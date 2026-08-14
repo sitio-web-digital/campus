@@ -1,0 +1,19 @@
+{
+  "name": "panel-comercial",
+  "version": "2.4.0",
+  "description": "Panel comercial B2B: pipeline de ventas, actividad diaria y dashboard de KPIs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.3.0",
+    "cookie-session": "^2.1.0",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.2"
+  }
+}

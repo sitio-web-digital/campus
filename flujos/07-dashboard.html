@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard · Panel Comercial</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+<style>
+:root {
+  --bg:#F6F7F5; --surface:#FFFFFF; --surface2:#EEF1EF; --ink:#1C2523; --muted:#5B6663;
+  --faint:#8A948F; --accent:#0F766E; --accent-ink:#0B5A54; --accent-soft:#E1F0EE;
+  --role:#B45309; --line:#E0E5E2; --line2:#C9D1CD; --bad:#C05450; --bad-soft:#F7E3E2; --ok-soft:#E3F0E7;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 "Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; -webkit-font-smoothing:antialiased; }
+.wrap { max-width:64rem; margin:0 auto; padding:1.25rem 1rem 5.5rem; }
+h1 { font-size:1.5rem; letter-spacing:-.01em; margin:.5rem 0 1rem; }
+h2 { font-size:1.1rem; margin:1.75rem 0 .6rem; }
+a { color:var(--accent-ink); }
+.nav { background:var(--surface); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:10; }
+.nav-inner { max-width:64rem; margin:0 auto; padding:.6rem 1rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+.brand { font-weight:700; }
+.nav-links { display:flex; gap:.25rem; flex-wrap:wrap; }
+.nav-links a { text-decoration:none; color:var(--muted); font-weight:600; font-size:.9rem; padding:.4rem .6rem; border-radius:8px; }
+.nav-links a.on { background:var(--accent-soft); color:var(--accent-ink); }
+@media (max-width:640px) {
+  .nav-inner { justify-content:center; }
+  .nav-links { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--line); justify-content:space-around; padding:.4rem .25rem calc(.4rem + env(safe-area-inset-bottom)); z-index:10; }
+  .nav-links a { font-size:.78rem; text-align:center; }
+}
+.flash { padding:.7rem 1rem; border-radius:10px; margin-bottom:1rem; font-weight:600; }
+.flash.ok { background:var(--ok-soft); color:#2A6B3C; }
+.flash.bad { background:var(--bad-soft); color:#8F3532; }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:1rem 1.1rem; margin-bottom:.75rem; }
+.btn { display:inline-block; background:var(--accent); color:#fff; border:none; border-radius:10px; padding:.65rem 1.2rem; font-size:1rem; font-weight:700; cursor:pointer; text-decoration:none; }
+.btn.secondary { background:var(--surface); color:var(--accent-ink); border:1px solid var(--line2); }
+.btn.danger { background:var(--bad); }
+.btn.small { padding:.35rem .7rem; font-size:.85rem; }
+label { display:block; font-size:.8rem; font-weight:700; color:var(--muted); margin:.9rem 0 .25rem; text-transform:uppercase; letter-spacing:.05em; }
+input, select, textarea { width:100%; padding:.6rem .7rem; font-size:1rem; border:1px solid var(--line2); border-radius:10px; background:var(--surface); color:var(--ink); font-family:inherit; }
+input:focus, select:focus, textarea:focus { outline:2px solid var(--accent); outline-offset:1px; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 1rem; }
+@media (max-width:520px) { .grid2 { grid-template-columns:1fr; } }
+.chip { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.04em; padding:.12rem .55rem; border-radius:999px; color:#fff; white-space:nowrap; }
+.deal-card { display:block; text-decoration:none; color:inherit; }
+.deal-card:hover { border-color:var(--accent); }
+.deal-top { display:flex; justify-content:space-between; align-items:baseline; gap:.5rem; }
+.deal-name { font-weight:700; }
+.deal-mrr { font-weight:700; color:var(--accent-ink); white-space:nowrap; }
+.deal-meta { font-size:.85rem; color:var(--muted); margin-top:.25rem; }
+.deal-next { font-size:.85rem; margin-top:.35rem; }
+.warn { color:var(--bad); font-weight:600; }
+.stage-h { display:flex; align-items:center; gap:.5rem; margin:1.5rem 0 .5rem; }
+.stage-h .dot { width:.7rem; height:.7rem; border-radius:50%; }
+.stage-h h2 { margin:0; font-size:1rem; }
+.stage-h .n { color:var(--faint); font-size:.85rem; }
+.toolbar { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem; }
+.toolbar .sp { flex:1; }
+.seg { display:inline-flex; border:1px solid var(--line2); border-radius:10px; overflow:hidden; }
+.seg a { padding:.4rem .8rem; text-decoration:none; font-size:.88rem; font-weight:600; color:var(--muted); }
+.seg a.on { background:var(--accent-soft); color:var(--accent-ink); }
+table { border-collapse:collapse; width:100%; font-size:.9rem; background:var(--surface); }
+th { text-align:left; font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); padding:.55rem .7rem; border-bottom:1px solid var(--line2); background:var(--surface2); }
+td { padding:.55rem .7rem; border-bottom:1px solid var(--line); vertical-align:top; }
+tr:last-child td { border-bottom:none; }
+.tablewrap { overflow-x:auto; border:1px solid var(--line); border-radius:12px; margin-bottom:1rem; }
+.tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.75rem; margin-bottom:1rem; }
+.tile { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:.9rem 1rem; }
+.tile .v { font-size:1.55rem; font-weight:700; letter-spacing:-.01em; font-variant-numeric:tabular-nums; }
+.tile .l { font-size:.78rem; color:var(--muted); font-weight:600; }
+.bar-row { display:flex; align-items:center; gap:.6rem; margin:.35rem 0; }
+.bar-label { width:9.5rem; font-size:.82rem; font-weight:600; color:var(--muted); text-align:right; flex-shrink:0; }
+.bar-track { flex:1; background:var(--surface2); border-radius:6px; height:1.4rem; position:relative; }
+.bar-fill { height:100%; border-radius:6px; min-width:2px; }
+.bar-val { position:absolute; right:.5rem; top:0; line-height:1.4rem; font-size:.8rem; font-weight:700; font-variant-numeric:tabular-nums; }
+.charts { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:.75rem; }
+.charts .card { margin-bottom:0; }
+.caption { font-size:.78rem; color:var(--faint); margin-top:.5rem; }
+.login-box { max-width:22rem; margin:12vh auto 0; }
+.muted { color:var(--muted); }
+.small { font-size:.85rem; }
+</style>
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <span class="brand">🎯 Panel Comercial</span>
+      <div class="nav-links">
+        <a href="/pipeline" class="">📋 Pipeline</a>
+        <a href="/actividad" class="">✅ Actividad</a>
+        <a href="/dashboard" class="on">📊 Dashboard</a>
+        <a href="/equipo" class="">👥 Equipo</a>
+        <a href="/perfil" class="">⚙️ Administrador</a>
+      </div>
+    </div>
+  </nav>
+<main class="wrap">
+
+
+
+  <h1>📊 Dashboard global</h1>
+  <div class="tiles">
+    <div class="tile"><div class="v">6</div><div class="l">Deals activos</div></div>
+    <div class="tile"><div class="v">$3.400</div><div class="l">MRR en juego (propuesta + negociación)</div></div>
+    <div class="tile"><div class="v">$800</div><div class="l">MRR ganado este mes</div></div>
+    <div class="tile"><div class="v">33%</div><div class="l">Win rate (90 días)</div></div>
+  </div>
+
+  <div class="charts">
+    <div class="card">
+      <h2 style="margin-top:0">Funnel: deals activos por etapa</h2>
+      <div class="bar-row"><span class="bar-label">Lead</span><div class="bar-track"><div class="bar-fill" style="width:0%;background:#8A948F"></div><span class="bar-val">0</span></div></div><div class="bar-row"><span class="bar-label">Contactado</span><div class="bar-track"><div class="bar-fill" style="width:50%;background:#4A7FB5"></div><span class="bar-val">1</span></div></div><div class="bar-row"><span class="bar-label">Reunión agendada</span><div class="bar-track"><div class="bar-fill" style="width:50%;background:#B59A2E"></div><span class="bar-val">1</span></div></div><div class="bar-row"><span class="bar-label">Discovery hecha</span><div class="bar-track"><div class="bar-fill" style="width:50%;background:#C07A3A"></div><span class="bar-val">1</span></div></div><div class="bar-row"><span class="bar-label">Propuesta enviada</span><div class="bar-track"><div class="bar-fill" style="width:100%;background:#8A62B5"></div><span class="bar-val">2</span></div></div><div class="bar-row"><span class="bar-label">Negociación</span><div class="bar-track"><div class="bar-fill" style="width:50%;background:#B5568A"></div><span class="bar-val">1</span></div></div>
+      <p class="caption">Donde se acumulan deals está el cuello de botella: Contactado→Reunión = pitch/lista · Discovery→Propuesta = diagnóstico · Propuesta→Cierre = objeciones/urgencia.</p>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0">Por qué perdemos deals</h2>
+      <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+    <svg viewBox="0 0 100 100" width="130" height="130" role="img" aria-label="Motivos de pérdida"><circle r="40" cx="50" cy="50" fill="none" stroke="#C05450" stroke-width="18" stroke-dasharray="125.66370614359172 251.32741228718345" stroke-dashoffset="0" transform="rotate(-90 50 50)"/><circle r="40" cx="50" cy="50" fill="none" stroke="#B59A2E" stroke-width="18" stroke-dasharray="125.66370614359172 251.32741228718345" stroke-dashoffset="-125.66370614359172" transform="rotate(-90 50 50)"/></svg>
+    <div style="flex:1;min-width:150px;display:grid;gap:.3rem"><div class="small" style="display:flex;align-items:center;gap:.4rem"><span style="width:.7rem;height:.7rem;border-radius:3px;background:#C05450;flex-shrink:0"></span>Timing / no es prioridad <strong style="margin-left:auto">1</strong></div><div class="small" style="display:flex;align-items:center;gap:.4rem"><span style="width:.7rem;height:.7rem;border-radius:3px;background:#B59A2E;flex-shrink:0"></span>Precio <strong style="margin-left:auto">1</strong></div></div>
+  </div>
+      <p class="caption">Si un motivo domina, es una decisión de pricing/producto/segmento — no un problema del vendedor.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:.75rem">
+    <h2 style="margin-top:0">Actividad del equipo: toques por día (14 días)</h2>
+    <svg viewBox="0 0 560 150" style="width:100%;height:auto" role="img" aria-label="Toques por día">
+    <polygon points="28,122 28,59.924528301886795 112,54.60377358490567 196,49.283018867924525 280,43.9622641509434 364,38.641509433962256 448,33.32075471698113 532,28 532,122" fill="#0F766E" opacity=".12"/>
+    <polyline points="28,59.924528301886795 112,54.60377358490567 196,49.283018867924525 280,43.9622641509434 364,38.641509433962256 448,33.32075471698113 532,28" fill="none" stroke="#0F766E" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="28" cy="59.924528301886795" r="3" fill="#0F766E"/><text x="28" y="52.924528301886795" font-size="9" text-anchor="middle" fill="#5B6663">35</text><circle cx="112" cy="54.60377358490567" r="3" fill="#0F766E"/><text x="112" y="47.60377358490567" font-size="9" text-anchor="middle" fill="#5B6663">38</text><circle cx="196" cy="49.283018867924525" r="3" fill="#0F766E"/><text x="196" y="42.283018867924525" font-size="9" text-anchor="middle" fill="#5B6663">41</text><circle cx="280" cy="43.9622641509434" r="3" fill="#0F766E"/><text x="280" y="36.9622641509434" font-size="9" text-anchor="middle" fill="#5B6663">44</text><circle cx="364" cy="38.641509433962256" r="3" fill="#0F766E"/><text x="364" y="31.641509433962256" font-size="9" text-anchor="middle" fill="#5B6663">47</text><circle cx="448" cy="33.32075471698113" r="3" fill="#0F766E"/><text x="448" y="26.320754716981128" font-size="9" text-anchor="middle" fill="#5B6663">50</text><circle cx="532" cy="28" r="3" fill="#0F766E"/><text x="532" y="21" font-size="9" text-anchor="middle" fill="#5B6663">53</text>
+    <text x="28" y="142" font-size="9" text-anchor="middle" fill="#8A948F">06/08</text><text x="112" y="142" font-size="9" text-anchor="middle" fill="#8A948F">07/08</text><text x="196" y="142" font-size="9" text-anchor="middle" fill="#8A948F">08/08</text><text x="280" y="142" font-size="9" text-anchor="middle" fill="#8A948F">09/08</text><text x="364" y="142" font-size="9" text-anchor="middle" fill="#8A948F">10/08</text><text x="448" y="142" font-size="9" text-anchor="middle" fill="#8A948F">11/08</text><text x="532" y="142" font-size="9" text-anchor="middle" fill="#8A948F">12/08</text>
+  </svg>
+    <p class="caption">El indicador adelantado: la actividad de hoy son las ventas de dentro de 1-2 meses. Si esta línea cae, el pipeline se seca.</p>
+  </div>
+
+  <h2>⚠️ Deals sin próximo paso definido</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Empresa</th><th>Vendedor</th><th>Etapa</th><th>Última actualización</th></tr></thead>
+    <tbody><tr><td><a href="/deals/14">Mayorista del Este</a></td><td>Carla Gómez</td><td><span class="chip" style="background:#8A62B5">Propuesta enviada</span></td><td>13/08/26</td></tr></tbody>
+  </table></div>
+
+  <h2>⏳ Deals estancados (sin cambios hace +14 días)</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Empresa</th><th>Vendedor</th><th>Etapa</th><th>Última actualización</th></tr></thead>
+    <tbody><tr><td colspan="4" class="muted">Ninguno.</td></tr></tbody>
+  </table></div>
+
+  <h2>👥 Por vendedor — este mes</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Vendedor</th><th>Contactos</th><th>Toques</th><th>Reu. agend.</th><th>Reu. hechas</th><th>Deals activos</th><th>Ganados</th><th>MRR ganado</th></tr></thead>
+    <tbody><tr><td><strong>Administrador</strong></td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>$0</td></tr><tr><td><strong>Carla Gómez</strong></td><td>65</td><td>182</td><td>6</td><td>7</td><td>4</td><td>1</td><td>$800</td></tr><tr><td><strong>Martín Paz</strong></td><td>48</td><td>126</td><td>4</td><td>3</td><td>2</td><td>0</td><td>$0</td></tr></tbody>
+  </table></div>
+  <p class="caption">Tasas a revisar a fin de mes: reuniones agendadas ÷ contactos (pitch/lista) · propuestas ÷ reuniones hechas (diagnóstico) · ganados ÷ propuestas (cierre).</p>
+</main>
+</body>
+</html>
