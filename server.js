@@ -21,6 +21,7 @@ const upload = multer({
 
 const app = express();
 app.set('trust proxy', 1);
+app.get('/health', (req, res) => res.json({ ok: true }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieSession({
   name: 'sesion',

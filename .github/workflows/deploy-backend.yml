@@ -1,0 +1,73 @@
+name: Deploy backend (self-hosted)
+
+# Solo main dispara deploy automático (este repo no usa develop) — ver
+# infraestructura/ansible/roles/campus_env para lo que hace falta preparar
+# en el runner antes del primer push (ENV_FILE + carpeta de datos).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: campus
+  CONTAINER_NAME: campus
+  # Archivo persistente en el runner con PORT/ADMIN_EMAIL/ADMIN_PASSWORD (solo
+  # importan en el primer arranque, ver README > "Primer arranque"). No vive
+  # en el repo — lo genera Ansible (roles/campus_env) en el server.
+  ENV_FILE: /opt/campus/campus.env
+  # Todo el estado real (SQLite + facturas subidas) vive acá, fuera del
+  # contenedor — sobrevive cada rebuild/redeploy. Ver README > Backup.
+  DATA_DIR: /opt/campus/data
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verificar que existe el .env del runner
+        run: |
+          if [ ! -f "$ENV_FILE" ]; then
+            echo "::error::No existe $ENV_FILE en el runner. Crealo antes de correr este workflow (ver infraestructura/ansible/roles/campus_env)."
+            exit 1
+          fi
+          mkdir -p "$DATA_DIR"
+
+      - name: Build de la imagen
+        run: docker build -t "$IMAGE_NAME:${{ github.sha }}" -t "$IMAGE_NAME:latest" .
+
+      - name: Sacar el contenedor anterior
+        run: docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
+
+      - name: Levantar el contenedor nuevo
+        run: |
+          docker run -d \
+            --name "$CONTAINER_NAME" \
+            --restart unless-stopped \
+            --network host \
+            --env-file "$ENV_FILE" \
+            -v "$DATA_DIR:/app/data" \
+            "$IMAGE_NAME:latest"
+
+      - name: Esperar a que responda /health
+        run: |
+          PORT="$(grep -m1 '^PORT=' "$ENV_FILE" | cut -d= -f2-)"
+          PORT="${PORT:-3000}"
+          for i in $(seq 1 15); do
+            if curl -sf "http://localhost:${PORT}/health" >/dev/null; then
+              echo "Campus arriba."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Campus no respondió /health a tiempo."
+          docker logs --tail 100 "$CONTAINER_NAME"
+          exit 1
+
+      - name: Limpiar imágenes viejas
+        run: docker image prune -f
