@@ -17,11 +17,13 @@ env:
   CONTAINER_NAME: campus
   # Archivo persistente en el runner con PORT/ADMIN_EMAIL/ADMIN_PASSWORD (solo
   # importan en el primer arranque, ver README > "Primer arranque"). No vive
-  # en el repo — lo genera Ansible (roles/campus_env) en el server.
-  ENV_FILE: /opt/campus/campus.env
+  # en el repo — lo genera Ansible (roles/campus_env) en el server. Mismo
+  # directorio base que usan los demás repos en este runner (app_root de
+  # Ansible, hoy /opt/sitioweb) — no es un descuido de nombre, ahí vive todo.
+  ENV_FILE: /opt/sitioweb/campus.env
   # Todo el estado real (SQLite + facturas subidas) vive acá, fuera del
   # contenedor — sobrevive cada rebuild/redeploy. Ver README > Backup.
-  DATA_DIR: /opt/campus/data
+  DATA_DIR: /opt/sitioweb/campus-data
 
 jobs:
   build-and-deploy:
