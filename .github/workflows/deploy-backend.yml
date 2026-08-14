@@ -38,7 +38,10 @@ jobs:
             echo "::error::No existe $ENV_FILE en el runner. Crealo antes de correr este workflow (ver infraestructura/ansible/roles/campus_env)."
             exit 1
           fi
-          mkdir -p "$DATA_DIR"
+          if [ ! -d "$DATA_DIR" ]; then
+            echo "::error::No existe $DATA_DIR en el runner (lo crea infraestructura/ansible/roles/campus_env, no este workflow)."
+            exit 1
+          fi
 
       - name: Build de la imagen
         run: docker build -t "$IMAGE_NAME:${{ github.sha }}" -t "$IMAGE_NAME:latest" .
