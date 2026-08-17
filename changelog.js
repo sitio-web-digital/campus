@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.6.2',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Accesos a gondola.com.ar y estanterias.online en el menú de sistemas y el campus, con botones personalizados.' },
+    ],
+  },
+  {
     version: '2.6.1',
     fecha: '2026-08-17',
     cambios: [

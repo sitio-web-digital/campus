@@ -68,6 +68,14 @@ function sysSwitch(sistema, user) {
         <img src="/logo-sitioweb.svg" alt="" width="30" height="30" style="border-radius:8px">
         <span class="se-txt">SitioWeb Digital<small>Tu página propia en minutos ↗</small></span>
       </a>
+      <a class="sys-ext sys-gon" href="https://gondola.com.ar/" target="_blank" rel="noopener">
+        <span class="se-ic"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/><path d="M6 8V5.5h3V8"/></svg></span>
+        <span class="se-txt">Gondola<small>gondola.com.ar ↗</small></span>
+      </a>
+      <a class="sys-ext sys-eol" href="https://estanterias.online/" target="_blank" rel="noopener">
+        <span class="se-ic"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2l1.6 8.5a1.5 1.5 0 001.5 1.2h6.3a1.5 1.5 0 001.5-1.2L17.5 7H6"/><circle cx="8.5" cy="17" r="1.1"/><circle cx="14.5" cy="17" r="1.1"/></svg></span>
+        <span class="se-txt">Estanterías Online<small>estanterias.online ↗</small></span>
+      </a>
       <a class="sys-ext sys-pco2" href="https://puntoco2.com/home" target="_blank" rel="noopener">
         <span class="se-ic">${ICON_PCO2}</span>
         <span class="se-txt">PuntoCO2<small>Plataforma de huella de carbono ↗</small></span>
@@ -442,6 +450,14 @@ body { overflow-x:hidden; }
 .sys-cfd { background:linear-gradient(135deg, #16406E, #0F3459); }
 .sys-est { background:linear-gradient(135deg, #E8781F, #C75E10); }
 .sys-sw { background:linear-gradient(135deg, #131C33, #0B1120); }
+.sys-gon { background:linear-gradient(135deg, #22854F, #1A6B3F); }
+.sys-eol { background:linear-gradient(135deg, #6B4FA3, #563F87); }
+.hub-card.hub-gon { background:linear-gradient(150deg, #22854F, #1A6B3F); border-color:#1A6B3F; }
+.hub-card.hub-gon h3, .hub-card.hub-eol h3 { color:#fff; }
+.hub-card.hub-gon p, .hub-card.hub-eol p { color:rgba(255,255,255,.85); }
+.hub-card.hub-gon .hc-ext, .hub-card.hub-eol .hc-ext { color:rgba(255,255,255,.72); }
+.hub-card.hub-gon .hc-ic, .hub-card.hub-eol .hc-ic { background:rgba(255,255,255,.2); color:#fff; }
+.hub-card.hub-eol { background:linear-gradient(150deg, #6B4FA3, #563F87); border-color:#563F87; }
 .sys-sw .se-txt small { color:#FFC107; opacity:1; }
 .hub-card.hub-sw { background:linear-gradient(150deg, #131C33, #0B1120); border-color:#0B1120; }
 .hub-card.hub-sw h3 { color:#fff; }
@@ -1306,6 +1322,18 @@ function hubPage({ user }) {
         <h3>SitioWeb Digital</h3>
         <p>Tu página propia en minutos.</p>
         <span class="hc-ext">app.sitioweb.digital ↗</span>
+      </a>
+      <a class="hub-card hub-gon" href="https://gondola.com.ar/" target="_blank" rel="noopener">
+        <span class="hc-ic">${IC('<path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/><path d="M6 8V5.5h3V8"/>')}</span>
+        <h3>Gondola</h3>
+        <p>La tienda online de góndolas.</p>
+        <span class="hc-ext">gondola.com.ar ↗</span>
+      </a>
+      <a class="hub-card hub-eol" href="https://estanterias.online/" target="_blank" rel="noopener">
+        <span class="hc-ic">${IC('<path d="M3 5h2l1.6 8.5a1.5 1.5 0 001.5 1.2h6.3a1.5 1.5 0 001.5-1.2L17.5 7H6"/><circle cx="8.5" cy="17" r="1.1"/><circle cx="14.5" cy="17" r="1.1"/>')}</span>
+        <h3>Estanterías Online</h3>
+        <p>La tienda online de estanterías.</p>
+        <span class="hc-ext">estanterias.online ↗</span>
       </a>
     </div>
   </div>`
