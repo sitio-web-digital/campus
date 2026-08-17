@@ -39,7 +39,7 @@ const ICONS = {
 };
 const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F3459'/%3E%3Ctext x='16' y='21' font-size='12' font-family='Helvetica,Arial' font-weight='bold' fill='white' text-anchor='middle'%3EC4D%3C/text%3E%3C/svg%3E";
 
-const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', hub: 'Campus C4D' };
+const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', hub: 'Campus C4D' };
 const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permisos || []).includes(s));
 
 // Ícono hoja para PuntoCO2 (plataforma de huella de carbono).
@@ -55,6 +55,7 @@ function sysSwitch(sistema, user) {
       ${tieneSistema(user, 'cfd') ? `<a href="/pipeline">Comercial Cloud For Deploy</a>` : ''}
       ${tieneSistema(user, 'gondolas') ? `<a href="/gondolas/pipeline">Comercial Góndolas</a>` : ''}
       ${tieneSistema(user, 'estanterias') ? `<a href="/estanterias/pipeline">Comercial Estanterías Reforzadas</a>` : ''}
+      ${tieneSistema(user, 'sitioweb') ? `<a href="/sitioweb/pipeline">Comercial SitioWeb Digital</a>` : ''}
       ${tieneSistema(user, 'cobranza') ? `<a href="/cobranza">Panel de Cobranza</a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
       <span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>
@@ -103,7 +104,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
   } else if (sistema === 'admin') {
     links = `
         <a href="/admin" class="${active === 'admin' ? 'on' : ''}">${ICONS.equipo}<span>Usuarios</span></a>${perfilLink}`;
-  } else if (sistema === 'gondolas' || sistema === 'estanterias') {
+  } else if (sistema === 'gondolas' || sistema === 'estanterias' || sistema === 'sitioweb') {
     const b = '/' + sistema;
     links = `
         <a href="${b}/pipeline" class="${active === 'pipeline' ? 'on' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
@@ -1274,6 +1275,12 @@ function hubPage({ user }) {
         <span class="hc-ic">${IC('<path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/>')}</span>
         <h3>Comercial Estanterías Reforzadas</h3>
         <p>Ventas de la nueva empresa: pipeline, actividad y metas propias.</p>
+      </a>` : ''}
+      ${tieneSistema(user, 'sitioweb') ? `
+      <a class="hub-card" href="/sitioweb/pipeline">
+        <span class="hc-ic">${IC('<path d="M10 3a7 7 0 100 14 7 7 0 000-14z"/><path d="M3 10h14M10 3c-2 2.2-2 11.8 0 14M10 3c2 2.2 2 11.8 0 14"/>')}</span>
+        <h3>Comercial SitioWeb Digital</h3>
+        <p>Ventas de sitios web: pipeline, actividad y metas propias.</p>
       </a>` : ''}
       ${tieneSistema(user, 'cobranza') ? `
       <a class="hub-card" href="/cobranza">

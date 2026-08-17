@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.7.0',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Comercial SitioWeb Digital: panel de ventas propio con etapas, carga diaria y objetivos configurables, comisión editable y todo el circuito de aprobación.' },
+    ],
+  },
+  {
     version: '2.6.2',
     fecha: '2026-08-17',
     cambios: [

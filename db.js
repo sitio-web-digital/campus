@@ -206,6 +206,7 @@ if (!userCols.includes('permisos')) {
 const PANELES_COMERCIALES = [
   { slug: 'gondolas', nombre: 'Góndolas' },
   { slug: 'estanterias', nombre: 'Estanterías Reforzadas' },
+  { slug: 'sitioweb', nombre: 'SitioWeb Digital' },
 ];
 
 // Sistemas del ecosistema (para permisos por usuario).
@@ -213,6 +214,7 @@ const SISTEMAS = [
   ['cfd', 'Comercial Cloud For Deploy'],
   ['gondolas', 'Comercial Góndolas'],
   ['estanterias', 'Comercial Estanterías Reforzadas'],
+  ['sitioweb', 'Comercial SitioWeb Digital'],
   ['cobranza', 'Panel de Cobranza'],
 ];
 
