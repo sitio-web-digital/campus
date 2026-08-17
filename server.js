@@ -312,11 +312,11 @@ app.post('/deals/:id/etapa', requireAuth, (req, res) => {
   let fechaCierre = deal.fecha_cierre;
   if (['Ganado', 'Perdido'].includes(etapa) && !fechaCierre) fechaCierre = hoyAR();
   if (!['Ganado', 'Perdido'].includes(etapa)) fechaCierre = null; // se reabre
-  const aprobacion = etapa === 'Ganado' ? (req.user.role === 'admin' && deal.mrr > 0 ? 'aprobado' : 'pendiente') : null;
+  // Arrastrar a Ganado NUNCA aprueba (ni siendo admin): la revisión de datos se hace en la ficha con "Aprobar venta".
+  const aprobacion = etapa === 'Ganado' ? 'pendiente' : null;
   db.prepare("UPDATE deals SET etapa = ?, fecha_cierre = ?, aprobacion = ?, updated_at = datetime('now') WHERE id = ?").run(etapa, fechaCierre, aprobacion, deal.id);
   logDealEvent(deal.id, req.user.id, 'etapa', `${deal.etapa} → ${etapa}`);
   notifyAdmins(req.user.id, `«${deal.empresa}»: ${deal.etapa} → ${etapa} — ${req.user.name}${aprobacion === 'pendiente' ? ' — requiere aprobación' : ''}`, `/deals/${deal.id}`);
-  if (etapa === 'Ganado' && aprobacion === 'aprobado') C.generarComisiones({ ...deal, etapa, fecha_cierre: fechaCierre });
   if (deal.etapa === 'Ganado' && etapa !== 'Ganado') C.cancelarPendientes(deal.id);
   res.redirect(home);
 });

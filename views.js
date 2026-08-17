@@ -692,9 +692,10 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], errAprob
   ${!isNew && d.etapa === 'Ganado' && d.aprobacion !== 'aprobado' ? (isAdmin ? `
   <div class="aprob-box">
     ${d.mrr > 0 ? `
-    <p><strong>Esta venta espera tu aprobación.</strong> Revisá el tipo de venta (${esc(d.tipo_venta || '—')}) y el valor (${money(d.mrr)}) — corregilos abajo si hace falta y guardá. Al aprobar, impacta en las métricas y se generan las comisiones en Cobranza.</p>
+    <p><strong>Esta venta espera tu aprobación.</strong> Validá los datos antes de aprobar (corregilos abajo y guardá si algo está mal):</p>
+    <p class="small" style="margin:.2rem 0 .7rem"><strong>Vendedor:</strong> ${esc((vendedores.find((v) => v.id === d.user_id) || {}).name || '—')} · <strong>Tipo:</strong> ${esc(panel === 'cfd' ? d.tipo_venta || '—' : 'Venta ' + panel)} · <strong>Valor:</strong> ${money(d.mrr)} · <strong>Cierre:</strong> ${fecha(d.fecha_cierre) || 'se estampa al aprobar'}</p>
     <form method="post" action="/deals/${d.id}/aprobar"><button class="btn">Aprobar venta</button></form>` : `
-    <p style="margin:0"><strong>Falta el valor del deal.</strong> Para aprobar esta venta primero cargá el valor (abajo) y guardá — sin ese dato no se puede calcular la comisión del vendedor.</p>`}
+    <p style="margin:0"><strong>Faltan datos para aprobar: el valor del deal.</strong> Cargalo abajo y guardá — sin ese dato no se puede calcular la comisión del vendedor.</p>`}
   </div>` : `
   <div class="aprob-box">
     <p style="margin:0"><strong>Esperando aprobación del administrador.</strong> La venta va a impactar en métricas y comisiones cuando sea aprobada.</p>
@@ -1825,7 +1826,7 @@ function docsPage({ user, manualDisponible }) {
       ${etapaFila('Discovery hecha', 'Se hizo la reunión de diagnóstico: entendimos situación, problema y calificamos (decisor, presupuesto, timing).')}
       ${etapaFila('Propuesta enviada', 'El cliente tiene la propuesta con precio y alcance en la mano.')}
       ${etapaFila('Negociación', 'Se discuten objeciones, condiciones o contrato. Hay intención de compra.')}
-      ${etapaFila('Ganado', 'Contrato firmado o pago acordado. Si lo gana un vendedor, queda <strong>pendiente de aprobación</strong>: el administrador revisa tipo y valor y aprueba — recién ahí impacta en métricas y comisiones. La fecha de cierre se estampa sola si falta.')}
+      ${etapaFila('Ganado', 'Contrato firmado o pago acordado. Todo deal arrastrado a Ganado queda <strong>pendiente de aprobación</strong> (también si lo arrastra el admin): se abre la ficha, se validan vendedor, tipo, valor y fecha, y se toca "Aprobar venta" — recién ahí impacta en métricas y comisiones. Sin valor cargado no se puede aprobar.')}
       ${etapaFila('Perdido', 'No avanza (o pasaron 4-5 reuniones sin cierre). Cargar SIEMPRE el motivo de pérdida: esa información define pricing y cliente ideal.')}
     </tbody>
   </table></div>

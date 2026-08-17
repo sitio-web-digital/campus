@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.7.1',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'fix', texto: 'Arrastrar un deal a Ganado ya no aprueba automáticamente, ni siquiera al administrador: siempre queda "Por aprobar" y la aprobación exige validar los datos en la ficha (con resumen de vendedor, tipo, valor y fecha). Sin valor cargado, avisa qué falta y bloquea.' },
+    ],
+  },
+  {
     version: '2.7.0',
     fecha: '2026-08-17',
     cambios: [
