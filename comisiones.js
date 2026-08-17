@@ -48,7 +48,7 @@ function generarComisiones(deal) {
   let creadas = 0;
   if (rules.tipo === 'flat') {
     // Comisión única cobrable al momento (fecha = cierre → exigible ya).
-    ins.run(deal.id, deal.user_id, `Comisión venta góndolas (${rules.pct}% de $${deal.mrr})`, round2(deal.mrr * (rules.pct / 100)), base);
+    ins.run(deal.id, deal.user_id, `Comisión por venta (${rules.pct}% de $${deal.mrr})`, round2(deal.mrr * (rules.pct / 100)), base);
     creadas = 1;
   } else if (rules.tipo === 'tramos') {
     const pct = pctPorTramo(rules.tramos, deal.mrr);

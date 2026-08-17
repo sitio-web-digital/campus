@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.10.2',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Cobranza histórica: las ventas de la hoja de pagos de la planilla ya impactan en el Panel de Cobranza — 7 cuotas de Mateo ($1.181.000) y 1 de Romina ($86.500) al 5% del rubro, cobrables al momento.' },
+      { tipo: 'nuevo', texto: 'Se cargaron las 5 ventas de Mateo que estaban solo en la hoja de pagos (Manuel, Gabriel Lopez, Benedicta 2ª, Esteban, Jorge 2ª) y se completó y aprobó la de David Ruiz (Romina, $1.730.000).' },
+      { tipo: 'mejora', texto: 'El concepto de la comisión por venta de rubro ya no dice "góndolas" fijo: sirve para todos los paneles.' },
+    ],
+  },
+  {
     version: '2.10.1',
     fecha: '2026-08-17',
     cambios: [
