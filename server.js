@@ -70,10 +70,17 @@ function logDealEvent(dealId, userId, tipo, detalle) {
 }
 
 // Notifica a todos los admins activos menos al que hizo la acción.
-function notifyAdmins(actorId, texto, url) {
-  const admins = db.prepare("SELECT id FROM users WHERE role = 'admin' AND active = 1 AND id != ?").all(actorId);
+// tipo: 'deal_nuevo' | 'cambio_etapa' (silenciables por preferencia) · 'ganado' (siempre) · otro (siempre).
+function notifyAdmins(actorId, texto, url, tipo = 'otro') {
+  const admins = db.prepare("SELECT id, notif_prefs FROM users WHERE role = 'admin' AND active = 1 AND id != ?").all(actorId);
   const ins = db.prepare('INSERT INTO notifications (user_id, texto, url) VALUES (?, ?, ?)');
-  for (const a of admins) ins.run(a.id, texto, url);
+  for (const a of admins) {
+    if (tipo === 'deal_nuevo' || tipo === 'cambio_etapa') {
+      let p = {}; try { p = JSON.parse(a.notif_prefs || '{}'); } catch {}
+      if (p[tipo] === false) continue;
+    }
+    ins.run(a.id, texto, url);
+  }
 }
 
 // Notifica a un usuario puntual (ej: al vendedor cuando le aprueban una venta).
@@ -184,8 +191,34 @@ app.post('/login', (req, res) => {
     return res.send(V.loginPage({ err: 'Email o contraseña incorrectos.' }));
   }
   req.session.uid = user.id;
+  if (user.role === 'vendedor') avisarDiasFaltantes(user);
   res.redirect('/');
 });
+
+// Al entrar, si al vendedor le faltan días de actividad (ayer a -3), se lo recuerda por notificación.
+function avisarDiasFaltantes(user) {
+  try {
+    let permisos = []; try { permisos = JSON.parse(user.permisos || '[]'); } catch {}
+    const ventana = ventanaFechas().slice(1); // ayer, -2, -3
+    const ddmm = (f) => `${+f.slice(8, 10)}/${+f.slice(5, 7)}`;
+    const avisos = [];
+    if (permisos.includes('cfd')) {
+      const cargadas = db.prepare('SELECT fecha FROM activity WHERE user_id = ? AND fecha >= ?').all(user.id, ventana[2]).map((r) => r.fecha);
+      const faltan = ventana.filter((d) => !cargadas.includes(d));
+      if (faltan.length) avisos.push({ texto: `Te faltan cargar días de actividad en Comercial Cloud For Deploy: ${faltan.map(ddmm).join(', ')}`, url: `/actividad?fecha=${faltan[0]}` });
+    }
+    for (const P of PANELES_COMERCIALES) {
+      if (!permisos.includes(P.slug)) continue;
+      const cargadas = db.prepare('SELECT fecha FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(P.slug, user.id, ventana[2]).map((r) => r.fecha);
+      const faltan = ventana.filter((d) => !cargadas.includes(d));
+      if (faltan.length) avisos.push({ texto: `Te faltan cargar días de actividad en Comercial ${P.nombre}: ${faltan.map(ddmm).join(', ')}`, url: `/${P.slug}/actividad?fecha=${faltan[0]}` });
+    }
+    if (avisos.length) {
+      db.prepare("DELETE FROM notifications WHERE user_id = ? AND leida = 0 AND texto LIKE 'Te faltan cargar días%'").run(user.id);
+      for (const a of avisos) notifyUser(user.id, a.texto, a.url);
+    }
+  } catch (e) { console.error('avisarDiasFaltantes:', e.message); }
+}
 
 app.post('/logout', (req, res) => { req.session = null; res.redirect('/login'); });
 
@@ -254,7 +287,7 @@ app.post('/deals', requireAuth, (req, res) => {
     VALUES (@empresa, @user_id, @panel, @etapa, @tipo_venta, @mrr, @decisor, @origen, @proximo_paso, @fecha_proximo_paso, @fecha_primera_reunion, @fecha_cierre, @motivo_perdida, @campana_id, @pais, @provincia, @ciudad, @notas, @aprobacion)`).run(dInsert);
   logDealEvent(r.lastInsertRowid, req.user.id, 'creado', `Deal creado en etapa ${d.etapa}`);
   if (d.nota) logDealEvent(r.lastInsertRowid, req.user.id, 'edicion', `Nota: ${d.nota}`);
-  notifyAdmins(req.user.id, `Deal nuevo: «${d.empresa}» (${d.etapa}) — ${req.user.name}${d.aprobacion === 'pendiente' ? ' — requiere aprobación' : ''}`, `/deals/${r.lastInsertRowid}`);
+  notifyAdmins(req.user.id, `Deal nuevo: «${d.empresa}» (${d.etapa}) — ${req.user.name}${d.aprobacion === 'pendiente' ? ' — requiere aprobación' : ''}`, `/deals/${r.lastInsertRowid}`, d.etapa === 'Ganado' ? 'ganado' : 'deal_nuevo');
   if (d.aprobacion === 'aprobado') C.generarComisiones({ ...d, id: r.lastInsertRowid, fecha_cierre: d.fecha_cierre || new Date().toISOString().slice(0, 10) });
   res.redirect(home);
 });
@@ -266,8 +299,9 @@ app.get('/deals/:id', requireAuth, (req, res) => {
   const vendedores = db.prepare('SELECT id, name FROM users WHERE active = 1 ORDER BY name').all();
   const eventos = db.prepare(`SELECT e.*, u.name AS user_name FROM deal_events e JOIN users u ON u.id = e.user_id
     WHERE e.deal_id = ? ORDER BY e.created_at DESC, e.id DESC`).all(deal.id);
+  const ultimaEd = eventos[0] ? { nombre: eventos[0].user_name, fecha: eventos[0].created_at } : null;
   const modal = V.dealFormModal({
-    user: req.user, deal, vendedores, isAdmin: req.user.role === 'admin', eventos, errAprob: req.query.err === 'valor',
+    user: req.user, deal, vendedores, isAdmin: req.user.role === 'admin', eventos, ultimaEd, errAprob: req.query.err === 'valor',
     panel: deal.panel, etapas: etapasDePanel(deal.panel), backHref: homeDePanel(deal.panel),
     campanas: db.prepare('SELECT id, nombre FROM campanas WHERE panel = ? AND (activa = 1 OR id = ?) ORDER BY nombre').all(deal.panel, deal.campana_id || 0),
   });
@@ -300,13 +334,18 @@ app.post('/deals/:id', requireAuth, (req, res) => {
   if (cambioEtapa) {
     const det = [`${deal.etapa} → ${d.etapa}`, ...otros].join(' · ');
     logDealEvent(deal.id, req.user.id, 'etapa', det);
-    notifyAdmins(req.user.id, `«${d.empresa}»: ${deal.etapa} → ${d.etapa} — ${req.user.name}${d.aprobacion === 'pendiente' ? ' — requiere aprobación' : ''}`, `/deals/${deal.id}`);
+    notifyAdmins(req.user.id, `«${d.empresa}»: ${deal.etapa} → ${d.etapa} — ${req.user.name}${d.aprobacion === 'pendiente' ? ' — requiere aprobación' : ''}`, `/deals/${deal.id}`, d.etapa === 'Ganado' ? 'ganado' : 'cambio_etapa');
     if (d.etapa === 'Ganado' && d.aprobacion === 'aprobado') C.generarComisiones({ ...d, id: deal.id });
     if (deal.etapa === 'Ganado' && d.etapa !== 'Ganado') C.cancelarPendientes(deal.id);
   } else if (otros.length) {
     logDealEvent(deal.id, req.user.id, 'edicion', otros.join(' · '));
   }
   if (d.nota) logDealEvent(deal.id, req.user.id, 'edicion', `Nota: ${d.nota}`);
+  // Si la lead la modificó otra persona (típicamente el admin), el vendedor dueño se entera.
+  if (req.user.id !== d.user_id && (cambioEtapa || otros.length || d.nota)) {
+    const resumen = cambioEtapa ? `${deal.etapa} → ${d.etapa}` : (otros.length ? otros.slice(0, 2).join(' · ') : 'nueva nota');
+    notifyUser(d.user_id, `Tu lead «${d.empresa}» fue modificada por ${req.user.name}: ${resumen}`, `/deals/${deal.id}`);
+  }
   res.redirect(home);
 });
 
@@ -326,7 +365,10 @@ app.post('/deals/:id/etapa', requireAuth, (req, res) => {
   const aprobacion = etapa === 'Ganado' ? 'pendiente' : null;
   db.prepare("UPDATE deals SET etapa = ?, fecha_cierre = ?, aprobacion = ?, updated_at = datetime('now') WHERE id = ?").run(etapa, fechaCierre, aprobacion, deal.id);
   logDealEvent(deal.id, req.user.id, 'etapa', `${deal.etapa} → ${etapa}`);
-  notifyAdmins(req.user.id, `«${deal.empresa}»: ${deal.etapa} → ${etapa} — ${req.user.name}${aprobacion === 'pendiente' ? ' — requiere aprobación' : ''}`, `/deals/${deal.id}`);
+  notifyAdmins(req.user.id, `«${deal.empresa}»: ${deal.etapa} → ${etapa} — ${req.user.name}${aprobacion === 'pendiente' ? ' — requiere aprobación' : ''}`, `/deals/${deal.id}`, etapa === 'Ganado' ? 'ganado' : 'cambio_etapa');
+  if (req.user.id !== deal.user_id) {
+    notifyUser(deal.user_id, `Tu lead «${deal.empresa}» fue movida por ${req.user.name}: ${deal.etapa} → ${etapa}`, `/deals/${deal.id}`);
+  }
   if (deal.etapa === 'Ganado' && etapa !== 'Ganado') C.cancelarPendientes(deal.id);
   res.redirect(home);
 });
@@ -356,22 +398,50 @@ app.post('/deals/:id/delete', requireAuth, requireAdmin, (req, res) => {
 
 /* ---------------- actividad ---------------- */
 
+// Ventana de carga: hoy y hasta 3 días atrás (el admin no tiene límite).
+function ventanaFechas() {
+  const out = [];
+  for (let i = 0; i < 4; i++) {
+    const d = new Date(hoyAR() + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() - i);
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+// Resuelve a quién y qué fecha se carga (vendedor: solo él, ventana de 3 días; admin: cualquiera, fecha libre).
+function targetActividad(req, fuente) {
+  const esAdmin = req.user.role === 'admin';
+  let target = { id: req.user.id, name: req.user.name };
+  const vendedorId = parseInt(fuente.vendedor || fuente.user_id, 10);
+  if (esAdmin && Number.isFinite(vendedorId)) {
+    const t = db.prepare('SELECT id, name FROM users WHERE id = ? AND active = 1').get(vendedorId);
+    if (t) target = t;
+  }
+  let fecha = cleanDate(fuente.fecha) || hoyAR();
+  if (!esAdmin && !ventanaFechas().includes(fecha)) fecha = hoyAR();
+  return { esAdmin, target, fecha };
+}
+
 app.get('/actividad', requireAuth, requireSistema('cfd'), (req, res) => {
-  const hoy = new Date().toISOString().slice(0, 10);
-  const today = db.prepare('SELECT * FROM activity WHERE user_id = ? AND fecha = ?').get(req.user.id, hoy);
-  const history = db.prepare('SELECT * FROM activity WHERE user_id = ? ORDER BY fecha DESC LIMIT 14').all(req.user.id);
-  res.send(V.actividadPage({ user: req.user, today, history }));
+  const { esAdmin, target, fecha } = targetActividad(req, req.query);
+  const today = db.prepare('SELECT * FROM activity WHERE user_id = ? AND fecha = ?').get(target.id, fecha);
+  const history = db.prepare('SELECT * FROM activity WHERE user_id = ? ORDER BY fecha DESC LIMIT 14').all(target.id);
+  const ventana = ventanaFechas();
+  const cargadas = db.prepare('SELECT fecha FROM activity WHERE user_id = ? AND fecha >= ?').all(target.id, ventana[3]).map((r) => r.fecha);
+  const vendedores = esAdmin ? db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all() : [];
+  res.send(V.actividadPage({ user: req.user, today, history, fecha, ventana, cargadas, esAdmin, target, vendedores, base: '' }));
 });
 
 app.post('/actividad', requireAuth, requireSistema('cfd'), (req, res) => {
-  const fecha = cleanDate(req.body.fecha) || new Date().toISOString().slice(0, 10);
+  const { esAdmin, target, fecha } = targetActividad(req, req.body);
   db.prepare(`INSERT INTO activity (user_id, fecha, contactos, toques, reuniones_agendadas, reuniones_realizadas, notas)
     VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(user_id, fecha) DO UPDATE SET contactos=excluded.contactos, toques=excluded.toques,
       reuniones_agendadas=excluded.reuniones_agendadas, reuniones_realizadas=excluded.reuniones_realizadas, notas=excluded.notas`)
-    .run(req.user.id, fecha, cleanInt(req.body.contactos), cleanInt(req.body.toques),
+    .run(target.id, fecha, cleanInt(req.body.contactos), cleanInt(req.body.toques),
       cleanInt(req.body.reuniones_agendadas), cleanInt(req.body.reuniones_realizadas), clean(req.body.notas));
-  res.redirect('/actividad');
+  res.redirect(`/actividad?fecha=${fecha}${esAdmin && target.id !== req.user.id ? '&vendedor=' + target.id : ''}`);
 });
 
 /* ---------------- dashboard ---------------- */
@@ -441,7 +511,8 @@ function permisosDeBody(body) {
 app.get('/equipo', requireAuth, requireAdmin, (req, res) => res.redirect('/admin'));
 
 app.get('/admin', requireAuth, requireAdmin, (req, res) => {
-  res.send(V.adminPage({ user: req.user, users: usuariosAdmin(), sistemas: SISTEMAS }));
+  let prefs = {}; try { prefs = JSON.parse(db.prepare('SELECT notif_prefs FROM users WHERE id = ?').get(req.user.id).notif_prefs || '{}'); } catch {}
+  res.send(V.adminPage({ user: req.user, users: usuariosAdmin(), sistemas: SISTEMAS, prefs }));
 });
 
 app.post('/admin/usuarios', requireAuth, requireAdmin, (req, res) => {
@@ -517,6 +588,13 @@ function statsCampanas(panel) {
     FROM deals d LEFT JOIN campanas c ON c.id = d.campana_id
     WHERE d.panel = ? GROUP BY d.campana_id ORDER BY ganadas DESC, ingresos DESC, leads DESC`).all(panel);
 }
+
+// Preferencias de notificaciones del admin (el paso a Ganado no se puede silenciar).
+app.post('/admin/mis-notificaciones', requireAuth, requireAdmin, (req, res) => {
+  const prefs = { deal_nuevo: req.body.deal_nuevo === 'on', cambio_etapa: req.body.cambio_etapa === 'on' };
+  db.prepare('UPDATE users SET notif_prefs = ? WHERE id = ?').run(JSON.stringify(prefs), req.user.id);
+  res.redirect('/admin');
+});
 
 // Aviso manual del admin: a un usuario puntual o global por rol.
 app.post('/admin/notificar', requireAuth, requireAdmin, (req, res) => {
@@ -819,20 +897,23 @@ for (const PANEL of PANELES_COMERCIALES) {
   });
 
   app.get(base + '/actividad', requireAuth, requireSistema(slug), (req, res) => {
-    const hoy = hoyAR();
-    const today = db.prepare('SELECT * FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha = ?').get(slug, req.user.id, hoy);
-    const history = db.prepare('SELECT * FROM panel_activity WHERE panel = ? AND user_id = ? ORDER BY fecha DESC LIMIT 14').all(slug, req.user.id);
-    res.send(V.panelActividadPage({ user: req.user, campos: camposPanel(slug), today, history, info }));
+    const { esAdmin, target, fecha } = targetActividad(req, req.query);
+    const today = db.prepare('SELECT * FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha = ?').get(slug, target.id, fecha);
+    const history = db.prepare('SELECT * FROM panel_activity WHERE panel = ? AND user_id = ? ORDER BY fecha DESC LIMIT 14').all(slug, target.id);
+    const ventana = ventanaFechas();
+    const cargadas = db.prepare('SELECT fecha FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(slug, target.id, ventana[3]).map((r) => r.fecha);
+    const vendedores = esAdmin ? db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all() : [];
+    res.send(V.panelActividadPage({ user: req.user, campos: camposPanel(slug), today, history, info, fecha, ventana, cargadas, esAdmin, target, vendedores, base }));
   });
 
   app.post(base + '/actividad', requireAuth, requireSistema(slug), (req, res) => {
-    const fecha = cleanDate(req.body.fecha) || hoyAR();
+    const { esAdmin, target, fecha } = targetActividad(req, req.body);
     const valores = {};
     for (const c of camposPanel(slug)) valores['c' + c.id] = cleanInt(req.body['c' + c.id]);
     db.prepare(`INSERT INTO panel_activity (panel, user_id, fecha, valores, notas) VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(panel, user_id, fecha) DO UPDATE SET valores = excluded.valores, notas = excluded.notas`)
-      .run(slug, req.user.id, fecha, JSON.stringify(valores), clean(req.body.notas));
-    res.redirect(base + '/actividad');
+      .run(slug, target.id, fecha, JSON.stringify(valores), clean(req.body.notas));
+    res.redirect(`${base}/actividad?fecha=${fecha}${esAdmin && target.id !== req.user.id ? '&vendedor=' + target.id : ''}`);
   });
 
   app.get(base + '/objetivos', requireAuth, requireSistema(slug), (req, res) => {

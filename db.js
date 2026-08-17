@@ -245,6 +245,12 @@ const PANELES_COMERCIALES = [
   { slug: 'sitioweb', nombre: 'SitioWeb Digital' },
 ];
 
+// Migración 2.9.0: preferencias de notificaciones del admin.
+const userCols2 = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+if (!userCols2.includes('notif_prefs')) {
+  db.exec("ALTER TABLE users ADD COLUMN notif_prefs TEXT NOT NULL DEFAULT '{}'");
+}
+
 // Sistemas del ecosistema (para permisos por usuario).
 const SISTEMAS = [
   ['cfd', 'Comercial Cloud For Deploy'],

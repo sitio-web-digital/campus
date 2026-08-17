@@ -682,7 +682,7 @@ const EVENTO_TIPO = { creado: ['Creado', '#3E9B57'], etapa: ['Etapa', '#14538C']
 
 const PROVINCIAS_AR = ['Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'];
 
-function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], errAprob, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
+function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
   const d = deal || {};
   const isNew = !deal;
   const opt = (list, sel) => list.map((o) => `<option value="${esc(o)}" ${o === sel ? 'selected' : ''}>${esc(o)}</option>`).join('');
@@ -690,6 +690,7 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], errAprob
   <div class="modal-back" id="modalBack">
   <div class="modal">
   <div class="modal-h"><h2>${isNew ? 'Nuevo deal' : esc(d.empresa)}</h2><a class="modal-x" href="${backHref}" aria-label="Cerrar">&times;</a></div>
+  ${!isNew && ultimaEd ? `<p class="small muted" style="margin:-.3rem 0 .7rem">Última edición: <strong>${esc(ultimaEd.nombre)}</strong> · ${fechaHora(ultimaEd.fecha)}</p>` : ''}
   ${errAprob ? `<div class="flash bad">No se pudo aprobar: falta cargar el <strong>valor del deal</strong>, que es la base para calcular la comisión del vendedor. Completalo, guardá y volvé a aprobar.</div>` : ''}
   ${!isNew && d.etapa === 'Ganado' && d.aprobacion !== 'aprobado' ? (isAdmin ? `
   <div class="aprob-box">
@@ -801,15 +802,37 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], errAprob
   <script>document.getElementById('modalBack').addEventListener('click', function (e) { if (e.target === this) location = '${backHref}'; });</script>`;
 }
 
-function actividadPage({ user, today, history }) {
+// Tabs de días de la ventana de carga (con punto rojo en los días pasados sin cargar).
+function tabsDias(ventana, cargadas, fechaSel, urlBase, extraQS) {
+  const lbl = (fch, i) => (i === 0 ? 'Hoy' : i === 1 ? 'Ayer' : `${+fch.slice(8, 10)}/${+fch.slice(5, 7)}`);
+  return `
+  <div class="seg">
+    ${ventana.map((fch, i) => `<a href="${urlBase}?fecha=${fch}${extraQS}" class="${fch === fechaSel ? 'on' : ''}">${lbl(fch, i)}${i > 0 && !cargadas.includes(fch) ? ' <span class="warn">•</span>' : ''}</a>`).join('')}
+  </div>`;
+}
+
+function actividadPage({ user, today, history, fecha: fechaSel, ventana = [], cargadas = [], esAdmin, target, vendedores = [] }) {
   const t = today || {};
+  const otro = esAdmin && target && target.id !== user.id;
+  const extraQS = otro ? '&vendedor=' + target.id : '';
   return layout({
     title: 'Actividad diaria', user, active: 'actividad',
     body: `
-  <h1>Mi actividad de hoy</h1>
-  <p class="muted small">Cargala al final de cada día — toma 2 minutos. Si volvés a guardar, se actualiza la de hoy.</p>
+  <h1>${otro ? 'Actividad de ' + esc(target.name) : 'Mi actividad'}</h1>
+  <p class="muted small">Cargala al final de cada día. Podés cargar o corregir hasta 3 días para atrás — los días con <span class="warn">•</span> están sin cargar.${esAdmin ? ' Como admin podés cargar cualquier fecha y de cualquier vendedor.' : ''}</p>
+  <div class="toolbar">
+    ${tabsDias(ventana, cargadas, fechaSel, '/actividad', extraQS)}
+    ${esAdmin ? `
+    <form method="get" action="/actividad" class="cfg-inline" style="flex:0">
+      <select name="vendedor" style="width:auto">${vendedores.map((v) => `<option value="${v.id}" ${target && v.id === target.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
+      <input type="date" name="fecha" value="${fechaSel}" style="width:auto">
+      <button class="btn secondary small">Ver</button>
+    </form>` : ''}
+  </div>
   <form method="post" action="/actividad" class="card">
-    <input type="hidden" name="fecha" value="${hoyISO()}">
+    <p class="small" style="margin:0 0 .3rem"><strong>Cargando el día ${fecha(fechaSel)}</strong>${otro ? ' de ' + esc(target.name) : ''}</p>
+    <input type="hidden" name="fecha" value="${fechaSel}">
+    ${otro ? `<input type="hidden" name="user_id" value="${target.id}">` : ''}
     <div class="grid2">
       <div><label>Contactos nuevos agregados</label><input name="contactos" type="number" min="0" inputmode="numeric" value="${t.contactos ?? ''}" placeholder="0"></div>
       <div><label>Toques (llamadas + mensajes + emails)</label><input name="toques" type="number" min="0" inputmode="numeric" value="${t.toques ?? ''}" placeholder="0"></div>
@@ -818,7 +841,7 @@ function actividadPage({ user, today, history }) {
     </div>
     <label>Notas del día</label>
     <input name="notas" value="${esc(t.notas)}" placeholder="Opcional">
-    <div style="margin-top:1.2rem"><button class="btn" style="width:100%">Guardar mi día</button></div>
+    <div style="margin-top:1.2rem"><button class="btn" style="width:100%">Guardar el día</button></div>
   </form>
   <h2>Mis últimos 14 días</h2>
   <div class="tablewrap"><table>
@@ -938,7 +961,7 @@ function dashboardPage({ user, k }) {
 
 const ROL_LABEL = { admin: 'Administrador', vendedor: 'Vendedor', developer: 'Developer' };
 
-function adminPage({ user, users, sistemas, resetInfo }) {
+function adminPage({ user, users, sistemas, resetInfo, prefs = {} }) {
   const rolOpts = (sel) => Object.entries(ROL_LABEL).map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('');
   const permChecks = (u) => sistemas.map(([slug, nombre]) => `
     <label class="perm"><input type="checkbox" name="permisos" value="${slug}" ${u && u.permisos.includes(slug) ? 'checked' : ''}> ${esc(nombre)}</label>`).join('');
@@ -947,6 +970,17 @@ function adminPage({ user, users, sistemas, resetInfo }) {
     msg: resetInfo ? `Nueva clave temporal para ${resetInfo.name}: ${resetInfo.password} — pasásela por un canal seguro y pedile que la cambie en Perfil.` : null,
     body: `
   <h1>Usuarios y permisos</h1>
+
+  <div class="card">
+    <h3 style="margin-top:0">Mis notificaciones</h3>
+    <p class="small muted">Elegí qué eventos del equipo te notifican. El paso a <strong>Ganado</strong> no se puede silenciar, y los avisos manuales siempre llegan a sus destinatarios.</p>
+    <form method="post" action="/admin/mis-notificaciones" class="perm-row">
+      <label class="perm"><input type="checkbox" name="deal_nuevo" ${prefs.deal_nuevo === false ? '' : 'checked'}> Deal nuevo</label>
+      <label class="perm"><input type="checkbox" name="cambio_etapa" ${prefs.cambio_etapa === false ? '' : 'checked'}> Cambios de etapa</label>
+      <label class="perm" style="opacity:.65"><input type="checkbox" checked disabled> Paso a Ganado / requiere aprobación (siempre activa)</label>
+      <button class="btn small">Guardar</button>
+    </form>
+  </div>
 
   <div class="card card--accent">
     <h3 style="margin-top:0">Enviar aviso al equipo</h3>
@@ -1629,15 +1663,28 @@ function reporteImprimirPage({ user, p, nombrePeriodo, desde, hasta, r }) {
 
 /* --------- paneles comerciales configurables --------- */
 
-function panelActividadPage({ user, campos, today, history, info }) {
+function panelActividadPage({ user, campos, today, history, info, fecha: fechaSel, ventana = [], cargadas = [], esAdmin, target, vendedores = [] }) {
   const vals = today ? (() => { try { return JSON.parse(today.valores || '{}'); } catch { return {}; } })() : {};
+  const otro = esAdmin && target && target.id !== user.id;
+  const extraQS = otro ? '&vendedor=' + target.id : '';
   return layout({
     title: `Actividad · ${info.nombre}`, user, active: 'actividad', sistema: info.slug,
     body: `
-  <h1>Mi actividad de hoy</h1>
-  <p class="muted small">Los campos los define administración (Config). Si volvés a guardar, se actualiza el día.</p>
+  <h1>${otro ? 'Actividad de ' + esc(target.name) : 'Mi actividad'}</h1>
+  <p class="muted small">Los campos los define administración (Config). Podés cargar o corregir hasta 3 días para atrás — los días con <span class="warn">•</span> están sin cargar.</p>
+  <div class="toolbar">
+    ${tabsDias(ventana, cargadas, fechaSel, info.base + '/actividad', extraQS)}
+    ${esAdmin ? `
+    <form method="get" action="${info.base}/actividad" class="cfg-inline" style="flex:0">
+      <select name="vendedor" style="width:auto">${vendedores.map((v) => `<option value="${v.id}" ${target && v.id === target.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
+      <input type="date" name="fecha" value="${fechaSel}" style="width:auto">
+      <button class="btn secondary small">Ver</button>
+    </form>` : ''}
+  </div>
   <form method="post" action="${info.base}/actividad" class="card">
-    <input type="hidden" name="fecha" value="${hoyISO()}">
+    <p class="small" style="margin:0 0 .3rem"><strong>Cargando el día ${fecha(fechaSel)}</strong>${otro ? ' de ' + esc(target.name) : ''}</p>
+    <input type="hidden" name="fecha" value="${fechaSel}">
+    ${otro ? `<input type="hidden" name="user_id" value="${target.id}">` : ''}
     <div class="grid2">
       ${campos.map((c) => `<div><label>${esc(c.label)}</label><input name="c${c.id}" type="number" min="0" inputmode="numeric" value="${vals['c' + c.id] ?? ''}" placeholder="0"></div>`).join('')}
     </div>

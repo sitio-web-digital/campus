@@ -2,6 +2,17 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.9.0',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'La ficha de la lead muestra "Última edición: quién y cuándo" (no editable) — clave cuando edita alguien distinto al vendedor.' },
+      { tipo: 'nuevo', texto: 'Actividad: los vendedores pueden cargar o corregir hasta 3 días para atrás (tabs Hoy/Ayer/… con marca de días sin cargar). El admin puede cargar cualquier fecha de cualquier vendedor.' },
+      { tipo: 'nuevo', texto: 'Al entrar al sistema, si al vendedor le faltan días de actividad recibe una notificación con los días pendientes y el link directo.' },
+      { tipo: 'nuevo', texto: 'El admin elige qué notificaciones recibir (deal nuevo, cambios de etapa) en Administración. El paso a Ganado no se puede silenciar; los avisos manuales tampoco.' },
+      { tipo: 'nuevo', texto: 'Cuando alguien modifica la lead de otro (típicamente el admin), el vendedor dueño recibe la notificación con el detalle.' },
+    ],
+  },
+  {
     version: '2.8.1',
     fecha: '2026-08-17',
     cambios: [
