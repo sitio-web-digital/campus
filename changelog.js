@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.8.0',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Campañas: se crean en Administración → Campañas, se eligen al cargar la lead, y cada dashboard muestra las campañas ganadoras (leads, ganadas, ingresos y conversión) para detectar ángulos ganadores.' },
+      { tipo: 'nuevo', texto: 'Ubicación de la lead: país (Argentina por defecto), provincia (con las 24 sugeridas) y ciudad. La ciudad se ve en la tarjeta del tablero.' },
+    ],
+  },
+  {
     version: '2.7.1',
     fecha: '2026-08-17',
     cambios: [

@@ -103,7 +103,8 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
     links = perfilLink;
   } else if (sistema === 'admin') {
     links = `
-        <a href="/admin" class="${active === 'admin' ? 'on' : ''}">${ICONS.equipo}<span>Usuarios</span></a>${perfilLink}`;
+        <a href="/admin" class="${active === 'admin' ? 'on' : ''}">${ICONS.equipo}<span>Usuarios</span></a>
+        <a href="/admin/campanas" class="${active === 'campanas' ? 'on' : ''}">${ICONS.metas}<span>Campañas</span></a>${perfilLink}`;
   } else if (sistema === 'gondolas' || sistema === 'estanterias' || sistema === 'sitioweb') {
     const b = '/' + sistema;
     links = `
@@ -613,7 +614,7 @@ function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPA
     return `
     <div class="kcard" ${puedeMover(d) ? 'draggable="true"' : ''} data-id="${d.id}">
       <a class="kcard-t" href="/deals/${d.id}">${esc(d.empresa)}</a>
-      <div class="kcard-m"><span class="mrr">${money(d.mrr)}${d.tipo_venta === 'Suscripción mensual' ? '<span style="font-weight:400">/mes</span>' : ''}</span><span>${esc(d.vendedor_name.split(' ')[0])}</span></div>
+      <div class="kcard-m"><span class="mrr">${money(d.mrr)}${d.tipo_venta === 'Suscripción mensual' ? '<span style="font-weight:400">/mes</span>' : ''}</span><span>${d.ciudad ? esc(d.ciudad) + ' · ' : ''}${esc(d.vendedor_name.split(' ')[0])}</span></div>
       ${pie}
     </div>`;
   };
@@ -680,7 +681,9 @@ function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPA
 
 const EVENTO_TIPO = { creado: ['Creado', '#3E9B57'], etapa: ['Etapa', '#14538C'], edicion: ['Edición', '#8494A6'] };
 
-function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], errAprob, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline' }) {
+const PROVINCIAS_AR = ['Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'];
+
+function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], errAprob, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
   const d = deal || {};
   const isNew = !deal;
   const opt = (list, sel) => list.map((o) => `<option value="${esc(o)}" ${o === sel ? 'selected' : ''}>${esc(o)}</option>`).join('');
@@ -731,6 +734,23 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], errAprob
       <div>
         <label>Contacto decisor</label>
         <input name="decisor" value="${esc(d.decisor)}" placeholder="Nombre y cargo de quien decide">
+      </div>
+      <div>
+        <label>Campaña de origen</label>
+        <select name="campana_id"><option value="">— Sin campaña —</option>${campanas.map((c) => `<option value="${c.id}" ${c.id === d.campana_id ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}</select>
+      </div>
+      <div>
+        <label>País</label>
+        <input name="pais" value="${esc(d.pais || 'Argentina')}" placeholder="Argentina">
+      </div>
+      <div>
+        <label>Provincia</label>
+        <input name="provincia" list="provincias-ar" value="${esc(d.provincia)}" placeholder="Ej: Tucumán">
+        <datalist id="provincias-ar">${PROVINCIAS_AR.map((p) => `<option value="${p}">`).join('')}</datalist>
+      </div>
+      <div>
+        <label>Ciudad</label>
+        <input name="ciudad" value="${esc(d.ciudad)}" placeholder="Ej: San Miguel de Tucumán">
       </div>
       ${isAdmin ? `
       <div>
@@ -893,6 +913,8 @@ function dashboardPage({ user, k }) {
     ${lineChart(k.actividad)}
     <p class="caption">El indicador adelantado: la actividad de hoy son las ventas de dentro de 1-2 meses. Si esta línea cae, el pipeline se seca.</p>
   </div>
+
+  ${tablaCampanas(k.campanas)}
 
   <h2>Deals sin próximo paso definido</h2>
   <div class="tablewrap"><table>
@@ -1243,6 +1265,51 @@ function reportesPage({ user, p, off, desde, hasta, periodos, r }) {
   <h2>Motivos de pérdida del período</h2>
   <div class="card">
     ${r.motivos.length ? r.motivos.map((m) => `<div class="prog-row"><span class="pl">${esc(m.label)}</span><div class="prog"><i style="width:${Math.round((m.n / Math.max(1, r.tot.perdidos)) * 100)}%;background:#C05450"></i></div><span class="pv">${m.n}</span></div>`).join('') : '<p class="muted small" style="margin:0">Sin deals perdidos en este período.</p>'}
+  </div>`
+  });
+}
+
+// Tabla de campañas ganadoras (compartida por los dashboards).
+function tablaCampanas(campanas) {
+  return `
+  <h2>Campañas: de dónde vienen las leads</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Campaña</th><th>Leads</th><th>Ganadas</th><th>Perdidas</th><th>Ingresos</th><th>Conversión</th></tr></thead>
+    <tbody>${campanas.length ? campanas.map((c) => `
+      <tr>
+        <td><strong>${esc(c.nombre)}</strong></td>
+        <td>${c.leads}</td>
+        <td>${c.ganadas}</td>
+        <td>${c.perdidas}</td>
+        <td><strong>${money(c.ingresos)}</strong></td>
+        <td>${c.leads > 0 ? Math.round((c.ganadas / c.leads) * 100) + '%' : '—'}</td>
+      </tr>`).join('') : '<tr><td colspan="6" class="muted">Sin leads con campaña todavía. Creá campañas en Administración → Campañas y elegilas al cargar la lead.</td></tr>'}</tbody>
+  </table></div>
+  <p class="caption">Ordenadas por ganadas e ingresos: las de arriba son tus ángulos ganadores. "Conversión" = ganadas ÷ leads de la campaña.</p>`;
+}
+
+function adminCampanasPage({ user, campanas }) {
+  return layout({
+    title: 'Campañas', user, active: 'campanas', sistema: 'admin',
+    body: `
+  <h1>Campañas</h1>
+  <p class="small muted">Las campañas son globales: los vendedores las eligen al cargar una lead en cualquier panel comercial, y cada dashboard muestra qué campañas traen las leads que ganan. Desactivar una campaña la saca del selector pero conserva sus estadísticas.</p>
+  <div class="card">
+    ${campanas.length ? campanas.map((c) => `
+    <div class="cfg-row">
+      <form method="post" action="/admin/campanas/${c.id}" class="cfg-inline">
+        <input type="hidden" name="accion" value="renombrar">
+        <input name="nombre" value="${esc(c.nombre)}">
+        <button class="btn secondary small">Renombrar</button>
+      </form>
+      <span class="muted small">${c.leads} lead${c.leads === 1 ? '' : 's'}</span>
+      ${c.activa ? '' : '<span class="chip chip--estado-cancelado">Inactiva</span>'}
+      <form method="post" action="/admin/campanas/${c.id}" style="display:inline"><input type="hidden" name="accion" value="toggle"><button class="btn secondary small">${c.activa ? 'Desactivar' : 'Activar'}</button></form>
+    </div>`).join('') : '<p class="muted small" style="margin:0">Todavía no hay campañas. Creá la primera abajo — ej: "Meta Ads góndolas agosto", "Google leads software", "Referidos".</p>'}
+    <form method="post" action="/admin/campanas" class="cfg-inline" style="margin-top:.6rem">
+      <input name="nombre" placeholder="Nueva campaña (ej: Meta Ads agosto)" required>
+      <button class="btn small">Crear campaña</button>
+    </form>
   </div>`
   });
 }
@@ -1706,6 +1773,7 @@ function panelDashboardPage({ user, k, campos, colores, etapas, info }) {
     <h2 style="margin-top:0">Funnel por etapa</h2>
     ${funnelHtml}
   </div>
+  ${tablaCampanas(k.campanas)}
   <h2>Deals sin próximo paso</h2>
   <div class="tablewrap"><table>
     <thead><tr><th>Empresa</th><th>Vendedor</th><th>Etapa</th><th>Última actualización</th></tr></thead>
@@ -1939,5 +2007,5 @@ module.exports = {
   loginPage, pipelinePage, dealFormModal, actividadPage, dashboardPage, adminPage, perfilPage, docsPage, changelogPage,
   notificacionesPage, objetivosPage, rankingPage, metasDetallePage, reportesPage, hubPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
-  panelActividadPage, panelObjetivosPage, panelRankingPage, panelDashboardPage, panelConfigPage, reporteImprimirPage,
+  panelActividadPage, panelObjetivosPage, panelRankingPage, panelDashboardPage, panelConfigPage, reporteImprimirPage, adminCampanasPage,
 };

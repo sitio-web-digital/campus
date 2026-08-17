@@ -23,6 +23,13 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS campanas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL UNIQUE,
+  activa INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS panel_etapas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   panel TEXT NOT NULL,
@@ -178,6 +185,13 @@ if (!dealCols.includes('aprobacion')) {
 // Migración 2.3.0: multi-panel (cfd | gondolas).
 if (!dealCols.includes('panel')) {
   db.exec("ALTER TABLE deals ADD COLUMN panel TEXT NOT NULL DEFAULT 'cfd'");
+}
+// Migración 2.8.0: campaña de origen y ubicación de la lead.
+if (!dealCols.includes('campana_id')) {
+  db.exec('ALTER TABLE deals ADD COLUMN campana_id INTEGER REFERENCES campanas(id)');
+  db.exec("ALTER TABLE deals ADD COLUMN pais TEXT DEFAULT 'Argentina'");
+  db.exec('ALTER TABLE deals ADD COLUMN provincia TEXT');
+  db.exec('ALTER TABLE deals ADD COLUMN ciudad TEXT');
 }
 // Migración 2.3.0: rol developer + permisos por sistema en users (rebuild por el CHECK).
 const userCols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);

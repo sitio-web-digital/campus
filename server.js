@@ -83,6 +83,7 @@ function notifyUser(userId, texto, url) {
 
 const CAMPOS_DEAL = {
   empresa: 'Empresa', tipo_venta: 'Tipo de venta', mrr: 'Valor', decisor: 'Decisor', origen: 'Origen',
+  campana_id: 'Campaña', pais: 'País', provincia: 'Provincia', ciudad: 'Ciudad',
   proximo_paso: 'Próximo paso', fecha_proximo_paso: 'Fecha próximo paso',
   fecha_primera_reunion: 'Fecha primera reunión', fecha_cierre: 'Fecha de cierre',
   motivo_perdida: 'Motivo de pérdida', user_id: 'Vendedor',
@@ -96,6 +97,9 @@ function diffDeal(antes, despues) {
     if (campo === 'user_id') {
       const nombre = (id) => db.prepare('SELECT name FROM users WHERE id = ?').get(id)?.name || '—';
       cambios.push(`${label}: ${nombre(a)} → ${nombre(b)}`);
+    } else if (campo === 'campana_id') {
+      const nc = (id) => (id ? db.prepare('SELECT nombre FROM campanas WHERE id = ?').get(id)?.nombre || '—' : '—');
+      cambios.push(`${label}: ${nc(a)} → ${nc(b)}`);
     } else if (campo === 'notas') {
       cambios.push('Notas actualizadas');
     } else {
@@ -158,6 +162,10 @@ function dealFromBody(body, user, panel = 'cfd', etapaActual = 'Lead', tipoActua
     fecha_primera_reunion: cleanDate(body.fecha_primera_reunion),
     fecha_cierre: cleanDate(body.fecha_cierre),
     motivo_perdida: cleanEnum(body.motivo_perdida, MOTIVOS),
+    campana_id: (() => { const id = parseInt(body.campana_id, 10); return Number.isFinite(id) && db.prepare('SELECT 1 FROM campanas WHERE id = ?').get(id) ? id : null; })(),
+    pais: clean(body.pais) || 'Argentina',
+    provincia: clean(body.provincia),
+    ciudad: clean(body.ciudad),
     notas: null,
     nota: clean(body.notas), // nota nueva → va al historial
   };
@@ -228,6 +236,7 @@ app.get('/deals/new', requireAuth, (req, res) => {
   const modal = V.dealFormModal({
     user: req.user, deal: null, vendedores, isAdmin: req.user.role === 'admin',
     panel, etapas: etapasDePanel(panel), backHref: homeDePanel(panel),
+    campanas: db.prepare('SELECT id, nombre FROM campanas WHERE activa = 1 ORDER BY nombre').all(),
   });
   renderModalSobrePipeline(req, res, modal, panel);
 });
@@ -241,8 +250,8 @@ app.post('/deals', requireAuth, (req, res) => {
   // Ganado por admin CON valor cargado: aprobado directo. Sin valor o ganado por vendedor: pendiente.
   d.aprobacion = d.etapa === 'Ganado' ? (req.user.role === 'admin' && d.mrr > 0 ? 'aprobado' : 'pendiente') : null;
   const { nota: _n1, ...dInsert } = d;
-  const r = db.prepare(`INSERT INTO deals (empresa, user_id, panel, etapa, tipo_venta, mrr, decisor, origen, proximo_paso, fecha_proximo_paso, fecha_primera_reunion, fecha_cierre, motivo_perdida, notas, aprobacion)
-    VALUES (@empresa, @user_id, @panel, @etapa, @tipo_venta, @mrr, @decisor, @origen, @proximo_paso, @fecha_proximo_paso, @fecha_primera_reunion, @fecha_cierre, @motivo_perdida, @notas, @aprobacion)`).run(dInsert);
+  const r = db.prepare(`INSERT INTO deals (empresa, user_id, panel, etapa, tipo_venta, mrr, decisor, origen, proximo_paso, fecha_proximo_paso, fecha_primera_reunion, fecha_cierre, motivo_perdida, campana_id, pais, provincia, ciudad, notas, aprobacion)
+    VALUES (@empresa, @user_id, @panel, @etapa, @tipo_venta, @mrr, @decisor, @origen, @proximo_paso, @fecha_proximo_paso, @fecha_primera_reunion, @fecha_cierre, @motivo_perdida, @campana_id, @pais, @provincia, @ciudad, @notas, @aprobacion)`).run(dInsert);
   logDealEvent(r.lastInsertRowid, req.user.id, 'creado', `Deal creado en etapa ${d.etapa}`);
   if (d.nota) logDealEvent(r.lastInsertRowid, req.user.id, 'edicion', `Nota: ${d.nota}`);
   notifyAdmins(req.user.id, `Deal nuevo: «${d.empresa}» (${d.etapa}) — ${req.user.name}${d.aprobacion === 'pendiente' ? ' — requiere aprobación' : ''}`, `/deals/${r.lastInsertRowid}`);
@@ -260,6 +269,7 @@ app.get('/deals/:id', requireAuth, (req, res) => {
   const modal = V.dealFormModal({
     user: req.user, deal, vendedores, isAdmin: req.user.role === 'admin', eventos, errAprob: req.query.err === 'valor',
     panel: deal.panel, etapas: etapasDePanel(deal.panel), backHref: homeDePanel(deal.panel),
+    campanas: db.prepare('SELECT id, nombre FROM campanas WHERE activa = 1 OR id = ? ORDER BY nombre').all(deal.campana_id || 0),
   });
   renderModalSobrePipeline(req, res, modal, deal.panel);
 });
@@ -282,7 +292,7 @@ app.post('/deals/:id', requireAuth, (req, res) => {
   const { nota: _n2, ...dUpdate } = d;
   db.prepare(`UPDATE deals SET empresa=@empresa, user_id=@user_id, panel=@panel, etapa=@etapa, tipo_venta=@tipo_venta, mrr=@mrr, decisor=@decisor, origen=@origen,
     proximo_paso=@proximo_paso, fecha_proximo_paso=@fecha_proximo_paso, fecha_primera_reunion=@fecha_primera_reunion,
-    fecha_cierre=@fecha_cierre, motivo_perdida=@motivo_perdida, notas=@notas, aprobacion=@aprobacion, updated_at=datetime('now') WHERE id=@id`)
+    fecha_cierre=@fecha_cierre, motivo_perdida=@motivo_perdida, campana_id=@campana_id, pais=@pais, provincia=@provincia, ciudad=@ciudad, notas=@notas, aprobacion=@aprobacion, updated_at=datetime('now') WHERE id=@id`)
     .run({ ...dUpdate, id: deal.id });
 
   // Historial: cambio de etapa es un evento propio; el resto va como edición.
@@ -406,7 +416,7 @@ app.get('/dashboard', requireAuth, requireAdmin, (req, res) => {
     FROM users u WHERE u.active = 1 ORDER BY u.name
   `).all(mesInicio, mesInicio, mesInicio, mesInicio, mesInicio, mesInicio);
 
-  res.send(V.dashboardPage({ user: req.user, k: { funnel, activos, mrrJuego, mrrNuevoMes, proyectosMes, winRate, motivos, actividad, sinPaso, estancados, porVendedor } }));
+  res.send(V.dashboardPage({ user: req.user, k: { funnel, activos, mrrJuego, mrrNuevoMes, proyectosMes, winRate, motivos, actividad, sinPaso, estancados, porVendedor, campanas: statsCampanas('cfd') } }));
 });
 
 /* ---------------- equipo ---------------- */
@@ -463,6 +473,43 @@ app.post('/admin/usuarios/:id/toggle', requireAuth, requireAdmin, (req, res) => 
   }
   res.redirect('/admin');
 });
+
+/* --- campañas (globales, se eligen en la lead de cualquier panel) --- */
+
+app.get('/admin/campanas', requireAuth, requireAdmin, (req, res) => {
+  const campanas = db.prepare(`SELECT c.*, (SELECT COUNT(*) FROM deals d WHERE d.campana_id = c.id) AS leads FROM campanas c ORDER BY c.activa DESC, c.nombre`).all();
+  res.send(V.adminCampanasPage({ user: req.user, campanas }));
+});
+
+app.post('/admin/campanas', requireAuth, requireAdmin, (req, res) => {
+  const nombre = clean(req.body.nombre);
+  if (nombre) { try { db.prepare('INSERT INTO campanas (nombre) VALUES (?)').run(nombre); } catch {} }
+  res.redirect('/admin/campanas');
+});
+
+app.post('/admin/campanas/:id', requireAuth, requireAdmin, (req, res) => {
+  const c = db.prepare('SELECT * FROM campanas WHERE id = ?').get(req.params.id);
+  if (c) {
+    if (req.body.accion === 'renombrar') {
+      const nombre = clean(req.body.nombre);
+      if (nombre) { try { db.prepare('UPDATE campanas SET nombre = ? WHERE id = ?').run(nombre, c.id); } catch {} }
+    } else if (req.body.accion === 'toggle') {
+      db.prepare('UPDATE campanas SET activa = 1 - activa WHERE id = ?').run(c.id);
+    }
+  }
+  res.redirect('/admin/campanas');
+});
+
+// Estadísticas de campañas de un panel: leads, ganadas aprobadas e ingresos.
+function statsCampanas(panel) {
+  return db.prepare(`SELECT COALESCE(c.nombre, 'Sin campaña') AS nombre,
+      COUNT(*) AS leads,
+      SUM(CASE WHEN d.etapa = 'Ganado' AND d.aprobacion = 'aprobado' THEN 1 ELSE 0 END) AS ganadas,
+      COALESCE(SUM(CASE WHEN d.etapa = 'Ganado' AND d.aprobacion = 'aprobado' THEN d.mrr END), 0) AS ingresos,
+      SUM(CASE WHEN d.etapa = 'Perdido' THEN 1 ELSE 0 END) AS perdidas
+    FROM deals d LEFT JOIN campanas c ON c.id = d.campana_id
+    WHERE d.panel = ? GROUP BY d.campana_id ORDER BY ganadas DESC, ingresos DESC, leads DESC`).all(panel);
+}
 
 // Aviso manual del admin: a un usuario puntual o global por rol.
 app.post('/admin/notificar', requireAuth, requireAdmin, (req, res) => {
@@ -835,7 +882,7 @@ for (const PANEL of PANELES_COMERCIALES) {
       .map((u) => ({ name: u.name, ...panelStats(slug, u.id, mesInicio) }));
     res.send(V.panelDashboardPage({
       user: req.user,
-      k: { funnel, activos, ingresosMes: g.m, ganadosMes: g.n, winRate, sinPaso, porVendedor },
+      k: { funnel, activos, ingresosMes: g.m, ganadosMes: g.n, winRate, sinPaso, porVendedor, campanas: statsCampanas(slug) },
       campos: camposPanel(slug), colores, etapas: etapasPanelCfg(slug).map((e) => e.nombre), info,
     }));
   });
