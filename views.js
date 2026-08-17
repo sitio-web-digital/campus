@@ -561,6 +561,16 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .card--accent { border-left:4px solid var(--role); }
 .row-actions { display:flex; gap:.4rem; flex-wrap:wrap; justify-content:flex-end; }
 
+/* --- administración: tabla de usuarios y ficha --- */
+.rowlink { cursor:pointer; }
+.rowlink a { text-decoration:none; color:var(--accent-ink); }
+.rowlink:hover td { background:var(--accent-soft); }
+tr.inactivo td { opacity:.55; }
+.users-tbl td { vertical-align:middle; }
+.udata { display:grid; grid-template-columns:repeat(auto-fit,minmax(11.5rem,1fr)); gap:.9rem; }
+.udata .l { font-size:.66rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); font-weight:700; }
+.udata .v { font-weight:600; margin-top:.2rem; line-height:1.35; }
+
 /* La barra de navegación nunca se corta: si no entra, se desliza (sin barra de scroll visible). */
 .nav-links { overflow-x:auto; scrollbar-width:none; max-width:100%; }
 .nav-links::-webkit-scrollbar { display:none; }
@@ -1002,14 +1012,31 @@ function dashboardPage({ user, k }) {
 }
 
 const ROL_LABEL = { admin: 'Administrador', vendedor: 'Vendedor', developer: 'Developer' };
+const ROL_COLOR = { admin: '#0F3459', vendedor: '#1D6FB8', developer: '#54657A' };
+const chipRol = (r) => `<span class="chip" style="background:${ROL_COLOR[r] || '#8494A6'}">${ROL_LABEL[r] || r}</span>`;
 
-function adminPage({ user, users, sistemas, resetInfo, prefs = {} }) {
-  const rolOpts = (sel) => Object.entries(ROL_LABEL).map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('');
-  const permChecks = (u) => sistemas.map(([slug, nombre]) => `
+// "hace 5 min" / "hace 2 h" / "hace 3 días" — para último login y última interacción.
+function tiempoRel(s) {
+  if (!s) return '—';
+  const ms = Date.now() - new Date(s.replace(' ', 'T') + 'Z').getTime();
+  if (!Number.isFinite(ms) || ms < 0) return fechaHora(s);
+  const min = Math.floor(ms / 60000);
+  if (min < 1) return 'ahora';
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `hace ${h} h`;
+  const d = Math.floor(h / 24);
+  if (d < 31) return `hace ${d} día${d === 1 ? '' : 's'}`;
+  return fechaHora(s);
+}
+
+const rolOpts = (sel) => Object.entries(ROL_LABEL).map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('');
+const permChecks = (sistemas, u) => sistemas.map(([slug, nombre]) => `
     <label class="perm"><input type="checkbox" name="permisos" value="${slug}" ${u && u.permisos.includes(slug) ? 'checked' : ''}> ${esc(nombre)}</label>`).join('');
+
+function adminPage({ user, users, sistemas, prefs = {} }) {
   return layout({
     title: 'Administración', user, active: 'admin', sistema: 'admin',
-    msg: resetInfo ? `Nueva clave temporal para ${resetInfo.name}: ${resetInfo.password} — pasásela por un canal seguro y pedile que la cambie en Perfil.` : null,
     body: `
   <h1>Usuarios y permisos</h1>
 
@@ -1050,24 +1077,22 @@ function adminPage({ user, users, sistemas, resetInfo, prefs = {} }) {
     </form>
   </div>
 
-  <p class="small muted">Los administradores tienen acceso total a todos los sistemas (los permisos no les aplican). A vendedores y developers habilitales solo los sistemas que necesiten.</p>
-  ${users.map((u) => `
-  <div class="card">
-    <div class="deal-top">
-      <div><strong>${esc(u.name)}</strong> <span class="muted small">· ${esc(u.email)}</span> ${u.active ? '' : '<span class="chip chip--estado-cancelado">Inactivo</span>'}</div>
-      <div class="row-actions">
-        ${u.id !== user.id ? `
-        <form method="post" action="/admin/usuarios/${u.id}/toggle" style="display:inline"><button class="btn secondary small">${u.active ? 'Desactivar' : 'Activar'}</button></form>
-        <form method="post" action="/admin/usuarios/${u.id}/reset" style="display:inline" onsubmit="return confirm('¿Generar una clave nueva para ${esc(u.name)}?')"><button class="btn secondary small">Resetear clave</button></form>` : '<span class="muted small">(vos)</span>'}
-      </div>
-    </div>
-    ${u.id !== user.id ? `
-    <form method="post" action="/admin/usuarios/${u.id}" class="perm-row">
-      <select name="role" style="width:auto">${rolOpts(u.role)}</select>
-      ${permChecks(u)}
-      <button class="btn small">Guardar</button>
-    </form>` : ''}
-  </div>`).join('')}
+  <h2>Equipo</h2>
+  <p class="small muted">Tocá un usuario para ver su ficha: datos, rol, permisos y el historial de todo lo que hizo en el sistema.</p>
+  <div class="tablewrap"><table class="users-tbl">
+    <thead><tr><th>Usuario</th><th>Rol</th><th>Sistemas</th><th>Estado</th><th>Alta</th><th>Último login</th><th>Última interacción</th></tr></thead>
+    <tbody>${users.map((u) => `
+      <tr class="rowlink ${u.active ? '' : 'inactivo'}" onclick="location='/admin/usuarios/${u.id}'">
+        <td><a href="/admin/usuarios/${u.id}" onclick="event.stopPropagation()"><strong>${esc(u.name)}</strong></a>${u.id === user.id ? ' <span class="muted small">(vos)</span>' : ''}<div class="small muted">${esc(u.email)}</div></td>
+        <td>${chipRol(u.role)}</td>
+        <td class="small muted">${u.role === 'admin' ? 'Todos' : (u.permisos.length || '—')}</td>
+        <td>${u.active ? '<span class="chip chip--estado-pagado">Activo</span>' : '<span class="chip chip--estado-cancelado">Inactivo</span>'}</td>
+        <td class="small">${fecha(u.created_at)}</td>
+        <td class="small">${u.last_login_at ? tiempoRel(u.last_login_at) : '<span class="muted">Nunca entró</span>'}</td>
+        <td class="small">${u.last_seen_at ? tiempoRel(u.last_seen_at) : '—'}</td>
+      </tr>`).join('')}</tbody>
+  </table></div>
+  <p class="caption">Los administradores tienen acceso total a todos los sistemas (los permisos no les aplican). "Última interacción" es la última vez que la persona usó el sistema, aunque no haya vuelto a loguearse.</p>
 
   <h2>Crear usuario</h2>
   <form method="post" action="/admin/usuarios" class="card">
@@ -1078,9 +1103,59 @@ function adminPage({ user, users, sistemas, resetInfo, prefs = {} }) {
       <div><label>Rol</label><select name="role">${rolOpts('vendedor')}</select></div>
     </div>
     <label>Permisos por sistema</label>
-    <div class="perm-row">${permChecks({ permisos: ['cfd', 'cobranza'] })}</div>
+    <div class="perm-row">${permChecks(sistemas, { permisos: ['cfd', 'cobranza'] })}</div>
     <div style="margin-top:1rem"><button class="btn">Crear usuario</button></div>
   </form>`
+  });
+}
+
+/* --------- ficha de usuario (admin) --------- */
+
+const UEVENTO_TIPO = {
+  creado: ['Deal', '#3E9B57'], etapa: ['Etapa', '#14538C'], edicion: ['Edición', '#8494A6'],
+  login: ['Sesión', '#1D6FB8'], actividad: ['Actividad', '#C08A2E'], cuenta: ['Cuenta', '#54657A'],
+};
+
+function adminUserPage({ user, target, sistemas, historial = [], resetInfo }) {
+  const esYo = target.id === user.id;
+  return layout({
+    title: `Usuario · ${target.name}`, user, active: 'admin', sistema: 'admin',
+    msg: resetInfo ? `Nueva clave temporal para ${resetInfo.name}: ${resetInfo.password} — pasásela por un canal seguro y pedile que la cambie en Perfil.` : null,
+    body: `
+  <div class="toolbar"><a class="btn secondary small" href="/admin">← Usuarios</a></div>
+  <h1 style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">${esc(target.name)} ${chipRol(target.role)}${target.active ? '' : '<span class="chip chip--estado-cancelado">Inactivo</span>'}</h1>
+
+  <div class="card">
+    <div class="udata">
+      <div><div class="l">Email</div><div class="v">${esc(target.email)}</div></div>
+      <div><div class="l">Alta en el sistema</div><div class="v">${fechaHora(target.created_at)}</div></div>
+      <div><div class="l">Último login</div><div class="v">${target.last_login_at ? `${tiempoRel(target.last_login_at)}<div class="small muted">${fechaHora(target.last_login_at)}</div>` : 'Nunca entró'}</div></div>
+      <div><div class="l">Última interacción</div><div class="v">${target.last_seen_at ? `${tiempoRel(target.last_seen_at)}<div class="small muted">${fechaHora(target.last_seen_at)}</div>` : '—'}</div></div>
+    </div>
+  </div>
+
+  ${esYo ? '<p class="small muted">Este es tu propio usuario: tu clave se cambia desde Perfil, y tu rol no se puede degradar desde acá.</p>' : `
+  <div class="card">
+    <h3 style="margin-top:0">Rol y permisos</h3>
+    <form method="post" action="/admin/usuarios/${target.id}" class="perm-row">
+      <select name="role" style="width:auto">${rolOpts(target.role)}</select>
+      ${permChecks(sistemas, target)}
+      <button class="btn small">Guardar</button>
+    </form>
+    <div class="row-actions" style="justify-content:flex-start;margin-top:.9rem">
+      <form method="post" action="/admin/usuarios/${target.id}/toggle" style="display:inline"><button class="btn secondary small">${target.active ? 'Desactivar cuenta' : 'Activar cuenta'}</button></form>
+      <form method="post" action="/admin/usuarios/${target.id}/reset" style="display:inline" onsubmit="return confirm('¿Generar una clave nueva para ${esc(target.name)}?')"><button class="btn secondary small">Resetear clave</button></form>
+    </div>
+  </div>`}
+
+  <h2>Historial de acciones</h2>
+  <div class="card hist">
+    ${historial.length ? historial.map((e) => {
+      const [label, color] = UEVENTO_TIPO[e.tipo] || ['Cambio', '#54657A'];
+      return `<div class="hist-item"><span class="chip" style="background:${color}">${label}</span><span>${e.url ? `<a href="${e.url}">${esc(e.texto)}</a>` : esc(e.texto)}</span><span class="cuando" style="margin-left:auto">${e.soloFecha ? fecha(e.cuando) : fechaHora(e.cuando)}</span></div>`;
+    }).join('') : '<p class="muted small" style="margin:0">Sin acciones registradas todavía. Desde ahora quedan acá los logins, deals tocados, días de actividad cargados y cambios de cuenta.</p>'}
+  </div>
+  ${historial.length >= 120 ? '<p class="caption">Se muestran las últimas 120 acciones.</p>' : ''}`
   });
 }
 
@@ -2103,7 +2178,7 @@ function changelogPage({ user, versiones }) {
 }
 
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, actividadPage, dashboardPage, adminPage, perfilPage, docsPage, changelogPage,
+  loginPage, pipelinePage, dealFormModal, actividadPage, dashboardPage, adminPage, adminUserPage, perfilPage, docsPage, changelogPage,
   notificacionesPage, objetivosPage, rankingPage, metasDetallePage, reportesPage, hubPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelDashboardPage, panelConfigPage, reporteImprimirPage, campanasPage,

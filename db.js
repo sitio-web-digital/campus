@@ -251,6 +251,19 @@ if (!userCols2.includes('notif_prefs')) {
   db.exec("ALTER TABLE users ADD COLUMN notif_prefs TEXT NOT NULL DEFAULT '{}'");
 }
 
+// Migración 2.10.0: último login / última interacción + historial de acciones del usuario.
+if (!userCols2.includes('last_login_at')) {
+  db.exec('ALTER TABLE users ADD COLUMN last_login_at TEXT');
+  db.exec('ALTER TABLE users ADD COLUMN last_seen_at TEXT');
+}
+db.exec(`CREATE TABLE IF NOT EXISTS user_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  tipo TEXT NOT NULL,
+  detalle TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);`);
+
 // Sistemas del ecosistema (para permisos por usuario).
 const SISTEMAS = [
   ['cfd', 'Comercial Cloud For Deploy'],

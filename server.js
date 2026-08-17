@@ -46,7 +46,7 @@ if (seeded) {
 
 function currentUser(req) {
   if (!req.session.uid) return null;
-  const u = db.prepare('SELECT id, name, email, role, active, permisos FROM users WHERE id = ? AND active = 1').get(req.session.uid) || null;
+  const u = db.prepare('SELECT id, name, email, role, active, permisos, last_seen_at FROM users WHERE id = ? AND active = 1').get(req.session.uid) || null;
   if (u) { try { u.permisos = JSON.parse(u.permisos || '[]'); } catch { u.permisos = []; } }
   return u;
 }
@@ -59,9 +59,17 @@ function requireAuth(req, res, next) {
   const user = currentUser(req);
   if (!user) return res.redirect('/login');
   user.unread = db.prepare('SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND leida = 0').get(user.id).c;
+  // Última interacción: se estampa como mucho una vez por minuto para no escribir en cada request.
+  const haceUnMin = new Date(Date.now() - 60000).toISOString().replace('T', ' ').slice(0, 19);
+  if (!user.last_seen_at || user.last_seen_at < haceUnMin) {
+    db.prepare("UPDATE users SET last_seen_at = datetime('now') WHERE id = ?").run(user.id);
+  }
   req.user = user;
   next();
 }
+
+const logUserEvent = (userId, tipo, detalle) =>
+  db.prepare('INSERT INTO user_events (user_id, tipo, detalle) VALUES (?, ?, ?)').run(userId, tipo, detalle);
 
 /* --- historial de deals y notificaciones --- */
 
@@ -191,6 +199,8 @@ app.post('/login', (req, res) => {
     return res.send(V.loginPage({ err: 'Email o contraseña incorrectos.' }));
   }
   req.session.uid = user.id;
+  db.prepare("UPDATE users SET last_login_at = datetime('now'), last_seen_at = datetime('now') WHERE id = ?").run(user.id);
+  logUserEvent(user.id, 'login', 'Inició sesión');
   if (user.role === 'vendedor') avisarDiasFaltantes(user);
   res.redirect('/');
 });
@@ -496,8 +506,30 @@ app.get('/dashboard', requireAuth, requireAdmin, (req, res) => {
 const ROLES = ['admin', 'vendedor', 'developer'];
 
 function usuariosAdmin() {
-  return db.prepare('SELECT id, name, email, role, active, permisos FROM users ORDER BY role, name').all()
+  return db.prepare('SELECT id, name, email, role, active, permisos, created_at, last_login_at, last_seen_at FROM users ORDER BY role, name').all()
     .map((u) => { try { u.permisos = JSON.parse(u.permisos || '[]'); } catch { u.permisos = []; } return u; });
+}
+
+// Historial de un usuario: deals que tocó + sesiones y cambios de cuenta + días de actividad cargados.
+function historialUsuario(userId, limite = 120) {
+  const eventos = [];
+  const VERBO = { creado: 'Creó el deal', etapa: 'Movió el deal', edicion: 'Editó el deal' };
+  for (const e of db.prepare(`SELECT e.tipo, e.detalle, e.created_at, d.id AS deal_id, d.empresa, d.panel
+      FROM deal_events e JOIN deals d ON d.id = e.deal_id WHERE e.user_id = ? ORDER BY e.created_at DESC LIMIT ?`).all(userId, limite)) {
+    const P = PANELES_COMERCIALES.find((p) => p.slug === e.panel);
+    eventos.push({ tipo: e.tipo, texto: `${VERBO[e.tipo] || 'Cambió el deal'} «${e.empresa}»${P ? ` (${P.nombre})` : ''}${e.detalle ? ': ' + e.detalle : ''}`, url: `/deals/${e.deal_id}`, cuando: e.created_at });
+  }
+  for (const e of db.prepare('SELECT tipo, detalle, created_at FROM user_events WHERE user_id = ? ORDER BY created_at DESC LIMIT ?').all(userId, limite)) {
+    eventos.push({ tipo: e.tipo, texto: e.detalle || e.tipo, cuando: e.created_at });
+  }
+  for (const a of db.prepare('SELECT fecha FROM activity WHERE user_id = ? ORDER BY fecha DESC LIMIT 45').all(userId)) {
+    eventos.push({ tipo: 'actividad', texto: 'Cargó su actividad diaria en Comercial Cloud For Deploy', cuando: a.fecha + ' 23:59:59', soloFecha: true });
+  }
+  for (const a of db.prepare('SELECT panel, fecha FROM panel_activity WHERE user_id = ? ORDER BY fecha DESC LIMIT 45').all(userId)) {
+    const P = PANELES_COMERCIALES.find((p) => p.slug === a.panel);
+    eventos.push({ tipo: 'actividad', texto: `Cargó su actividad diaria en Comercial ${P ? P.nombre : a.panel}`, cuando: a.fecha + ' 23:59:59', soloFecha: true });
+  }
+  return eventos.sort((a, b) => (a.cuando < b.cuando ? 1 : -1)).slice(0, limite);
 }
 
 function permisosDeBody(body) {
@@ -515,14 +547,22 @@ app.get('/admin', requireAuth, requireAdmin, (req, res) => {
   res.send(V.adminPage({ user: req.user, users: usuariosAdmin(), sistemas: SISTEMAS, prefs }));
 });
 
+// Ficha del usuario: datos, permisos y su historial de acciones.
+app.get('/admin/usuarios/:id', requireAuth, requireAdmin, (req, res) => {
+  const target = usuariosAdmin().find((u) => u.id === parseInt(req.params.id, 10));
+  if (!target) return res.redirect('/admin');
+  res.send(V.adminUserPage({ user: req.user, target, sistemas: SISTEMAS, historial: historialUsuario(target.id) }));
+});
+
 app.post('/admin/usuarios', requireAuth, requireAdmin, (req, res) => {
   const name = clean(req.body.name); const email = clean(req.body.email)?.toLowerCase();
   const password = req.body.password || '';
   const role = ROLES.includes(req.body.role) ? req.body.role : 'vendedor';
   if (name && email && password.length >= 6) {
     try {
-      db.prepare('INSERT INTO users (name, email, password_hash, role, permisos) VALUES (?, ?, ?, ?, ?)')
+      const r = db.prepare('INSERT INTO users (name, email, password_hash, role, permisos) VALUES (?, ?, ?, ?, ?)')
         .run(name, email, bcrypt.hashSync(password, 10), role, permisosDeBody(req.body));
+      logUserEvent(r.lastInsertRowid, 'cuenta', `Cuenta creada por ${req.user.name}`);
     } catch (e) { /* email duplicado: ignorar y volver a la lista */ }
   }
   res.redirect('/admin');
@@ -530,19 +570,23 @@ app.post('/admin/usuarios', requireAuth, requireAdmin, (req, res) => {
 
 // Cambiar rol (promocionar/degradar) y permisos por sistema.
 app.post('/admin/usuarios/:id', requireAuth, requireAdmin, (req, res) => {
-  const target = db.prepare('SELECT id FROM users WHERE id = ?').get(req.params.id);
+  const target = db.prepare('SELECT id, role FROM users WHERE id = ?').get(req.params.id);
   if (target && target.id !== req.user.id) {
     const role = ROLES.includes(req.body.role) ? req.body.role : 'vendedor';
     db.prepare('UPDATE users SET role = ?, permisos = ? WHERE id = ?').run(role, permisosDeBody(req.body), target.id);
+    logUserEvent(target.id, 'cuenta', `${req.user.name} actualizó su rol y permisos${role !== target.role ? ` (ahora ${role})` : ''}`);
   }
-  res.redirect('/admin');
+  res.redirect(`/admin/usuarios/${req.params.id}`);
 });
 
 app.post('/admin/usuarios/:id/toggle', requireAuth, requireAdmin, (req, res) => {
-  if (parseInt(req.params.id, 10) !== req.user.id) {
-    db.prepare('UPDATE users SET active = 1 - active WHERE id = ?').run(req.params.id);
+  const id = parseInt(req.params.id, 10);
+  if (id !== req.user.id) {
+    db.prepare('UPDATE users SET active = 1 - active WHERE id = ?').run(id);
+    const u = db.prepare('SELECT active FROM users WHERE id = ?').get(id);
+    if (u) logUserEvent(id, 'cuenta', `${req.user.name} ${u.active ? 'activó' : 'desactivó'} la cuenta`);
   }
-  res.redirect('/admin');
+  res.redirect(`/admin/usuarios/${id}`);
 });
 
 /* --- campañas (por panel: cada empresa gestiona las suyas) --- */
@@ -616,7 +660,9 @@ app.post('/admin/usuarios/:id/reset', requireAuth, requireAdmin, (req, res) => {
   if (!target || target.id === req.user.id) return res.redirect('/admin');
   const password = require('crypto').randomBytes(4).toString('hex');
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(password, 10), target.id);
-  res.send(V.adminPage({ user: req.user, users: usuariosAdmin(), sistemas: SISTEMAS, resetInfo: { name: target.name, password } }));
+  logUserEvent(target.id, 'cuenta', `${req.user.name} le reseteó la clave`);
+  const t = usuariosAdmin().find((u) => u.id === target.id);
+  res.send(V.adminUserPage({ user: req.user, target: t, sistemas: SISTEMAS, historial: historialUsuario(t.id), resetInfo: { name: target.name, password } }));
 });
 
 /* ---------------- objetivos y ranking ---------------- */
@@ -1211,6 +1257,7 @@ app.post('/perfil/password', requireAuth, (req, res) => {
   const full = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   if (bcrypt.compareSync(req.body.current || '', full.password_hash) && (req.body.next || '').length >= 6) {
     db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(req.body.next, 10), req.user.id);
+    logUserEvent(req.user.id, 'cuenta', 'Cambió su contraseña');
   }
   res.redirect('/perfil');
 });

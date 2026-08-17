@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.10.0',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Administración renovada: los usuarios ahora son una tabla compacta con rol, sistemas habilitados, estado, fecha de alta, último login y última interacción ("hace 5 min", "hace 2 días").' },
+      { tipo: 'nuevo', texto: 'Ficha de usuario: tocando cualquier usuario se abre su ficha con los datos de la cuenta, la edición de rol y permisos, y las acciones de desactivar / resetear clave.' },
+      { tipo: 'nuevo', texto: 'Historial por usuario: la ficha muestra todo lo que hizo la persona — logins, deals creados/movidos/editados (con link), días de actividad cargados y cambios de cuenta (quién le cambió permisos o le reseteó la clave).' },
+    ],
+  },
+  {
     version: '2.9.1',
     fecha: '2026-08-17',
     cambios: [
