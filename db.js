@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS panel_goals (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   panel TEXT NOT NULL,
   user_id INTEGER NOT NULL REFERENCES users(id),
-  periodo TEXT NOT NULL CHECK (periodo IN ('semana','mes')),
+  periodo TEXT NOT NULL CHECK (periodo IN ('dia','semana','mes')),
   valores TEXT NOT NULL DEFAULT '{}',
   UNIQUE (panel, user_id, periodo)
 );
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE TABLE IF NOT EXISTS goals (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id),
-  periodo TEXT NOT NULL CHECK (periodo IN ('semana','mes')),
+  periodo TEXT NOT NULL CHECK (periodo IN ('dia','semana','mes')),
   toques INTEGER NOT NULL DEFAULT 0,
   reuniones INTEGER NOT NULL DEFAULT 0,
   ganados INTEGER NOT NULL DEFAULT 0,
@@ -239,6 +239,46 @@ for (const p of PANELES_COMERCIALES) {
     db.prepare('INSERT INTO commission_rules (tipo_venta, config) VALUES (?, ?)')
       .run(p.slug, JSON.stringify({ tipo: 'flat', pct: 5, nota: `Venta de ${p.nombre}: comisión única cobrable al momento.` }));
   }
+}
+
+// Migración 2.6.0: los objetivos suman el período diario (rebuild por el CHECK de periodo).
+const goalsSql = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'goals'").get()?.sql || '';
+if (goalsSql && !goalsSql.includes("'dia'")) {
+  db.pragma('foreign_keys = OFF');
+  db.exec(`
+    CREATE TABLE goals_mig (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      periodo TEXT NOT NULL CHECK (periodo IN ('dia','semana','mes')),
+      toques INTEGER NOT NULL DEFAULT 0,
+      reuniones INTEGER NOT NULL DEFAULT 0,
+      ganados INTEGER NOT NULL DEFAULT 0,
+      mrr REAL NOT NULL DEFAULT 0,
+      UNIQUE (user_id, periodo)
+    );
+    INSERT INTO goals_mig (id, user_id, periodo, toques, reuniones, ganados, mrr) SELECT id, user_id, periodo, toques, reuniones, ganados, mrr FROM goals;
+    DROP TABLE goals;
+    ALTER TABLE goals_mig RENAME TO goals;
+  `);
+  db.pragma('foreign_keys = ON');
+}
+const pgoalsSql = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'panel_goals'").get()?.sql || '';
+if (pgoalsSql && !pgoalsSql.includes("'dia'")) {
+  db.pragma('foreign_keys = OFF');
+  db.exec(`
+    CREATE TABLE panel_goals_mig (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      panel TEXT NOT NULL,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      periodo TEXT NOT NULL CHECK (periodo IN ('dia','semana','mes')),
+      valores TEXT NOT NULL DEFAULT '{}',
+      UNIQUE (panel, user_id, periodo)
+    );
+    INSERT INTO panel_goals_mig (id, panel, user_id, periodo, valores) SELECT id, panel, user_id, periodo, valores FROM panel_goals;
+    DROP TABLE panel_goals;
+    ALTER TABLE panel_goals_mig RENAME TO panel_goals;
+  `);
+  db.pragma('foreign_keys = ON');
 }
 
 // Migración 2.5.0: las notas de los deals pasan al historial (el campo del formulario queda siempre limpio).

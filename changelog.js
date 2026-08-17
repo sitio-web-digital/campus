@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.6.0',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Metas diarias: cada vendedor puede tener objetivos por día además de semanales y mensuales, con columna "Hoy" y progreso que se reinicia cada día. En todos los paneles comerciales.' },
+      { tipo: 'mejora', texto: 'Los rankings suman el corte "Hoy".' },
+    ],
+  },
+  {
     version: '2.5.0',
     fecha: '2026-08-17',
     cambios: [

@@ -506,7 +506,7 @@ function statsPeriodo(userId, desde) {
 }
 
 function getGoals(userId) {
-  const out = { semana: null, mes: null };
+  const out = { dia: null, semana: null, mes: null };
   for (const row of db.prepare('SELECT * FROM goals WHERE user_id = ?').all(userId)) out[row.periodo] = row;
   return out;
 }
@@ -515,11 +515,11 @@ app.get('/objetivos', requireAuth, requireSistema('cfd'), (req, res) => {
   const usuarios = req.user.role === 'admin'
     ? db.prepare("SELECT id, name FROM users WHERE active = 1 ORDER BY role = 'admin', name").all()
     : [{ id: req.user.id, name: req.user.name }];
-  const desde = { semana: inicioSemana(), mes: inicioMes() };
+  const desde = { dia: hoyAR(), semana: inicioSemana(), mes: inicioMes() };
   const data = usuarios.map((u) => ({
     u,
     goals: getGoals(u.id),
-    stats: { semana: statsPeriodo(u.id, desde.semana), mes: statsPeriodo(u.id, desde.mes) },
+    stats: { dia: statsPeriodo(u.id, desde.dia), semana: statsPeriodo(u.id, desde.semana), mes: statsPeriodo(u.id, desde.mes) },
   }));
   res.send(V.objetivosPage({ user: req.user, data, esAdmin: req.user.role === 'admin' }));
 });
@@ -529,6 +529,7 @@ app.post('/objetivos/:userId', requireAuth, requireAdmin, (req, res) => {
   if (target) {
     const up = db.prepare(`INSERT INTO goals (user_id, periodo, toques, reuniones, ganados, mrr) VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(user_id, periodo) DO UPDATE SET toques=excluded.toques, reuniones=excluded.reuniones, ganados=excluded.ganados, mrr=excluded.mrr`);
+    up.run(target.id, 'dia', cleanInt(req.body.d_toques), cleanInt(req.body.d_reuniones), cleanInt(req.body.d_ganados), cleanNum(req.body.d_mrr) || 0);
     up.run(target.id, 'semana', cleanInt(req.body.s_toques), cleanInt(req.body.s_reuniones), cleanInt(req.body.s_ganados), cleanNum(req.body.s_mrr) || 0);
     up.run(target.id, 'mes', cleanInt(req.body.m_toques), cleanInt(req.body.m_reuniones), cleanInt(req.body.m_ganados), cleanNum(req.body.m_mrr) || 0);
   }
@@ -540,6 +541,7 @@ app.post('/objetivos-generales', requireAuth, requireAdmin, (req, res) => {
   const up = db.prepare(`INSERT INTO goals (user_id, periodo, toques, reuniones, ganados, mrr) VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(user_id, periodo) DO UPDATE SET toques=excluded.toques, reuniones=excluded.reuniones, ganados=excluded.ganados, mrr=excluded.mrr`);
   for (const u of db.prepare("SELECT id FROM users WHERE role = 'vendedor' AND active = 1").all()) {
+    up.run(u.id, 'dia', cleanInt(req.body.d_toques), cleanInt(req.body.d_reuniones), cleanInt(req.body.d_ganados), cleanNum(req.body.d_mrr) || 0);
     up.run(u.id, 'semana', cleanInt(req.body.s_toques), cleanInt(req.body.s_reuniones), cleanInt(req.body.s_ganados), cleanNum(req.body.s_mrr) || 0);
     up.run(u.id, 'mes', cleanInt(req.body.m_toques), cleanInt(req.body.m_reuniones), cleanInt(req.body.m_ganados), cleanNum(req.body.m_mrr) || 0);
   }
@@ -679,8 +681,8 @@ app.get('/reportes.csv', requireAuth, requireAdmin, (req, res) => {
 });
 
 app.get('/ranking', requireAuth, requireSistema('cfd'), (req, res) => {
-  const periodo = req.query.p === 'mes' ? 'mes' : 'semana';
-  const desde = periodo === 'mes' ? inicioMes() : inicioSemana();
+  const periodo = req.query.p === 'mes' ? 'mes' : req.query.p === 'dia' ? 'dia' : 'semana';
+  const desde = periodo === 'mes' ? inicioMes() : periodo === 'dia' ? hoyAR() : inicioSemana();
   const usuarios = db.prepare('SELECT id, name FROM users WHERE active = 1').all();
   const rows = usuarios.map((u) => {
     const s = statsPeriodo(u.id, desde);
@@ -733,7 +735,7 @@ function panelStats(slug, userId, desde) {
 }
 
 const panelGoalsDe = (slug, userId) => {
-  const out = { semana: {}, mes: {} };
+  const out = { dia: {}, semana: {}, mes: {} };
   for (const r of db.prepare('SELECT * FROM panel_goals WHERE panel = ? AND user_id = ?').all(slug, userId)) { try { out[r.periodo] = JSON.parse(r.valores || '{}'); } catch {} }
   return out;
 };
@@ -742,7 +744,7 @@ function guardarGoalsPanel(slug, userId, body) {
   const campos = camposPanel(slug);
   const up = db.prepare(`INSERT INTO panel_goals (panel, user_id, periodo, valores) VALUES (?, ?, ?, ?)
     ON CONFLICT(panel, user_id, periodo) DO UPDATE SET valores = excluded.valores`);
-  for (const [pref, periodo] of [['s', 'semana'], ['m', 'mes']]) {
+  for (const [pref, periodo] of [['d', 'dia'], ['s', 'semana'], ['m', 'mes']]) {
     const v = {};
     for (const c of campos) v['c' + c.id] = cleanNum(body[`${pref}_c${c.id}`]) || 0;
     v.ganados = cleanNum(body[`${pref}_ganados`]) || 0;
@@ -784,10 +786,10 @@ for (const PANEL of PANELES_COMERCIALES) {
     const usuarios = esAdmin
       ? db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY role = 'admin', name").all()
       : [{ id: req.user.id, name: req.user.name }];
-    const desde = { semana: inicioSemana(), mes: inicioMes() };
+    const desde = { dia: hoyAR(), semana: inicioSemana(), mes: inicioMes() };
     const data = usuarios.map((u) => ({
       u, goals: panelGoalsDe(slug, u.id),
-      stats: { semana: panelStats(slug, u.id, desde.semana), mes: panelStats(slug, u.id, desde.mes) },
+      stats: { dia: panelStats(slug, u.id, desde.dia), semana: panelStats(slug, u.id, desde.semana), mes: panelStats(slug, u.id, desde.mes) },
     }));
     res.send(V.panelObjetivosPage({ user: req.user, campos: camposPanel(slug), data, esAdmin, info }));
   });
@@ -804,8 +806,8 @@ for (const PANEL of PANELES_COMERCIALES) {
   });
 
   app.get(base + '/ranking', requireAuth, requireSistema(slug), (req, res) => {
-    const periodo = req.query.p === 'mes' ? 'mes' : 'semana';
-    const desde = periodo === 'mes' ? inicioMes() : inicioSemana();
+    const periodo = req.query.p === 'mes' ? 'mes' : req.query.p === 'dia' ? 'dia' : 'semana';
+    const desde = periodo === 'mes' ? inicioMes() : periodo === 'dia' ? hoyAR() : inicioSemana();
     const rows = db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer'").all()
       .map((u) => {
         const st = panelStats(slug, u.id, desde);

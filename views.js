@@ -1048,6 +1048,7 @@ function objetivosPage({ user, data, esAdmin }) {
     <p class="small muted">Aplica los mismos objetivos a todos los vendedores activos de una sola vez (pisa los individuales). Después podés ajustar cada uno en su tarjeta.</p>
     <form method="post" action="/objetivos-generales">
       <div class="metas-grid">
+        <div><strong class="small">Diario</strong><div class="goal-inputs">${METRICAS.map(([campo, label]) => `<div><label>${label}</label><input name="d_${campo}" type="number" min="0" step="any" inputmode="numeric" placeholder="0"></div>`).join('')}</div></div>
         <div><strong class="small">Semanal</strong><div class="goal-inputs">${METRICAS.map(([campo, label]) => `<div><label>${label}</label><input name="s_${campo}" type="number" min="0" step="any" inputmode="numeric" placeholder="0"></div>`).join('')}</div></div>
         <div><strong class="small">Mensual</strong><div class="goal-inputs">${METRICAS.map(([campo, label]) => `<div><label>${label}</label><input name="m_${campo}" type="number" min="0" step="any" inputmode="numeric" placeholder="0"></div>`).join('')}</div></div>
       </div>
@@ -1062,6 +1063,10 @@ function objetivosPage({ user, data, esAdmin }) {
     </div>
     <div class="metas-grid">
       <div>
+        <h4 style="margin:.2rem 0 .4rem">Hoy</h4>
+        ${progreso(goals.dia, stats.dia)}
+      </div>
+      <div>
         <h4 style="margin:.2rem 0 .4rem">Esta semana</h4>
         ${progreso(goals.semana, stats.semana)}
       </div>
@@ -1075,6 +1080,7 @@ function objetivosPage({ user, data, esAdmin }) {
       <summary class="small" style="cursor:pointer;color:var(--accent-ink);font-weight:600">Definir objetivos de ${esc(u.name.split(' ')[0])}</summary>
       <form method="post" action="/objetivos/${u.id}">
         <div class="metas-grid" style="margin-top:.5rem">
+          <div><strong class="small">Diario</strong><div class="goal-inputs">${inputsPeriodo('d', goals.dia)}</div></div>
           <div><strong class="small">Semanal</strong><div class="goal-inputs">${inputsPeriodo('s', goals.semana)}</div></div>
           <div><strong class="small">Mensual</strong><div class="goal-inputs">${inputsPeriodo('m', goals.mes)}</div></div>
         </div>
@@ -1093,6 +1099,7 @@ function rankingPage({ user, periodo, rows }) {
   ${metasHeader('ranking')}
   <div class="toolbar">
     <div class="seg">
+      <a href="/ranking?p=dia" class="${periodo === 'dia' ? 'on' : ''}">Hoy</a>
       <a href="/ranking?p=semana" class="${periodo === 'semana' ? 'on' : ''}">Esta semana</a>
       <a href="/ranking?p=mes" class="${periodo === 'mes' ? 'on' : ''}">Este mes</a>
     </div>
@@ -1575,6 +1582,7 @@ function panelObjetivosPage({ user, campos, data, esAdmin, info }) {
     <h3 style="margin-top:0">Objetivos generales del equipo</h3>
     <form method="post" action="${info.base}/objetivos-generales">
       <div class="metas-grid">
+        <div><strong class="small">Diario</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('d', null)}</div></div>
         <div><strong class="small">Semanal</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('s', null)}</div></div>
         <div><strong class="small">Mensual</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('m', null)}</div></div>
       </div>
@@ -1585,6 +1593,7 @@ function panelObjetivosPage({ user, campos, data, esAdmin, info }) {
   <div class="card">
     <h3 style="margin-top:0">${esc(u.name)}</h3>
     <div class="metas-grid">
+      <div><h4 style="margin:.2rem 0 .4rem">Hoy</h4>${panelProgreso(metricas, goals.dia, stats.dia)}</div>
       <div><h4 style="margin:.2rem 0 .4rem">Esta semana</h4>${panelProgreso(metricas, goals.semana, stats.semana)}</div>
       <div><h4 style="margin:.2rem 0 .4rem">Este mes</h4>${panelProgreso(metricas, goals.mes, stats.mes)}</div>
     </div>
@@ -1593,6 +1602,7 @@ function panelObjetivosPage({ user, campos, data, esAdmin, info }) {
       <summary class="small" style="cursor:pointer;color:var(--accent-ink);font-weight:600">Definir objetivos de ${esc(u.name.split(' ')[0])}</summary>
       <form method="post" action="${info.base}/objetivos/${u.id}">
         <div class="metas-grid" style="margin-top:.5rem">
+          <div><strong class="small">Diario</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('d', goals.dia)}</div></div>
           <div><strong class="small">Semanal</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('s', goals.semana)}</div></div>
           <div><strong class="small">Mensual</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('m', goals.mes)}</div></div>
         </div>
@@ -1614,6 +1624,7 @@ function panelRankingPage({ user, periodo, campos, rows, info }) {
       <a href="${info.base}/ranking" class="on">Ranking</a>
     </div>
     <div class="seg">
+      <a href="${info.base}/ranking?p=dia" class="${periodo === 'dia' ? 'on' : ''}">Hoy</a>
       <a href="${info.base}/ranking?p=semana" class="${periodo === 'semana' ? 'on' : ''}">Esta semana</a>
       <a href="${info.base}/ranking?p=mes" class="${periodo === 'mes' ? 'on' : ''}">Este mes</a>
     </div>
@@ -1809,7 +1820,7 @@ function docsPage({ user, manualDisponible }) {
   <h2>Metas: objetivos y ranking</h2>
   <div class="card">
     <ul class="small" style="margin-bottom:0">
-      <li><strong>Objetivos</strong>: administración define metas semanales y mensuales por vendedor (toques, reuniones, deals ganados y MRR), o <strong>generales para todo el equipo</strong> de una sola vez. Cada uno ve su progreso con barras: azul en camino, verde al llegar al 100%. La semana arranca el lunes; el mes, el día 1 — el progreso se reinicia solo en cada período.</li>
+      <li><strong>Objetivos</strong>: administración define metas semanales y mensuales por vendedor (toques, reuniones, deals ganados y MRR), o <strong>generales para todo el equipo</strong> de una sola vez. Cada uno ve su progreso con barras: azul en camino, verde al llegar al 100%. El progreso diario se reinicia cada día; la semana arranca el lunes y el mes el día 1.</li>
       <li><strong>Gráficas por vendedor</strong>: desde "Ver gráficas" en Objetivos se abre la evolución de toques, reuniones y MRR ganado en tres cortes: diario (14 días), semanal (8 semanas) y mensual (6 meses).</li>
       <li><strong>Ranking</strong>: tabla de posiciones del equipo por semana o mes, ordenada por MRR ganado (desempata: deals, reuniones, toques). Tu fila aparece resaltada. Es visible para todo el equipo.</li>
     </ul>
