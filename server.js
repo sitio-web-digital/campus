@@ -236,7 +236,7 @@ app.get('/deals/new', requireAuth, (req, res) => {
   const modal = V.dealFormModal({
     user: req.user, deal: null, vendedores, isAdmin: req.user.role === 'admin',
     panel, etapas: etapasDePanel(panel), backHref: homeDePanel(panel),
-    campanas: db.prepare('SELECT id, nombre FROM campanas WHERE activa = 1 ORDER BY nombre').all(),
+    campanas: db.prepare('SELECT id, nombre FROM campanas WHERE panel = ? AND activa = 1 ORDER BY nombre').all(panel),
   });
   renderModalSobrePipeline(req, res, modal, panel);
 });
@@ -269,7 +269,7 @@ app.get('/deals/:id', requireAuth, (req, res) => {
   const modal = V.dealFormModal({
     user: req.user, deal, vendedores, isAdmin: req.user.role === 'admin', eventos, errAprob: req.query.err === 'valor',
     panel: deal.panel, etapas: etapasDePanel(deal.panel), backHref: homeDePanel(deal.panel),
-    campanas: db.prepare('SELECT id, nombre FROM campanas WHERE activa = 1 OR id = ? ORDER BY nombre').all(deal.campana_id || 0),
+    campanas: db.prepare('SELECT id, nombre FROM campanas WHERE panel = ? AND (activa = 1 OR id = ?) ORDER BY nombre').all(deal.panel, deal.campana_id || 0),
   });
   renderModalSobrePipeline(req, res, modal, deal.panel);
 });
@@ -474,31 +474,38 @@ app.post('/admin/usuarios/:id/toggle', requireAuth, requireAdmin, (req, res) => 
   res.redirect('/admin');
 });
 
-/* --- campañas (globales, se eligen en la lead de cualquier panel) --- */
+/* --- campañas (por panel: cada empresa gestiona las suyas) --- */
 
-app.get('/admin/campanas', requireAuth, requireAdmin, (req, res) => {
-  const campanas = db.prepare(`SELECT c.*, (SELECT COUNT(*) FROM deals d WHERE d.campana_id = c.id) AS leads FROM campanas c ORDER BY c.activa DESC, c.nombre`).all();
-  res.send(V.adminCampanasPage({ user: req.user, campanas }));
-});
+const campanasDePanel = (panel) => db.prepare(`SELECT c.*, (SELECT COUNT(*) FROM deals d WHERE d.campana_id = c.id) AS leads FROM campanas c WHERE c.panel = ? ORDER BY c.activa DESC, c.nombre`).all(panel);
 
-app.post('/admin/campanas', requireAuth, requireAdmin, (req, res) => {
-  const nombre = clean(req.body.nombre);
-  if (nombre) { try { db.prepare('INSERT INTO campanas (nombre) VALUES (?)').run(nombre); } catch {} }
-  res.redirect('/admin/campanas');
-});
-
-app.post('/admin/campanas/:id', requireAuth, requireAdmin, (req, res) => {
-  const c = db.prepare('SELECT * FROM campanas WHERE id = ?').get(req.params.id);
-  if (c) {
-    if (req.body.accion === 'renombrar') {
-      const nombre = clean(req.body.nombre);
-      if (nombre) { try { db.prepare('UPDATE campanas SET nombre = ? WHERE id = ?').run(nombre, c.id); } catch {} }
-    } else if (req.body.accion === 'toggle') {
-      db.prepare('UPDATE campanas SET activa = 1 - activa WHERE id = ?').run(c.id);
+function registrarRutasCampanas(basePath, panel, backUrl) {
+  app.post(basePath, requireAuth, requireAdmin, (req, res) => {
+    const nombre = clean(req.body.nombre);
+    if (nombre) { try { db.prepare('INSERT INTO campanas (panel, nombre) VALUES (?, ?)').run(panel, nombre); } catch {} }
+    res.redirect(backUrl);
+  });
+  app.post(basePath + '/:id', requireAuth, requireAdmin, (req, res) => {
+    const c = db.prepare('SELECT * FROM campanas WHERE id = ? AND panel = ?').get(req.params.id, panel);
+    if (c) {
+      if (req.body.accion === 'renombrar') {
+        const nombre = clean(req.body.nombre);
+        if (nombre) { try { db.prepare('UPDATE campanas SET nombre = ? WHERE id = ?').run(nombre, c.id); } catch {} }
+      } else if (req.body.accion === 'toggle') {
+        db.prepare('UPDATE campanas SET activa = 1 - activa WHERE id = ?').run(c.id);
+      }
     }
-  }
-  res.redirect('/admin/campanas');
+    res.redirect(backUrl);
+  });
+}
+
+// CFD: pestaña Campañas junto a Dashboard/Reportes.
+app.get('/campanas', requireAuth, requireAdmin, (req, res) => {
+  res.send(V.campanasPage({ user: req.user, campanas: campanasDePanel('cfd') }));
 });
+registrarRutasCampanas('/campanas', 'cfd', '/campanas');
+for (const P of PANELES_COMERCIALES) {
+  registrarRutasCampanas(`/${P.slug}/campanas`, P.slug, `/${P.slug}/config`);
+}
 
 // Estadísticas de campañas de un panel: leads, ganadas aprobadas e ingresos.
 function statsCampanas(panel) {
@@ -890,7 +897,7 @@ for (const PANEL of PANELES_COMERCIALES) {
   /* --- configuración del panel (solo admin) --- */
 
   app.get(base + '/config', requireAuth, requireAdmin, (req, res) => {
-    res.send(V.panelConfigPage({ user: req.user, etapas: etapasPanelCfg(slug), campos: camposPanel(slug), err: req.query.err, info }));
+    res.send(V.panelConfigPage({ user: req.user, etapas: etapasPanelCfg(slug), campos: camposPanel(slug), err: req.query.err, info, campanas: campanasDePanel(slug) }));
   });
 
   app.post(base + '/config/etapas', requireAuth, requireAdmin, (req, res) => {

@@ -103,8 +103,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
     links = perfilLink;
   } else if (sistema === 'admin') {
     links = `
-        <a href="/admin" class="${active === 'admin' ? 'on' : ''}">${ICONS.equipo}<span>Usuarios</span></a>
-        <a href="/admin/campanas" class="${active === 'campanas' ? 'on' : ''}">${ICONS.metas}<span>Campañas</span></a>${perfilLink}`;
+        <a href="/admin" class="${active === 'admin' ? 'on' : ''}">${ICONS.equipo}<span>Usuarios</span></a>${perfilLink}`;
   } else if (sistema === 'gondolas' || sistema === 'estanterias' || sistema === 'sitioweb') {
     const b = '/' + sistema;
     links = `
@@ -1210,6 +1209,7 @@ function dashHeader(active) {
     <div class="seg">
       <a href="/dashboard" class="${active === 'dashboard' ? 'on' : ''}">Dashboard</a>
       <a href="/reportes" class="${active === 'reportes' ? 'on' : ''}">Reportes</a>
+      <a href="/campanas" class="${active === 'campanas' ? 'on' : ''}">Campañas</a>
     </div>
   </div>`;
 }
@@ -1288,29 +1288,36 @@ function tablaCampanas(campanas) {
   <p class="caption">Ordenadas por ganadas e ingresos: las de arriba son tus ángulos ganadores. "Conversión" = ganadas ÷ leads de la campaña.</p>`;
 }
 
-function adminCampanasPage({ user, campanas }) {
-  return layout({
-    title: 'Campañas', user, active: 'campanas', sistema: 'admin',
-    body: `
-  <h1>Campañas</h1>
-  <p class="small muted">Las campañas son globales: los vendedores las eligen al cargar una lead en cualquier panel comercial, y cada dashboard muestra qué campañas traen las leads que ganan. Desactivar una campaña la saca del selector pero conserva sus estadísticas.</p>
+// Sección de gestión de campañas de un panel (reutilizada por CFD y las Config de cada empresa).
+function campanasSection(campanas, base) {
+  return `
   <div class="card">
+    <p class="small muted">Los vendedores eligen la campaña al cargar la lead; el dashboard muestra cuáles ganan. Desactivar una campaña la saca del selector pero conserva sus estadísticas.</p>
     ${campanas.length ? campanas.map((c) => `
     <div class="cfg-row">
-      <form method="post" action="/admin/campanas/${c.id}" class="cfg-inline">
+      <form method="post" action="${base}/${c.id}" class="cfg-inline">
         <input type="hidden" name="accion" value="renombrar">
         <input name="nombre" value="${esc(c.nombre)}">
         <button class="btn secondary small">Renombrar</button>
       </form>
       <span class="muted small">${c.leads} lead${c.leads === 1 ? '' : 's'}</span>
       ${c.activa ? '' : '<span class="chip chip--estado-cancelado">Inactiva</span>'}
-      <form method="post" action="/admin/campanas/${c.id}" style="display:inline"><input type="hidden" name="accion" value="toggle"><button class="btn secondary small">${c.activa ? 'Desactivar' : 'Activar'}</button></form>
-    </div>`).join('') : '<p class="muted small" style="margin:0">Todavía no hay campañas. Creá la primera abajo — ej: "Meta Ads góndolas agosto", "Google leads software", "Referidos".</p>'}
-    <form method="post" action="/admin/campanas" class="cfg-inline" style="margin-top:.6rem">
+      <form method="post" action="${base}/${c.id}" style="display:inline"><input type="hidden" name="accion" value="toggle"><button class="btn secondary small">${c.activa ? 'Desactivar' : 'Activar'}</button></form>
+    </div>`).join('') : '<p class="muted small" style="margin:0">Todavía no hay campañas de esta empresa. Creá la primera abajo — ej: "Meta Ads agosto", "Google leads", "Referidos".</p>'}
+    <form method="post" action="${base}" class="cfg-inline" style="margin-top:.6rem">
       <input name="nombre" placeholder="Nueva campaña (ej: Meta Ads agosto)" required>
       <button class="btn small">Crear campaña</button>
     </form>
-  </div>`
+  </div>`;
+}
+
+function campanasPage({ user, campanas }) {
+  return layout({
+    title: 'Campañas', user, active: 'dashboard',
+    body: `
+  <h1>Campañas</h1>
+  ${dashHeader('campanas')}
+  ${campanasSection(campanas, '/campanas')}`
   });
 }
 
@@ -1787,7 +1794,7 @@ function panelDashboardPage({ user, k, campos, colores, etapas, info }) {
   });
 }
 
-function panelConfigPage({ user, etapas, campos, err, info }) {
+function panelConfigPage({ user, etapas, campos, err, info, campanas = [] }) {
   const ERRS = { 'etapa-en-uso': 'No se puede borrar esa etapa: tiene deals adentro. Movelos a otra etapa primero.', 'ultima-etapa': 'Tiene que quedar al menos una etapa activa.' };
   return layout({
     title: `Config · ${info.nombre}`, user, active: 'config', sistema: info.slug, err: ERRS[err],
@@ -1831,7 +1838,10 @@ function panelConfigPage({ user, etapas, campos, err, info }) {
       <input name="label" placeholder="Nuevo campo (ej: Presupuestos entregados)" required>
       <button class="btn small">Agregar campo</button>
     </form>
-  </div>`
+  </div>
+
+  <h2>Campañas de ${esc(info.nombre)}</h2>
+  ${campanasSection(campanas, info.base + '/campanas')}`
   });
 }
 
@@ -2007,5 +2017,5 @@ module.exports = {
   loginPage, pipelinePage, dealFormModal, actividadPage, dashboardPage, adminPage, perfilPage, docsPage, changelogPage,
   notificacionesPage, objetivosPage, rankingPage, metasDetallePage, reportesPage, hubPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
-  panelActividadPage, panelObjetivosPage, panelRankingPage, panelDashboardPage, panelConfigPage, reporteImprimirPage, adminCampanasPage,
+  panelActividadPage, panelObjetivosPage, panelRankingPage, panelDashboardPage, panelConfigPage, reporteImprimirPage, campanasPage,
 };

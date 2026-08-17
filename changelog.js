@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.8.1',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'mejora', texto: 'Las campañas ahora son de cada empresa: se gestionan dentro de su panel comercial (CFD en la pestaña Campañas junto al Dashboard; Góndolas/Estanterías/SitioWeb en su Config) y el selector de la lead muestra solo las campañas de esa empresa.' },
+    ],
+  },
+  {
     version: '2.8.0',
     fecha: '2026-08-17',
     cambios: [

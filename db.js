@@ -25,9 +25,11 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS campanas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT NOT NULL UNIQUE,
+  panel TEXT NOT NULL DEFAULT 'cfd',
+  nombre TEXT NOT NULL,
   activa INTEGER NOT NULL DEFAULT 1,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (panel, nombre)
 );
 
 CREATE TABLE IF NOT EXISTS panel_etapas (
@@ -186,6 +188,26 @@ if (!dealCols.includes('aprobacion')) {
 if (!dealCols.includes('panel')) {
   db.exec("ALTER TABLE deals ADD COLUMN panel TEXT NOT NULL DEFAULT 'cfd'");
 }
+// Migración 2.8.1: campañas por panel (las existentes quedan en CFD). Rebuild para UNIQUE(panel, nombre).
+const campCols = db.prepare('PRAGMA table_info(campanas)').all().map((c) => c.name);
+if (!campCols.includes('panel')) {
+  db.pragma('foreign_keys = OFF');
+  db.exec(`
+    CREATE TABLE campanas_mig (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      panel TEXT NOT NULL DEFAULT 'cfd',
+      nombre TEXT NOT NULL,
+      activa INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (panel, nombre)
+    );
+    INSERT INTO campanas_mig (id, panel, nombre, activa, created_at) SELECT id, 'cfd', nombre, activa, created_at FROM campanas;
+    DROP TABLE campanas;
+    ALTER TABLE campanas_mig RENAME TO campanas;
+  `);
+  db.pragma('foreign_keys = ON');
+}
+
 // Migración 2.8.0: campaña de origen y ubicación de la lead.
 if (!dealCols.includes('campana_id')) {
   db.exec('ALTER TABLE deals ADD COLUMN campana_id INTEGER REFERENCES campanas(id)');
