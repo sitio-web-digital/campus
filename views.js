@@ -734,10 +734,15 @@ const EVENTO_TIPO = { creado: ['Creado', '#3E9B57'], etapa: ['Etapa', '#14538C']
 
 const PROVINCIAS_AR = ['Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'];
 
+// Orígenes de lead para los paneles comerciales configurables (los de CFD son de venta de software).
+const ORIGENES_PANEL = ['MarketPlace', 'Ads', 'WhatsApp', 'Instagram', 'Referido', 'Cliente anterior', 'Propio', 'Otro'];
+
 function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
   const d = deal || {};
   const isNew = !deal;
   const opt = (list, sel) => list.map((o) => `<option value="${esc(o)}" ${o === sel ? 'selected' : ''}>${esc(o)}</option>`).join('');
+  // El origen guardado siempre aparece en el selector, aunque no esté en la lista (leads importadas).
+  const origenes = panel === 'cfd' ? ORIGENES : [...new Set([...(d.origen ? [d.origen] : []), ...ORIGENES_PANEL])];
   return `
   <div class="modal-back" id="modalBack">
   <div class="modal">
@@ -766,7 +771,7 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
         <label>Etapa</label>
         <select name="etapa">${opt(etapas, d.etapa || etapas[0])}</select>
       </div>
-      ${panel === 'gondolas' ? `
+      ${panel !== 'cfd' ? `
       <div>
         <label>Valor de la venta ($)</label>
         <input name="mrr" type="number" step="any" min="0" inputmode="decimal" value="${d.mrr ?? ''}" placeholder="Total de la venta">
@@ -781,7 +786,7 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
       </div>`}
       <div>
         <label>Origen</label>
-        <select name="origen"><option value="">—</option>${opt(ORIGENES, d.origen)}</select>
+        <select name="origen"><option value="">—</option>${opt(origenes, d.origen)}</select>
       </div>
       <div>
         <label>Contacto decisor</label>

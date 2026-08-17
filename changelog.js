@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.10.5',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'fix', texto: 'La ficha de lead de Estanterías Reforzadas (y SitioWeb) mostraba los campos de Cloud For Deploy: pedía "Tipo de venta" con las opciones de software y los orígenes de CFD. Ahora pide "Valor de la venta" simple, como Góndolas.' },
+      { tipo: 'fix', texto: 'Origen propio de los paneles comerciales (MarketPlace, Ads, WhatsApp, Instagram, Referido, etc.). Además, editar una lead importada ya no le borra el origen al guardar.' },
+    ],
+  },
+  {
     version: '2.10.4',
     fecha: '2026-08-17',
     cambios: [

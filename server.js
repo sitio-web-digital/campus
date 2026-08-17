@@ -171,7 +171,9 @@ function dealFromBody(body, user, panel = 'cfd', etapaActual = 'Lead', tipoActua
     tipo_venta: cleanEnum(body.tipo_venta, TIPOS_VENTA) || tipoActual,
     mrr: cleanNum(body.mrr),
     decisor: clean(body.decisor),
-    origen: cleanEnum(body.origen, ORIGENES),
+    // CFD valida contra sus orígenes de venta de software; los paneles aceptan cualquier origen
+    // (el selector ofrece los suyos, y las leads importadas traen valores propios que no deben perderse).
+    origen: panel === 'cfd' ? cleanEnum(body.origen, ORIGENES) : (clean(body.origen) || null),
     proximo_paso: clean(body.proximo_paso),
     fecha_proximo_paso: cleanDate(body.fecha_proximo_paso),
     fecha_primera_reunion: cleanDate(body.fecha_primera_reunion),
