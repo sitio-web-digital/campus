@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.10.4',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Importación definitiva desde el CSV corregido (Tracker Agosto): 223 leads a Góndolas y Estanterías con vendedor, etapa, valor, provincia y notas al historial. El importador lee el CSV directamente, así que un export futuro se recarga fácil.' },
+      { tipo: 'nuevo', texto: 'Las ventas del CSV generan su comisión al importar: Mateo $440.000 (Benedicta y Jorge) y Romina $86.500 (David Ruiz, valor según hoja de pagos) — visibles en Cobranza, cobrables al momento.' },
+    ],
+  },
+  {
     version: '2.10.3',
     fecha: '2026-08-17',
     cambios: [
