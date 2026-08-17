@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.10.3',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'fix', texto: 'Se dio de baja la importación histórica: se eliminan las leads importadas de Góndolas y Estanterías (con sus comisiones e historial) y las etapas Frío/Caliente/Seguimiento si quedan vacías. Las leads cargadas a mano por los vendedores no se tocan.' },
+    ],
+  },
+  {
     version: '2.10.2',
     fecha: '2026-08-17',
     cambios: [
