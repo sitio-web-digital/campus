@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.9.1',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'mejora', texto: 'Pulido visual completo para teléfono: la barra de navegación inferior y las pestañas se deslizan si no entran (nunca más se cortan), el menú de sistemas ocupa el ancho de la pantalla, y las barras de objetivos y el funnel se achican para que se lean enteros.' },
+      { tipo: 'mejora', texto: 'Kanban en pantallas chicas: columnas más anchas y desplazamiento con imán (cada columna queda alineada al frenar).' },
+      { tipo: 'fix', texto: 'Las tarjetas destacadas (aviso al equipo, objetivos generales) ahora se distinguen con una franja de color, y los botones de cada usuario en Administración ya no desbordan la tarjeta en el celular.' },
+    ],
+  },
+  {
     version: '2.9.0',
     fecha: '2026-08-17',
     cambios: [

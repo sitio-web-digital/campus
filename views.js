@@ -555,7 +555,49 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .modal-h h2 { margin:0; font-size:1.15rem; }
 .modal-x { font-size:1.6rem; line-height:1; text-decoration:none; color:var(--muted); padding:.15rem .5rem; border-radius:8px; }
 .modal-x:hover { background:var(--surface2); color:var(--ink); }
-@media (max-width:640px) { .modal-back { padding:0; } .modal { border-radius:0; min-height:100vh; } }
+@media (max-width:640px) { .modal-back { padding:0; } .modal { border-radius:0; min-height:100vh; padding-bottom:2.2rem; } }
+
+/* --- pulido responsive (computadora, tablet y teléfono) --- */
+.card--accent { border-left:4px solid var(--role); }
+.row-actions { display:flex; gap:.4rem; flex-wrap:wrap; justify-content:flex-end; }
+
+/* La barra de navegación nunca se corta: si no entra, se desliza (sin barra de scroll visible). */
+.nav-links { overflow-x:auto; scrollbar-width:none; max-width:100%; }
+.nav-links::-webkit-scrollbar { display:none; }
+.nav-links a { flex-shrink:0; }
+.sys summary { min-width:0; }
+.brand-txt { overflow:hidden; }
+.brand-txt, .brand-txt .sub { white-space:nowrap; }
+@media (max-width:1080px) { .brand-txt { max-width:13rem; } }
+
+/* Tabs y filtros (segmentos) deslizables si no entran en el ancho. */
+.toolbar .seg { max-width:100%; overflow-x:auto; scrollbar-width:none; }
+.toolbar .seg::-webkit-scrollbar { display:none; }
+.seg a { white-space:nowrap; flex-shrink:0; }
+
+/* Kanban en pantallas chicas: columnas más legibles y scroll con imán. */
+@media (max-width:980px) {
+  .board { scroll-snap-type:x proximity; padding-bottom:.6rem; }
+  .col { scroll-snap-align:start; flex:0 0 236px; }
+}
+
+/* Teléfono */
+@media (max-width:640px) {
+  .wrap { padding-left:.8rem; padding-right:.8rem; }
+  h1 { font-size:1.22rem; }
+  .brand-txt { max-width:calc(100vw - 7.5rem); }
+  .nav-links { flex-wrap:nowrap; justify-content:flex-start; }
+  .nav-links a { flex:1 0 auto; min-width:3.9rem; padding:.35rem .3rem; }
+  .sys-menu { position:fixed; top:3.4rem; left:.5rem; right:.5rem; min-width:0; max-height:74vh; overflow:auto; }
+  .deal-top { flex-wrap:wrap; }
+  .tile { padding:.7rem .8rem; }
+  .tile .v { font-size:1.4rem; }
+  .prog-row { grid-template-columns:5.5rem 1fr max-content !important; }
+  .bar-label { width:5.8rem; font-size:.72rem; }
+  .modal-x { padding:.3rem .7rem; }
+  .toolbar .btn:not(.small):not(.secondary) { flex:1 0 auto; text-align:center; }
+  .cfg-inline { min-width:0; width:100%; }
+}
 `;
 
 /* ---------------- páginas ---------------- */
@@ -1013,7 +1055,7 @@ function adminPage({ user, users, sistemas, resetInfo, prefs = {} }) {
   <div class="card">
     <div class="deal-top">
       <div><strong>${esc(u.name)}</strong> <span class="muted small">· ${esc(u.email)}</span> ${u.active ? '' : '<span class="chip chip--estado-cancelado">Inactivo</span>'}</div>
-      <div style="white-space:nowrap">
+      <div class="row-actions">
         ${u.id !== user.id ? `
         <form method="post" action="/admin/usuarios/${u.id}/toggle" style="display:inline"><button class="btn secondary small">${u.active ? 'Desactivar' : 'Activar'}</button></form>
         <form method="post" action="/admin/usuarios/${u.id}/reset" style="display:inline" onsubmit="return confirm('¿Generar una clave nueva para ${esc(u.name)}?')"><button class="btn secondary small">Resetear clave</button></form>` : '<span class="muted small">(vos)</span>'}
