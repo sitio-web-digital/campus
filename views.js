@@ -373,16 +373,17 @@ h2 { font-size:1rem; letter-spacing:.005em; }
 .hist-item .chip { flex-shrink:0; }
 
 /* --- objetivos y ranking --- */
-.prog-row { display:grid; grid-template-columns:9.5rem 1fr 6.5rem; gap:.6rem; align-items:center; margin:.45rem 0; }
-@media (max-width:520px) { .prog-row { grid-template-columns:7rem 1fr 5.5rem; } }
-.prog-row .pl { font-size:.82rem; font-weight:600; color:var(--muted); text-align:right; }
+.prog-row { display:grid; grid-template-columns:minmax(5.5rem,7.5rem) 1fr max-content; gap:.5rem; align-items:center; margin:.45rem 0; }
+@media (max-width:520px) { .prog-row { grid-template-columns:5.5rem 1fr max-content; } }
+.prog-row .pl { font-size:.76rem; font-weight:600; color:var(--muted); text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .prog { height:.6rem; background:var(--surface2); border-radius:999px; overflow:hidden; }
 .prog i { display:block; height:100%; border-radius:999px; background:var(--role); }
 .prog i.full { background:#3E9B57; }
-.prog-row .pv { font-size:.8rem; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.prog-row .pv { font-size:.74rem; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .prog-row .pv strong { color:var(--accent-ink); }
-.metas-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:1rem; }
-.goal-inputs { display:grid; grid-template-columns:repeat(4,1fr); gap:.5rem; }
+.metas-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(235px,1fr)); gap:1.1rem; }
+.goal-cols { display:grid; gap:1rem; margin-top:.5rem; }
+.goal-inputs { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:.5rem .7rem; }
 .goal-inputs label { margin:.4rem 0 .2rem; font-size:.66rem; }
 .pos { display:inline-flex; align-items:center; justify-content:center; width:1.8rem; height:1.8rem; border-radius:50%; font-weight:800; font-size:.85rem; background:var(--surface2); color:var(--muted); }
 .pos.p1 { background:#C08A2E; color:#fff; }
@@ -1047,7 +1048,7 @@ function objetivosPage({ user, data, esAdmin }) {
     <h3 style="margin-top:0">Objetivos generales del equipo</h3>
     <p class="small muted">Aplica los mismos objetivos a todos los vendedores activos de una sola vez (pisa los individuales). Después podés ajustar cada uno en su tarjeta.</p>
     <form method="post" action="/objetivos-generales">
-      <div class="metas-grid">
+      <div class="goal-cols">
         <div><strong class="small">Diario</strong><div class="goal-inputs">${METRICAS.map(([campo, label]) => `<div><label>${label}</label><input name="d_${campo}" type="number" min="0" step="any" inputmode="numeric" placeholder="0"></div>`).join('')}</div></div>
         <div><strong class="small">Semanal</strong><div class="goal-inputs">${METRICAS.map(([campo, label]) => `<div><label>${label}</label><input name="s_${campo}" type="number" min="0" step="any" inputmode="numeric" placeholder="0"></div>`).join('')}</div></div>
         <div><strong class="small">Mensual</strong><div class="goal-inputs">${METRICAS.map(([campo, label]) => `<div><label>${label}</label><input name="m_${campo}" type="number" min="0" step="any" inputmode="numeric" placeholder="0"></div>`).join('')}</div></div>
@@ -1079,7 +1080,7 @@ function objetivosPage({ user, data, esAdmin }) {
     <details style="margin-top:.8rem">
       <summary class="small" style="cursor:pointer;color:var(--accent-ink);font-weight:600">Definir objetivos de ${esc(u.name.split(' ')[0])}</summary>
       <form method="post" action="/objetivos/${u.id}">
-        <div class="metas-grid" style="margin-top:.5rem">
+        <div class="goal-cols">
           <div><strong class="small">Diario</strong><div class="goal-inputs">${inputsPeriodo('d', goals.dia)}</div></div>
           <div><strong class="small">Semanal</strong><div class="goal-inputs">${inputsPeriodo('s', goals.semana)}</div></div>
           <div><strong class="small">Mensual</strong><div class="goal-inputs">${inputsPeriodo('m', goals.mes)}</div></div>
@@ -1581,10 +1582,10 @@ function panelObjetivosPage({ user, campos, data, esAdmin, info }) {
   <div class="card card--accent">
     <h3 style="margin-top:0">Objetivos generales del equipo</h3>
     <form method="post" action="${info.base}/objetivos-generales">
-      <div class="metas-grid">
-        <div><strong class="small">Diario</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('d', null)}</div></div>
-        <div><strong class="small">Semanal</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('s', null)}</div></div>
-        <div><strong class="small">Mensual</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('m', null)}</div></div>
+      <div class="goal-cols">
+        <div><strong class="small">Diario</strong><div class="goal-inputs">${inputs('d', null)}</div></div>
+        <div><strong class="small">Semanal</strong><div class="goal-inputs">${inputs('s', null)}</div></div>
+        <div><strong class="small">Mensual</strong><div class="goal-inputs">${inputs('m', null)}</div></div>
       </div>
       <div style="margin-top:.8rem"><button class="btn small" onclick="return confirm('¿Aplicar a TODOS los vendedores activos?')">Aplicar a todo el equipo</button></div>
     </form>
@@ -1601,10 +1602,10 @@ function panelObjetivosPage({ user, campos, data, esAdmin, info }) {
     <details style="margin-top:.8rem">
       <summary class="small" style="cursor:pointer;color:var(--accent-ink);font-weight:600">Definir objetivos de ${esc(u.name.split(' ')[0])}</summary>
       <form method="post" action="${info.base}/objetivos/${u.id}">
-        <div class="metas-grid" style="margin-top:.5rem">
-          <div><strong class="small">Diario</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('d', goals.dia)}</div></div>
-          <div><strong class="small">Semanal</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('s', goals.semana)}</div></div>
-          <div><strong class="small">Mensual</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('m', goals.mes)}</div></div>
+        <div class="goal-cols">
+          <div><strong class="small">Diario</strong><div class="goal-inputs">${inputs('d', goals.dia)}</div></div>
+          <div><strong class="small">Semanal</strong><div class="goal-inputs">${inputs('s', goals.semana)}</div></div>
+          <div><strong class="small">Mensual</strong><div class="goal-inputs">${inputs('m', goals.mes)}</div></div>
         </div>
         <div style="margin-top:.8rem"><button class="btn small">Guardar objetivos</button></div>
       </form>

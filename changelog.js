@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.6.1',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'fix', texto: 'Maquetado de Metas: los formularios de objetivos se apilan por período con inputs en grilla fluida (soportan cualquier cantidad de campos) y las barras de progreso se compactaron para las tres columnas.' },
+    ],
+  },
+  {
     version: '2.6.0',
     fecha: '2026-08-17',
     cambios: [
