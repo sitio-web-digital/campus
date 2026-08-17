@@ -23,6 +23,40 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS panel_etapas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  panel TEXT NOT NULL,
+  nombre TEXT NOT NULL,
+  orden INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (panel, nombre)
+);
+
+CREATE TABLE IF NOT EXISTS panel_campos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  panel TEXT NOT NULL,
+  label TEXT NOT NULL,
+  orden INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS panel_activity (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  panel TEXT NOT NULL,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  fecha TEXT NOT NULL,
+  valores TEXT NOT NULL DEFAULT '{}',
+  notas TEXT,
+  UNIQUE (panel, user_id, fecha)
+);
+
+CREATE TABLE IF NOT EXISTS panel_goals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  panel TEXT NOT NULL,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  periodo TEXT NOT NULL CHECK (periodo IN ('semana','mes')),
+  valores TEXT NOT NULL DEFAULT '{}',
+  UNIQUE (panel, user_id, periodo)
+);
+
 CREATE TABLE IF NOT EXISTS gondolas_etapas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nombre TEXT NOT NULL UNIQUE,
@@ -168,21 +202,51 @@ if (!userCols.includes('permisos')) {
   db.pragma('foreign_keys = ON');
 }
 
+// Paneles comerciales configurables (además del CFD fijo). Agregar una empresa nueva = una línea acá.
+const PANELES_COMERCIALES = [
+  { slug: 'gondolas', nombre: 'Góndolas' },
+  { slug: 'estanterias', nombre: 'Estanterías Reforzadas' },
+];
+
 // Sistemas del ecosistema (para permisos por usuario).
 const SISTEMAS = [
-  ['cfd', 'Panel Comercial (Cloud For Deploy)'],
+  ['cfd', 'Comercial Cloud For Deploy'],
   ['gondolas', 'Comercial Góndolas'],
+  ['estanterias', 'Comercial Estanterías Reforzadas'],
   ['cobranza', 'Panel de Cobranza'],
 ];
 
-// Seeds de Góndolas: etapas y campos de actividad por defecto (editables por el admin).
-if (db.prepare('SELECT COUNT(*) AS c FROM gondolas_etapas').get().c === 0) {
-  const ins = db.prepare('INSERT INTO gondolas_etapas (nombre, orden) VALUES (?, ?)');
-  ['Lead', 'Contactado', 'Visita realizada', 'Cotización enviada', 'Negociación'].forEach((n, i) => ins.run(n, i + 1));
+// Migración 2.5.0: mover config de góndolas a las tablas genéricas de paneles.
+if (db.prepare('SELECT COUNT(*) AS c FROM panel_etapas').get().c === 0 && db.prepare('SELECT COUNT(*) AS c FROM gondolas_etapas').get().c > 0) {
+  db.exec(`INSERT INTO panel_etapas (panel, nombre, orden) SELECT 'gondolas', nombre, orden FROM gondolas_etapas;
+    INSERT INTO panel_campos (panel, label, orden) SELECT 'gondolas', label, orden FROM gondolas_campos;
+    INSERT INTO panel_activity (panel, user_id, fecha, valores, notas) SELECT 'gondolas', user_id, fecha, valores, notas FROM gondolas_activity;
+    INSERT INTO panel_goals (panel, user_id, periodo, valores) SELECT 'gondolas', user_id, periodo, valores FROM gondolas_goals;`);
 }
-if (db.prepare('SELECT COUNT(*) AS c FROM gondolas_campos').get().c === 0) {
-  const ins = db.prepare('INSERT INTO gondolas_campos (label, orden) VALUES (?, ?)');
-  ['Llamadas', 'Visitas', 'Cotizaciones enviadas'].forEach((n, i) => ins.run(n, i + 1));
+
+// Seeds por panel: etapas y campos por defecto (editables por el admin en Config).
+for (const p of PANELES_COMERCIALES) {
+  if (db.prepare('SELECT COUNT(*) AS c FROM panel_etapas WHERE panel = ?').get(p.slug).c === 0) {
+    const ins = db.prepare('INSERT INTO panel_etapas (panel, nombre, orden) VALUES (?, ?, ?)');
+    ['Lead', 'Contactado', 'Visita realizada', 'Cotización enviada', 'Negociación'].forEach((n, i) => ins.run(p.slug, n, i + 1));
+  }
+  if (db.prepare('SELECT COUNT(*) AS c FROM panel_campos WHERE panel = ?').get(p.slug).c === 0) {
+    const ins = db.prepare('INSERT INTO panel_campos (panel, label, orden) VALUES (?, ?, ?)');
+    ['Llamadas', 'Visitas', 'Cotizaciones enviadas'].forEach((n, i) => ins.run(p.slug, n, i + 1));
+  }
+  // Regla de comisión por rubro: % plano cobrable al momento (editable en Cobranza → Reglas).
+  if (!db.prepare('SELECT 1 FROM commission_rules WHERE tipo_venta = ?').get(p.slug)) {
+    db.prepare('INSERT INTO commission_rules (tipo_venta, config) VALUES (?, ?)')
+      .run(p.slug, JSON.stringify({ tipo: 'flat', pct: 5, nota: `Venta de ${p.nombre}: comisión única cobrable al momento.` }));
+  }
+}
+
+// Migración 2.5.0: las notas de los deals pasan al historial (el campo del formulario queda siempre limpio).
+const conNotas = db.prepare("SELECT id, user_id, notas FROM deals WHERE notas IS NOT NULL AND notas != ''").all();
+if (conNotas.length) {
+  const insEv = db.prepare("INSERT INTO deal_events (deal_id, user_id, tipo, detalle) VALUES (?, ?, 'edicion', ?)");
+  for (const d of conNotas) insEv.run(d.id, d.user_id, `Nota: ${d.notas}`);
+  db.exec('UPDATE deals SET notas = NULL');
 }
 
 const ETAPAS = ['Lead', 'Contactado', 'Reunión agendada', 'Discovery hecha', 'Propuesta enviada', 'Negociación', 'Ganado', 'Perdido'];
@@ -198,11 +262,6 @@ const REGLAS_DEFAULT = {
 if (db.prepare('SELECT COUNT(*) AS c FROM commission_rules').get().c === 0) {
   const ins = db.prepare('INSERT INTO commission_rules (tipo_venta, config) VALUES (?, ?)');
   for (const [t, cfg] of Object.entries(REGLAS_DEFAULT)) ins.run(t, JSON.stringify(cfg));
-}
-// Regla por rubro Góndolas: % plano por venta, cobrable al momento (producto físico, no software).
-if (!db.prepare("SELECT 1 FROM commission_rules WHERE tipo_venta = 'gondolas'").get()) {
-  db.prepare('INSERT INTO commission_rules (tipo_venta, config) VALUES (?, ?)')
-    .run('gondolas', JSON.stringify({ tipo: 'flat', pct: 5, nota: 'Venta de góndolas: comisión única cobrable al momento.' }));
 }
 const ETAPAS_ACTIVAS = ETAPAS.slice(0, 6);
 const ORIGENES = ['Outbound frío', 'Referido', 'Inbound / Marketing', 'Red personal'];
@@ -228,4 +287,4 @@ function getSessionSecret() {
   return secret;
 }
 
-module.exports = { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, SISTEMAS };
+module.exports = { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, SISTEMAS, PANELES_COMERCIALES };

@@ -2,6 +2,16 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.5.0',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Comercial Estanterías Reforzadas: panel de ventas propio para la nueva empresa, con etapas, carga diaria y objetivos configurables, comisiones (5% editable) y todo el circuito de aprobación.' },
+      { tipo: 'mejora', texto: 'Los paneles comerciales ahora se llaman "Comercial <empresa>" en el campus y los menús.' },
+      { tipo: 'mejora', texto: 'Las notas del deal van directo al historial (con autor y fecha) y el campo queda siempre libre para la próxima nota. Las notas viejas se migraron al historial.' },
+      { tipo: 'nuevo', texto: 'Reportes: nuevo corte diario (hoy o cualquiera de los últimos 14 días) y botón "Exportar PDF" con vista imprimible.' },
+    ],
+  },
+  {
     version: '2.4.0',
     fecha: '2026-08-14',
     cambios: [

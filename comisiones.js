@@ -40,7 +40,8 @@ function generarComisiones(deal) {
   if (!deal || !deal.mrr || deal.mrr <= 0) return 0;
   const vivas = db.prepare("SELECT COUNT(*) AS c FROM commissions WHERE deal_id = ? AND estado != 'cancelado'").get(deal.id).c;
   if (vivas > 0) return 0;
-  const rules = deal.panel === 'gondolas' ? getRules('gondolas') : getRules(deal.tipo_venta);
+  // Primero busca regla por rubro/panel (ej: 'gondolas', 'estanterias'); si no hay, por tipo de venta (software CFD).
+  const rules = (deal.panel && deal.panel !== 'cfd' ? getRules(deal.panel) : null) || getRules(deal.tipo_venta);
   if (!rules) return 0;
   const base = deal.fecha_cierre || hoyAR();
   const ins = db.prepare('INSERT INTO commissions (deal_id, user_id, concepto, monto, fecha_devengada) VALUES (?, ?, ?, ?, ?)');

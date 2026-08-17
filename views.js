@@ -39,7 +39,7 @@ const ICONS = {
 };
 const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F3459'/%3E%3Ctext x='16' y='21' font-size='12' font-family='Helvetica,Arial' font-weight='bold' fill='white' text-anchor='middle'%3EC4D%3C/text%3E%3C/svg%3E";
 
-const SISTEMA_NOMBRE = { comercial: 'Panel Comercial', gondolas: 'Comercial Góndolas', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', hub: 'Campus C4D' };
+const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', hub: 'Campus C4D' };
 const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permisos || []).includes(s));
 
 // Ícono hoja para PuntoCO2 (plataforma de huella de carbono).
@@ -52,8 +52,9 @@ function sysSwitch(sistema, user) {
     <summary><span class="brand-txt">${SISTEMA_NOMBRE[sistema] || 'Panel Comercial'}<span class="sub">Cloud For Deploy ▾</span></span></summary>
     <div class="sys-menu">
       <a href="/hub">Campus (inicio)</a>
-      ${tieneSistema(user, 'cfd') ? `<a href="/pipeline">Panel Comercial</a>` : ''}
+      ${tieneSistema(user, 'cfd') ? `<a href="/pipeline">Comercial Cloud For Deploy</a>` : ''}
       ${tieneSistema(user, 'gondolas') ? `<a href="/gondolas/pipeline">Comercial Góndolas</a>` : ''}
+      ${tieneSistema(user, 'estanterias') ? `<a href="/estanterias/pipeline">Comercial Estanterías Reforzadas</a>` : ''}
       ${tieneSistema(user, 'cobranza') ? `<a href="/cobranza">Panel de Cobranza</a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
       <span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>
@@ -94,13 +95,14 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
   } else if (sistema === 'admin') {
     links = `
         <a href="/admin" class="${active === 'admin' ? 'on' : ''}">${ICONS.equipo}<span>Usuarios</span></a>${perfilLink}`;
-  } else if (sistema === 'gondolas') {
+  } else if (sistema === 'gondolas' || sistema === 'estanterias') {
+    const b = '/' + sistema;
     links = `
-        <a href="/gondolas/pipeline" class="${active === 'pipeline' ? 'on' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
-        <a href="/gondolas/actividad" class="${active === 'actividad' ? 'on' : ''}">${ICONS.actividad}<span>Actividad</span></a>
-        <a href="/gondolas/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
-        ${user && user.role === 'admin' ? `<a href="/gondolas/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
-        <a href="/gondolas/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>` : ''}${perfilLink}`;
+        <a href="${b}/pipeline" class="${active === 'pipeline' ? 'on' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
+        <a href="${b}/actividad" class="${active === 'actividad' ? 'on' : ''}">${ICONS.actividad}<span>Actividad</span></a>
+        <a href="${b}/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
+        ${user && user.role === 'admin' ? `<a href="${b}/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
+        <a href="${b}/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>` : ''}${perfilLink}`;
   } else {
     links = `
         <a href="/pipeline" class="${active === 'pipeline' ? 'on' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
@@ -737,8 +739,8 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], errAprob
         <select name="motivo_perdida"><option value="">—</option>${opt(MOTIVOS, d.motivo_perdida)}</select>
       </div>
     </div>
-    <label>Notas</label>
-    <textarea name="notas" rows="3" placeholder="Contexto, objeciones, acuerdos…">${esc(d.notas)}</textarea>
+    <label>Agregar nota al historial</label>
+    <textarea name="notas" rows="3" placeholder="Contexto, objeciones, acuerdos… Al guardar, la nota queda registrada en el historial con tu nombre y fecha, y este campo vuelve a quedar libre."></textarea>
     <div style="margin-top:1.2rem; display:flex; gap:.6rem; flex-wrap:wrap">
       <button class="btn">${isNew ? 'Crear deal' : 'Guardar cambios'}</button>
       <a class="btn secondary" href="${backHref}">Cancelar</a>
@@ -1172,17 +1174,19 @@ function reportesPage({ user, p, off, desde, hasta, periodos, r }) {
   ${dashHeader('reportes')}
   <div class="toolbar">
     <div class="seg">
+      <a href="/reportes?p=dia" class="${p === 'dia' ? 'on' : ''}">Diario</a>
       <a href="/reportes?p=semana" class="${p === 'semana' ? 'on' : ''}">Semanal</a>
       <a href="/reportes?p=mes" class="${p === 'mes' ? 'on' : ''}">Mensual</a>
     </div>
     <form method="get" action="/reportes" style="display:inline">
       <input type="hidden" name="p" value="${p}">
       <select name="off" onchange="this.form.submit()" style="width:auto">
-        ${periodos.map((per) => `<option value="${per.off}" ${per.off === off ? 'selected' : ''}>${per.off === 0 ? (p === 'mes' ? 'Mes actual' : 'Semana actual') : per.label}</option>`).join('')}
+        ${periodos.map((per) => `<option value="${per.off}" ${per.off === off ? 'selected' : ''}>${per.off === 0 ? (p === 'mes' ? 'Mes actual' : p === 'dia' ? 'Hoy' : 'Semana actual') : per.label}</option>`).join('')}
       </select>
     </form>
     <div class="sp"></div>
     <a class="btn secondary" href="/reportes.csv?p=${p}&off=${off}">Descargar CSV</a>
+    <a class="btn" href="/reportes/imprimir?p=${p}&off=${off}" target="_blank" rel="noopener">Exportar PDF</a>
   </div>
   <p class="small muted">Período: <strong>${fecha(desde)} a ${fecha(hasta)}</strong></p>
 
@@ -1232,14 +1236,20 @@ function hubPage({ user }) {
       ${tieneSistema(user, 'cfd') ? `
       <a class="hub-card" href="/pipeline">
         <span class="hc-ic">${ICONS.pipeline}</span>
-        <h3>Panel Comercial</h3>
-        <p>Pipeline de ventas, actividad diaria, metas, ranking${user.role === 'admin' ? ', dashboard y reportes' : ''}.</p>
+        <h3>Comercial Cloud For Deploy</h3>
+        <p>Ventas de software: pipeline, actividad diaria, metas, ranking${user.role === 'admin' ? ', dashboard y reportes' : ''}.</p>
       </a>` : ''}
       ${tieneSistema(user, 'gondolas') ? `
       <a class="hub-card" href="/gondolas/pipeline">
         <span class="hc-ic">${IC('<path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/>')}</span>
         <h3>Comercial Góndolas</h3>
-        <p>Ventas de estanterías y góndolas: pipeline con etapas propias y carga diaria a medida.</p>
+        <p>Ventas de góndolas: pipeline con etapas propias y carga diaria a medida.</p>
+      </a>` : ''}
+      ${tieneSistema(user, 'estanterias') ? `
+      <a class="hub-card" href="/estanterias/pipeline">
+        <span class="hc-ic">${IC('<path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/>')}</span>
+        <h3>Comercial Estanterías Reforzadas</h3>
+        <p>Ventas de la nueva empresa: pipeline, actividad y metas propias.</p>
       </a>` : ''}
       ${tieneSistema(user, 'cobranza') ? `
       <a class="hub-card" href="/cobranza">
@@ -1364,7 +1374,7 @@ function cobranzaVendedorPage({ user, vendedor, resumen, filas, esAdmin }) {
   });
 }
 
-function reglasPage({ user, reglas }) {
+function reglasPage({ user, reglas, paneles }) {
   const p = reglas['Proyecto único'] || { tramos: [] };
   const fila = (pref, tipo) => {
     const r = reglas[tipo] || { fases: [] };
@@ -1406,28 +1416,109 @@ function reglasPage({ user, reglas }) {
     ${fila('s', 'Suscripción mensual')}
     ${fila('i', 'Infraestructura')}
     ${fila('m', 'Mantenimiento')}
+    ${(paneles || []).map((P) => `
     <div class="card">
-      <h3 style="margin-top:0">Rubro Góndolas — % por venta</h3>
-      <p class="small muted">Las ventas del panel Comercial Góndolas usan esta regla (no la de tipo de venta): comisión única con fecha del día del cierre, <strong>cobrable al momento</strong> — es un producto que se cobra en el acto, no como el software.</p>
+      <h3 style="margin-top:0">Rubro ${esc(P.nombre)} — % por venta</h3>
+      <p class="small muted">Las ventas del panel Comercial ${esc(P.nombre)} usan esta regla (no la de tipo de venta): comisión única con fecha del día del cierre, <strong>cobrable al momento</strong>.</p>
       <div class="grid2">
-        <div><label>Comisión (% del valor de la venta)</label><input name="g_pct" type="number" min="0" step="any" value="${reglas['gondolas'] ? reglas['gondolas'].pct : 5}"></div>
+        <div><label>Comisión (% del valor de la venta)</label><input name="flat_${P.slug}" type="number" min="0" step="any" value="${reglas[P.slug] ? reglas[P.slug].pct : 5}"></div>
       </div>
-    </div>
+    </div>`).join('')}
     <button class="btn">Guardar reglas</button>
   </form>`
   });
 }
 
-/* --------- comercial góndolas --------- */
+// Vista imprimible del reporte: el navegador la exporta a PDF (se abre el diálogo de impresión solo).
+function reporteImprimirPage({ user, p, nombrePeriodo, desde, hasta, r }) {
+  const filaV = (v, strong = false) => {
+    const t = strong ? 'strong' : 'span';
+    return `<tr><td><${t}>${esc(v.name)}</${t}></td><td>${v.contactos}</td><td>${v.toques}</td><td>${v.agendadas}</td><td>${v.realizadas}</td><td>${v.creados}</td><td>${v.ganados}</td><td>${v.perdidos}</td><td>${money(v.mrr)}</td></tr>`;
+  };
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Reporte ${esc(nombrePeriodo)} · ${esc(desde)}${desde !== hasta ? ' a ' + esc(hasta) : ''}</title>
+<style>
+  * { box-sizing:border-box; }
+  body { font:12px/1.5 "Helvetica Neue",Helvetica,Arial,sans-serif; color:#0F1D2E; margin:2rem; }
+  .cab { display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #0F3459; padding-bottom:.8rem; margin-bottom:1.2rem; }
+  .cab img { height:52px; }
+  .cab h1 { font-size:1.25rem; margin:0; color:#0F3459; }
+  .cab .sub { color:#54657A; font-size:.8rem; }
+  h2 { font-size:.95rem; color:#0F3459; margin:1.4rem 0 .5rem; }
+  table { border-collapse:collapse; width:100%; font-size:11px; }
+  th { text-align:left; background:#E9EEF4; color:#54657A; text-transform:uppercase; font-size:9px; letter-spacing:.05em; padding:.4rem .5rem; border:1px solid #DCE4EE; }
+  td { padding:.4rem .5rem; border:1px solid #DCE4EE; }
+  .tiles { display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:.4rem; }
+  .tile { border:1px solid #DCE4EE; border-top:3px solid #0F3459; border-radius:6px; padding:.5rem .8rem; min-width:8.5rem; }
+  .tile .v { font-size:1.1rem; font-weight:700; }
+  .tile .l { font-size:.68rem; color:#54657A; }
+  .pie { margin-top:1.5rem; padding-top:.6rem; border-top:1px solid #DCE4EE; color:#8494A6; font-size:.7rem; display:flex; justify-content:space-between; }
+  @media print { body { margin:.5rem; } .no-print { display:none; } }
+  .no-print { position:fixed; top:1rem; right:1rem; background:#0F3459; color:#fff; border:none; border-radius:8px; padding:.6rem 1rem; font-weight:700; cursor:pointer; }
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">Imprimir / Guardar PDF</button>
+<div class="cab">
+  <div>
+    <h1>Reporte comercial ${esc(nombrePeriodo)}</h1>
+    <div class="sub">Período: ${fecha(desde)}${desde !== hasta ? ' a ' + fecha(hasta) : ''} · Comercial Cloud For Deploy</div>
+  </div>
+  <img src="/logo.png" alt="Cloud For Deploy">
+</div>
 
-function gondolasActividadPage({ user, campos, today, history }) {
+<div class="tiles">
+  <div class="tile"><div class="v">${money(r.tot.mrr)}</div><div class="l">Ingresos ganados</div></div>
+  <div class="tile"><div class="v">${money(r.ingresosProyectos)}</div><div class="l">Por proyectos</div></div>
+  <div class="tile"><div class="v">${money(r.mrrNuevo)}</div><div class="l">MRR nuevo</div></div>
+  <div class="tile"><div class="v">${r.tot.ganados} / ${r.tot.perdidos}</div><div class="l">Ganados / perdidos</div></div>
+  <div class="tile"><div class="v">${r.winRate == null ? '—' : r.winRate + '%'}</div><div class="l">Win rate</div></div>
+  <div class="tile"><div class="v">${r.tot.toques}</div><div class="l">Toques</div></div>
+</div>
+
+<h2>Por vendedor</h2>
+<table>
+  <thead><tr><th>Vendedor</th><th>Contactos</th><th>Toques</th><th>Reu. agend.</th><th>Reu. hechas</th><th>Deals creados</th><th>Ganados</th><th>Perdidos</th><th>Ingresos</th></tr></thead>
+  <tbody>
+    ${r.porVendedor.map((v) => filaV(v)).join('')}
+    ${filaV({ ...r.tot, name: 'TOTAL' }, true)}
+  </tbody>
+</table>
+
+<h2>Deals cerrados en el período</h2>
+<table>
+  <thead><tr><th>Empresa</th><th>Resultado</th><th>Tipo</th><th>Valor</th><th>Fecha</th><th>Motivo</th><th>Vendedor</th></tr></thead>
+  <tbody>${r.cerrados.length ? r.cerrados.map((d) => `<tr><td>${esc(d.empresa)}</td><td>${d.etapa}</td><td>${d.tipo_venta === 'Suscripción mensual' ? 'Suscripción' : esc(d.tipo_venta)}</td><td>${money(d.mrr)}</td><td>${fecha(d.fecha_cierre)}</td><td>${esc(d.motivo_perdida || '—')}</td><td>${esc(d.vendedor)}</td></tr>`).join('') : '<tr><td colspan="7">Sin cierres en este período.</td></tr>'}</tbody>
+</table>
+
+<h2>Motivos de pérdida</h2>
+<table>
+  <thead><tr><th>Motivo</th><th>Cantidad</th></tr></thead>
+  <tbody>${r.motivos.length ? r.motivos.map((m) => `<tr><td>${esc(m.label)}</td><td>${m.n}</td></tr>`).join('') : '<tr><td colspan="2">Sin deals perdidos en el período.</td></tr>'}</tbody>
+</table>
+
+<div class="pie">
+  <span>Generado por ${esc(user.name)} · Campus C4D</span>
+  <span>${new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</span>
+</div>
+<script>window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 400); });</script>
+</body>
+</html>`;
+}
+
+/* --------- paneles comerciales configurables --------- */
+
+function panelActividadPage({ user, campos, today, history, info }) {
   const vals = today ? (() => { try { return JSON.parse(today.valores || '{}'); } catch { return {}; } })() : {};
   return layout({
-    title: 'Actividad Góndolas', user, active: 'actividad', sistema: 'gondolas',
+    title: `Actividad · ${info.nombre}`, user, active: 'actividad', sistema: info.slug,
     body: `
   <h1>Mi actividad de hoy</h1>
   <p class="muted small">Los campos los define administración (Config). Si volvés a guardar, se actualiza el día.</p>
-  <form method="post" action="/gondolas/actividad" class="card">
+  <form method="post" action="${info.base}/actividad" class="card">
     <input type="hidden" name="fecha" value="${hoyISO()}">
     <div class="grid2">
       ${campos.map((c) => `<div><label>${esc(c.label)}</label><input name="c${c.id}" type="number" min="0" inputmode="numeric" value="${vals['c' + c.id] ?? ''}" placeholder="0"></div>`).join('')}
@@ -1448,13 +1539,13 @@ function gondolasActividadPage({ user, campos, today, history }) {
 }
 
 // Métricas de objetivos de góndolas: campos dinámicos + fijas de venta.
-const gondolasMetricas = (campos) => [
+const panelMetricas = (campos) => [
   ...campos.map((c) => ({ key: 'c' + c.id, label: c.label, fmt: (v) => v })),
   { key: 'ganados', label: 'Ventas ganadas', fmt: (v) => v },
   { key: 'ingresos', label: 'Ingresos ($)', fmt: money },
 ];
 
-function gondolasProgreso(metricas, goal, stats) {
+function panelProgreso(metricas, goal, stats) {
   return metricas.map((m) => {
     const obj = goal ? Number(goal[m.key]) || 0 : 0;
     const real = stats[m.key] || 0;
@@ -1464,25 +1555,25 @@ function gondolasProgreso(metricas, goal, stats) {
   }).join('');
 }
 
-function gondolasObjetivosPage({ user, campos, data, esAdmin }) {
-  const metricas = gondolasMetricas(campos);
+function panelObjetivosPage({ user, campos, data, esAdmin, info }) {
+  const metricas = panelMetricas(campos);
   const inputs = (pref, goal) => metricas.map((m) => `
     <div><label>${esc(m.label)}</label><input name="${pref}_${m.key}" type="number" min="0" step="any" inputmode="numeric" value="${goal && goal[m.key] ? goal[m.key] : ''}" placeholder="0"></div>`).join('');
   return layout({
-    title: 'Objetivos Góndolas', user, active: 'metas', sistema: 'gondolas',
+    title: `Objetivos · ${info.nombre}`, user, active: 'metas', sistema: info.slug,
     body: `
   <h1>Objetivos</h1>
   <div class="toolbar">
     <div class="seg">
-      <a href="/gondolas/objetivos" class="on">Objetivos</a>
-      <a href="/gondolas/ranking">Ranking</a>
+      <a href="${info.base}/objetivos" class="on">Objetivos</a>
+      <a href="${info.base}/ranking">Ranking</a>
     </div>
   </div>
   <p class="small muted">${esAdmin ? 'Las métricas salen de los campos de actividad que definiste en Config, más las fijas de venta.' : 'Tu progreso contra los objetivos que definió administración.'} La semana arranca el lunes; el mes, el día 1.</p>
   ${esAdmin ? `
   <div class="card card--accent">
     <h3 style="margin-top:0">Objetivos generales del equipo</h3>
-    <form method="post" action="/gondolas/objetivos-generales">
+    <form method="post" action="${info.base}/objetivos-generales">
       <div class="metas-grid">
         <div><strong class="small">Semanal</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('s', null)}</div></div>
         <div><strong class="small">Mensual</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('m', null)}</div></div>
@@ -1494,13 +1585,13 @@ function gondolasObjetivosPage({ user, campos, data, esAdmin }) {
   <div class="card">
     <h3 style="margin-top:0">${esc(u.name)}</h3>
     <div class="metas-grid">
-      <div><h4 style="margin:.2rem 0 .4rem">Esta semana</h4>${gondolasProgreso(metricas, goals.semana, stats.semana)}</div>
-      <div><h4 style="margin:.2rem 0 .4rem">Este mes</h4>${gondolasProgreso(metricas, goals.mes, stats.mes)}</div>
+      <div><h4 style="margin:.2rem 0 .4rem">Esta semana</h4>${panelProgreso(metricas, goals.semana, stats.semana)}</div>
+      <div><h4 style="margin:.2rem 0 .4rem">Este mes</h4>${panelProgreso(metricas, goals.mes, stats.mes)}</div>
     </div>
     ${esAdmin ? `
     <details style="margin-top:.8rem">
       <summary class="small" style="cursor:pointer;color:var(--accent-ink);font-weight:600">Definir objetivos de ${esc(u.name.split(' ')[0])}</summary>
-      <form method="post" action="/gondolas/objetivos/${u.id}">
+      <form method="post" action="${info.base}/objetivos/${u.id}">
         <div class="metas-grid" style="margin-top:.5rem">
           <div><strong class="small">Semanal</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('s', goals.semana)}</div></div>
           <div><strong class="small">Mensual</strong><div class="goal-inputs" style="grid-template-columns:repeat(${Math.min(4, metricas.length)},1fr)">${inputs('m', goals.mes)}</div></div>
@@ -1512,19 +1603,19 @@ function gondolasObjetivosPage({ user, campos, data, esAdmin }) {
   });
 }
 
-function gondolasRankingPage({ user, periodo, campos, rows }) {
+function panelRankingPage({ user, periodo, campos, rows, info }) {
   return layout({
-    title: 'Ranking Góndolas', user, active: 'metas', sistema: 'gondolas',
+    title: `Ranking · ${info.nombre}`, user, active: 'metas', sistema: info.slug,
     body: `
   <h1>Ranking</h1>
   <div class="toolbar">
     <div class="seg">
-      <a href="/gondolas/objetivos">Objetivos</a>
-      <a href="/gondolas/ranking" class="on">Ranking</a>
+      <a href="${info.base}/objetivos">Objetivos</a>
+      <a href="${info.base}/ranking" class="on">Ranking</a>
     </div>
     <div class="seg">
-      <a href="/gondolas/ranking?p=semana" class="${periodo === 'semana' ? 'on' : ''}">Esta semana</a>
-      <a href="/gondolas/ranking?p=mes" class="${periodo === 'mes' ? 'on' : ''}">Este mes</a>
+      <a href="${info.base}/ranking?p=semana" class="${periodo === 'semana' ? 'on' : ''}">Esta semana</a>
+      <a href="${info.base}/ranking?p=mes" class="${periodo === 'mes' ? 'on' : ''}">Este mes</a>
     </div>
   </div>
   <div class="tablewrap"><table>
@@ -1543,7 +1634,7 @@ function gondolasRankingPage({ user, periodo, campos, rows }) {
   });
 }
 
-function gondolasDashboardPage({ user, k, campos, colores, etapas }) {
+function panelDashboardPage({ user, k, campos, colores, etapas, info }) {
   const max = Math.max(1, ...etapas.map((e) => k.funnel[e] || 0));
   const funnelHtml = etapas.map((e) => {
     const v = k.funnel[e] || 0;
@@ -1554,9 +1645,9 @@ function gondolasDashboardPage({ user, k, campos, colores, etapas }) {
     return `<div class="prog-row" style="grid-template-columns:10rem 1fr"><span class="pl">${esc(e)}</span><div class="bar-track">${val}</div></div>`;
   }).join('');
   return layout({
-    title: 'Dashboard Góndolas', user, active: 'dashboard', sistema: 'gondolas',
+    title: `Dashboard · ${info.nombre}`, user, active: 'dashboard', sistema: info.slug,
     body: `
-  <h1>Dashboard Góndolas</h1>
+  <h1>Dashboard ${esc(info.nombre)}</h1>
   <div class="tiles">
     <div class="tile"><div class="v">${k.activos}</div><div class="l">Deals activos</div></div>
     <div class="tile"><div class="v">${money(k.ingresosMes)}</div><div class="l">Ingresos ganados este mes</div></div>
@@ -1580,29 +1671,29 @@ function gondolasDashboardPage({ user, k, campos, colores, etapas }) {
   });
 }
 
-function gondolasConfigPage({ user, etapas, campos, err }) {
+function panelConfigPage({ user, etapas, campos, err, info }) {
   const ERRS = { 'etapa-en-uso': 'No se puede borrar esa etapa: tiene deals adentro. Movelos a otra etapa primero.', 'ultima-etapa': 'Tiene que quedar al menos una etapa activa.' };
   return layout({
-    title: 'Config Góndolas', user, active: 'config', sistema: 'gondolas', err: ERRS[err],
+    title: `Config · ${info.nombre}`, user, active: 'config', sistema: info.slug, err: ERRS[err],
     body: `
   <h1>Configuración del panel</h1>
-  <p class="small muted">Acá moldeás el panel de góndolas: las etapas del pipeline y los campos de la carga diaria (que también definen las métricas de los objetivos). <strong>Ganado y Perdido son fijas</strong>: sostienen la lógica de aprobación y comisiones.</p>
+  <p class="small muted">Acá moldeás el panel de ${esc(info.nombre)}: las etapas del pipeline y los campos de la carga diaria (que también definen las métricas de los objetivos). <strong>Ganado y Perdido son fijas</strong>: sostienen la lógica de aprobación y comisiones.</p>
 
   <h2>Etapas del pipeline</h2>
   <div class="card">
     ${etapas.map((e, i) => `
     <div class="cfg-row">
-      <form method="post" action="/gondolas/config/etapas/${e.id}" class="cfg-inline">
+      <form method="post" action="${info.base}/config/etapas/${e.id}" class="cfg-inline">
         <input type="hidden" name="accion" value="renombrar">
         <input name="nombre" value="${esc(e.nombre)}">
         <button class="btn secondary small">Renombrar</button>
       </form>
-      <form method="post" action="/gondolas/config/etapas/${e.id}" style="display:inline"><input type="hidden" name="accion" value="subir"><button class="btn secondary small" ${i === 0 ? 'disabled' : ''}>↑</button></form>
-      <form method="post" action="/gondolas/config/etapas/${e.id}" style="display:inline"><input type="hidden" name="accion" value="bajar"><button class="btn secondary small" ${i === etapas.length - 1 ? 'disabled' : ''}>↓</button></form>
-      <form method="post" action="/gondolas/config/etapas/${e.id}" style="display:inline" onsubmit="return confirm('¿Borrar la etapa ${esc(e.nombre)}?')"><input type="hidden" name="accion" value="borrar"><button class="btn danger small">Borrar</button></form>
+      <form method="post" action="${info.base}/config/etapas/${e.id}" style="display:inline"><input type="hidden" name="accion" value="subir"><button class="btn secondary small" ${i === 0 ? 'disabled' : ''}>↑</button></form>
+      <form method="post" action="${info.base}/config/etapas/${e.id}" style="display:inline"><input type="hidden" name="accion" value="bajar"><button class="btn secondary small" ${i === etapas.length - 1 ? 'disabled' : ''}>↓</button></form>
+      <form method="post" action="${info.base}/config/etapas/${e.id}" style="display:inline" onsubmit="return confirm('¿Borrar la etapa ${esc(e.nombre)}?')"><input type="hidden" name="accion" value="borrar"><button class="btn danger small">Borrar</button></form>
     </div>`).join('')}
     <div class="cfg-row"><span class="chip" style="background:#3E9B57">Ganado</span><span class="chip" style="background:#C05450">Perdido</span><span class="muted small">— fijas (lógica de aprobación)</span></div>
-    <form method="post" action="/gondolas/config/etapas" class="cfg-inline" style="margin-top:.6rem">
+    <form method="post" action="${info.base}/config/etapas" class="cfg-inline" style="margin-top:.6rem">
       <input name="nombre" placeholder="Nueva etapa (ej: Instalación coordinada)" required>
       <button class="btn small">Agregar etapa</button>
     </form>
@@ -1613,14 +1704,14 @@ function gondolasConfigPage({ user, etapas, campos, err }) {
     <p class="small muted">Cada campo aparece en la actividad diaria del vendedor y como métrica disponible en los objetivos.</p>
     ${campos.map((c) => `
     <div class="cfg-row">
-      <form method="post" action="/gondolas/config/campos/${c.id}" class="cfg-inline">
+      <form method="post" action="${info.base}/config/campos/${c.id}" class="cfg-inline">
         <input type="hidden" name="accion" value="renombrar">
         <input name="label" value="${esc(c.label)}">
         <button class="btn secondary small">Renombrar</button>
       </form>
-      <form method="post" action="/gondolas/config/campos/${c.id}" style="display:inline" onsubmit="return confirm('¿Borrar el campo ${esc(c.label)}? Los datos históricos dejan de mostrarse.')"><input type="hidden" name="accion" value="borrar"><button class="btn danger small">Borrar</button></form>
+      <form method="post" action="${info.base}/config/campos/${c.id}" style="display:inline" onsubmit="return confirm('¿Borrar el campo ${esc(c.label)}? Los datos históricos dejan de mostrarse.')"><input type="hidden" name="accion" value="borrar"><button class="btn danger small">Borrar</button></form>
     </div>`).join('')}
-    <form method="post" action="/gondolas/config/campos" class="cfg-inline" style="margin-top:.6rem">
+    <form method="post" action="${info.base}/config/campos" class="cfg-inline" style="margin-top:.6rem">
       <input name="label" placeholder="Nuevo campo (ej: Presupuestos entregados)" required>
       <button class="btn small">Agregar campo</button>
     </form>
@@ -1800,5 +1891,5 @@ module.exports = {
   loginPage, pipelinePage, dealFormModal, actividadPage, dashboardPage, adminPage, perfilPage, docsPage, changelogPage,
   notificacionesPage, objetivosPage, rankingPage, metasDetallePage, reportesPage, hubPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
-  gondolasActividadPage, gondolasObjetivosPage, gondolasRankingPage, gondolasDashboardPage, gondolasConfigPage,
+  panelActividadPage, panelObjetivosPage, panelRankingPage, panelDashboardPage, panelConfigPage, reporteImprimirPage,
 };

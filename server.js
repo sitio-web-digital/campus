@@ -3,7 +3,8 @@ const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
-const { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, SISTEMAS } = require('./db');
+const { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, SISTEMAS, PANELES_COMERCIALES } = require('./db');
+const PANEL_SLUGS = PANELES_COMERCIALES.map((p) => p.slug);
 const V = require('./views');
 const C = require('./comisiones');
 const multer = require('multer');
@@ -84,7 +85,7 @@ const CAMPOS_DEAL = {
   empresa: 'Empresa', tipo_venta: 'Tipo de venta', mrr: 'Valor', decisor: 'Decisor', origen: 'Origen',
   proximo_paso: 'Próximo paso', fecha_proximo_paso: 'Fecha próximo paso',
   fecha_primera_reunion: 'Fecha primera reunión', fecha_cierre: 'Fecha de cierre',
-  motivo_perdida: 'Motivo de pérdida', notas: 'Notas', user_id: 'Vendedor',
+  motivo_perdida: 'Motivo de pérdida', user_id: 'Vendedor',
 };
 
 function diffDeal(antes, despues) {
@@ -116,24 +117,26 @@ const cleanInt = (s) => { const n = parseInt(s, 10); return Number.isFinite(n) &
 const cleanDate = (s) => (typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null);
 const cleanEnum = (s, list) => (list.includes(s) ? s : null);
 
-// Etapas válidas según el panel: CFD fijas; Góndolas dinámicas + Ganado/Perdido (fijas por la lógica de aprobación).
+// Etapas válidas según el panel: CFD fijas; paneles configurables dinámicas + Ganado/Perdido (fijas por la lógica de aprobación).
 function etapasDePanel(panel) {
-  if (panel === 'gondolas') {
-    const din = db.prepare('SELECT nombre FROM gondolas_etapas ORDER BY orden').all().map((r) => r.nombre);
+  if (PANEL_SLUGS.includes(panel)) {
+    const din = db.prepare('SELECT nombre FROM panel_etapas WHERE panel = ? ORDER BY orden').all(panel).map((r) => r.nombre);
     return [...din, 'Ganado', 'Perdido'];
   }
   return ETAPAS;
 }
 
-// Paleta para etapas dinámicas de Góndolas (por orden) + fijas.
+// Paleta para etapas dinámicas (por orden) + fijas.
 function coloresDePanel(panel) {
-  if (panel !== 'gondolas') return null;
+  if (!PANEL_SLUGS.includes(panel)) return null;
   const paleta = ['#8494A6', '#4A90C8', '#2E7BB8', '#1D6FB8', '#14538C', '#0F3459', '#5A7CA6', '#3E6B96', '#6B8CAE', '#48627E'];
   const map = {};
-  db.prepare('SELECT nombre FROM gondolas_etapas ORDER BY orden').all().forEach((r, i) => { map[r.nombre] = paleta[i % paleta.length]; });
+  db.prepare('SELECT nombre FROM panel_etapas WHERE panel = ? ORDER BY orden').all(panel).forEach((r, i) => { map[r.nombre] = paleta[i % paleta.length]; });
   map['Ganado'] = '#3E9B57'; map['Perdido'] = '#C05450';
   return map;
 }
+
+const homeDePanel = (panel) => (PANEL_SLUGS.includes(panel) ? `/${panel}/pipeline` : '/pipeline');
 
 function dealFromBody(body, user, panel = 'cfd', etapaActual = 'Lead', tipoActual = 'Proyecto único') {
   let userId = user.id;
@@ -155,7 +158,8 @@ function dealFromBody(body, user, panel = 'cfd', etapaActual = 'Lead', tipoActua
     fecha_primera_reunion: cleanDate(body.fecha_primera_reunion),
     fecha_cierre: cleanDate(body.fecha_cierre),
     motivo_perdida: cleanEnum(body.motivo_perdida, MOTIVOS),
-    notas: clean(body.notas),
+    notas: null,
+    nota: clean(body.notas), // nota nueva → va al historial
   };
 }
 
@@ -211,35 +215,36 @@ app.get('/pipeline', requireAuth, requireSistema('cfd'), (req, res) => {
 
 // Fondo de tablero + modal según el panel del deal.
 function renderModalSobrePipeline(req, res, modal, panel) {
-  if (panel === 'gondolas') {
-    const data = gondolasPipelineData(req);
-    return res.send(V.pipelinePage({ user: req.user, ...data, modal, ...gondolasOpts() }));
+  if (PANEL_SLUGS.includes(panel)) {
+    return res.send(V.pipelinePage({ user: req.user, ...panelPipelineData(req, panel), modal, ...panelOpts(panel) }));
   }
   res.send(V.pipelinePage({ user: req.user, ...pipelineData(req), modal }));
 }
 
 app.get('/deals/new', requireAuth, (req, res) => {
-  const panel = req.query.panel === 'gondolas' ? 'gondolas' : 'cfd';
+  const panel = PANEL_SLUGS.includes(req.query.panel) ? req.query.panel : 'cfd';
   if (!puede(req.user, panel)) return res.status(403).send('Sin acceso a este panel.');
   const vendedores = db.prepare('SELECT id, name FROM users WHERE active = 1 ORDER BY name').all();
   const modal = V.dealFormModal({
     user: req.user, deal: null, vendedores, isAdmin: req.user.role === 'admin',
-    panel, etapas: etapasDePanel(panel), backHref: panel === 'gondolas' ? '/gondolas/pipeline' : '/pipeline',
+    panel, etapas: etapasDePanel(panel), backHref: homeDePanel(panel),
   });
   renderModalSobrePipeline(req, res, modal, panel);
 });
 
 app.post('/deals', requireAuth, (req, res) => {
-  const panel = req.body.panel === 'gondolas' ? 'gondolas' : 'cfd';
+  const panel = PANEL_SLUGS.includes(req.body.panel) ? req.body.panel : 'cfd';
   if (!puede(req.user, panel)) return res.status(403).send('Sin acceso a este panel.');
-  const home = panel === 'gondolas' ? '/gondolas/pipeline' : '/pipeline';
+  const home = homeDePanel(panel);
   const d = dealFromBody(req.body, req.user, panel);
   if (!d.empresa) return res.redirect(home);
   // Ganado por admin CON valor cargado: aprobado directo. Sin valor o ganado por vendedor: pendiente.
   d.aprobacion = d.etapa === 'Ganado' ? (req.user.role === 'admin' && d.mrr > 0 ? 'aprobado' : 'pendiente') : null;
+  const { nota: _n1, ...dInsert } = d;
   const r = db.prepare(`INSERT INTO deals (empresa, user_id, panel, etapa, tipo_venta, mrr, decisor, origen, proximo_paso, fecha_proximo_paso, fecha_primera_reunion, fecha_cierre, motivo_perdida, notas, aprobacion)
-    VALUES (@empresa, @user_id, @panel, @etapa, @tipo_venta, @mrr, @decisor, @origen, @proximo_paso, @fecha_proximo_paso, @fecha_primera_reunion, @fecha_cierre, @motivo_perdida, @notas, @aprobacion)`).run(d);
+    VALUES (@empresa, @user_id, @panel, @etapa, @tipo_venta, @mrr, @decisor, @origen, @proximo_paso, @fecha_proximo_paso, @fecha_primera_reunion, @fecha_cierre, @motivo_perdida, @notas, @aprobacion)`).run(dInsert);
   logDealEvent(r.lastInsertRowid, req.user.id, 'creado', `Deal creado en etapa ${d.etapa}`);
+  if (d.nota) logDealEvent(r.lastInsertRowid, req.user.id, 'edicion', `Nota: ${d.nota}`);
   notifyAdmins(req.user.id, `Deal nuevo: «${d.empresa}» (${d.etapa}) — ${req.user.name}${d.aprobacion === 'pendiente' ? ' — requiere aprobación' : ''}`, `/deals/${r.lastInsertRowid}`);
   if (d.aprobacion === 'aprobado') C.generarComisiones({ ...d, id: r.lastInsertRowid, fecha_cierre: d.fecha_cierre || new Date().toISOString().slice(0, 10) });
   res.redirect(home);
@@ -254,7 +259,7 @@ app.get('/deals/:id', requireAuth, (req, res) => {
     WHERE e.deal_id = ? ORDER BY e.created_at DESC, e.id DESC`).all(deal.id);
   const modal = V.dealFormModal({
     user: req.user, deal, vendedores, isAdmin: req.user.role === 'admin', eventos, errAprob: req.query.err === 'valor',
-    panel: deal.panel, etapas: etapasDePanel(deal.panel), backHref: deal.panel === 'gondolas' ? '/gondolas/pipeline' : '/pipeline',
+    panel: deal.panel, etapas: etapasDePanel(deal.panel), backHref: homeDePanel(deal.panel),
   });
   renderModalSobrePipeline(req, res, modal, deal.panel);
 });
@@ -263,7 +268,7 @@ app.post('/deals/:id', requireAuth, (req, res) => {
   const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(req.params.id);
   if (!deal) return res.redirect('/hub');
   if (!puede(req.user, deal.panel)) return res.status(403).send('Sin acceso a este panel.');
-  const home = deal.panel === 'gondolas' ? '/gondolas/pipeline' : '/pipeline';
+  const home = homeDePanel(deal.panel);
   const d = dealFromBody(req.body, req.user, deal.panel, deal.etapa, deal.tipo_venta);
   if (!d.empresa) return res.redirect(`/deals/${deal.id}`);
   if (req.user.role !== 'admin') d.user_id = deal.user_id; // un vendedor no reasigna deals
@@ -274,10 +279,11 @@ app.post('/deals/:id', requireAuth, (req, res) => {
   d.aprobacion = d.etapa !== 'Ganado' ? null
     : cambioEtapa ? (req.user.role === 'admin' && d.mrr > 0 ? 'aprobado' : 'pendiente')
     : deal.aprobacion;
+  const { nota: _n2, ...dUpdate } = d;
   db.prepare(`UPDATE deals SET empresa=@empresa, user_id=@user_id, panel=@panel, etapa=@etapa, tipo_venta=@tipo_venta, mrr=@mrr, decisor=@decisor, origen=@origen,
     proximo_paso=@proximo_paso, fecha_proximo_paso=@fecha_proximo_paso, fecha_primera_reunion=@fecha_primera_reunion,
     fecha_cierre=@fecha_cierre, motivo_perdida=@motivo_perdida, notas=@notas, aprobacion=@aprobacion, updated_at=datetime('now') WHERE id=@id`)
-    .run({ ...d, id: deal.id });
+    .run({ ...dUpdate, id: deal.id });
 
   // Historial: cambio de etapa es un evento propio; el resto va como edición.
   const otros = diffDeal(deal, d);
@@ -290,6 +296,7 @@ app.post('/deals/:id', requireAuth, (req, res) => {
   } else if (otros.length) {
     logDealEvent(deal.id, req.user.id, 'edicion', otros.join(' · '));
   }
+  if (d.nota) logDealEvent(deal.id, req.user.id, 'edicion', `Nota: ${d.nota}`);
   res.redirect(home);
 });
 
@@ -299,7 +306,7 @@ app.post('/deals/:id/etapa', requireAuth, (req, res) => {
   if (!deal) return res.status(404).end();
   if (!puede(req.user, deal.panel)) return res.status(403).end();
   if (req.user.role !== 'admin' && deal.user_id !== req.user.id) return res.status(403).end();
-  const home = deal.panel === 'gondolas' ? '/gondolas/pipeline' : '/pipeline';
+  const home = homeDePanel(deal.panel);
   const etapa = cleanEnum(req.body.etapa, etapasDePanel(deal.panel));
   if (!etapa || etapa === deal.etapa) return res.redirect(home);
   let fechaCierre = deal.fecha_cierre;
@@ -592,6 +599,12 @@ app.get('/metas/:userId', requireAuth, requireSistema('cfd'), (req, res) => {
 /* ---------------- reportes (admin) ---------------- */
 
 function rangoPeriodo(p, off) {
+  if (p === 'dia') {
+    const d = new Date(hoyAR() + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() - off);
+    const f = d.toISOString().slice(0, 10);
+    return { desde: f, hasta: f };
+  }
   if (p === 'mes') {
     const d = new Date(hoyAR().slice(0, 8) + '01T00:00:00Z');
     d.setUTCMonth(d.getUTCMonth() - off);
@@ -603,6 +616,9 @@ function rangoPeriodo(p, off) {
   const fin = new Date(d); fin.setUTCDate(fin.getUTCDate() + 6);
   return { desde: d.toISOString().slice(0, 10), hasta: fin.toISOString().slice(0, 10) };
 }
+
+const periodoDeQuery = (q) => (q === 'mes' ? 'mes' : q === 'dia' ? 'dia' : 'semana');
+const PERIODO_NOMBRE = { dia: 'diario', semana: 'semanal', mes: 'mensual' };
 
 function reporteData(desde, hasta) {
   const usuarios = db.prepare('SELECT id, name FROM users WHERE active = 1 ORDER BY name').all();
@@ -627,21 +643,29 @@ function reporteData(desde, hasta) {
 }
 
 app.get('/reportes', requireAuth, requireAdmin, (req, res) => {
-  const p = req.query.p === 'mes' ? 'mes' : 'semana';
-  const off = Math.min(11, Math.max(0, parseInt(req.query.off, 10) || 0));
+  const p = periodoDeQuery(req.query.p);
+  const off = Math.min(30, Math.max(0, parseInt(req.query.off, 10) || 0));
   const { desde, hasta } = rangoPeriodo(p, off);
-  const periodos = Array.from({ length: 8 }, (_, i) => { const r = rangoPeriodo(p, i); return { off: i, label: `${r.desde} a ${r.hasta}` }; });
+  const periodos = Array.from({ length: p === 'dia' ? 14 : 8 }, (_, i) => { const r = rangoPeriodo(p, i); return { off: i, label: p === 'dia' ? r.desde : `${r.desde} a ${r.hasta}` }; });
   res.send(V.reportesPage({ user: req.user, p, off, desde, hasta, periodos, r: reporteData(desde, hasta) }));
 });
 
+// Vista imprimible del reporte: el navegador la exporta a PDF (Ctrl+P → Guardar como PDF).
+app.get('/reportes/imprimir', requireAuth, requireAdmin, (req, res) => {
+  const p = periodoDeQuery(req.query.p);
+  const off = Math.min(30, Math.max(0, parseInt(req.query.off, 10) || 0));
+  const { desde, hasta } = rangoPeriodo(p, off);
+  res.send(V.reporteImprimirPage({ user: req.user, p, nombrePeriodo: PERIODO_NOMBRE[p], desde, hasta, r: reporteData(desde, hasta) }));
+});
+
 app.get('/reportes.csv', requireAuth, requireAdmin, (req, res) => {
-  const p = req.query.p === 'mes' ? 'mes' : 'semana';
-  const off = Math.min(11, Math.max(0, parseInt(req.query.off, 10) || 0));
+  const p = periodoDeQuery(req.query.p);
+  const off = Math.min(30, Math.max(0, parseInt(req.query.off, 10) || 0));
   const { desde, hasta } = rangoPeriodo(p, off);
   const r = reporteData(desde, hasta);
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const lines = [];
-  lines.push(`Reporte ${p === 'mes' ? 'mensual' : 'semanal'};${desde} a ${hasta}`);
+  lines.push(`Reporte ${PERIODO_NOMBRE[p]};${desde} a ${hasta}`);
   lines.push('');
   lines.push(['Vendedor', 'Contactos', 'Toques', 'Reuniones agendadas', 'Reuniones realizadas', 'Deals creados', 'Ganados', 'Perdidos', 'Ingresos ganados'].join(';'));
   for (const v of r.porVendedor) lines.push([esc(v.name), v.contactos, v.toques, v.agendadas, v.realizadas, v.creados, v.ganados, v.perdidos, v.mrr].join(';'));
@@ -667,27 +691,27 @@ app.get('/ranking', requireAuth, requireSistema('cfd'), (req, res) => {
   res.send(V.rankingPage({ user: req.user, periodo, rows }));
 });
 
-/* ---------------- comercial góndolas (etapas y actividad configurables) ---------------- */
+/* ---------------- paneles comerciales configurables (una empresa = un panel) ---------------- */
 
-const camposGondolas = () => db.prepare('SELECT * FROM gondolas_campos ORDER BY orden').all();
-const etapasGondolas = () => db.prepare('SELECT * FROM gondolas_etapas ORDER BY orden').all();
+const camposPanel = (slug) => db.prepare('SELECT * FROM panel_campos WHERE panel = ? ORDER BY orden').all(slug);
+const etapasPanelCfg = (slug) => db.prepare('SELECT * FROM panel_etapas WHERE panel = ? ORDER BY orden').all(slug);
 
-// Opciones de vista compartidas por todas las pantallas de góndolas.
-function gondolasOpts() {
+// Opciones de vista compartidas por todas las pantallas de un panel configurable.
+function panelOpts(slug) {
   return {
-    etapasActivas: etapasGondolas().map((e) => e.nombre),
-    colores: coloresDePanel('gondolas'),
-    base: '/gondolas',
-    nuevoHref: '/deals/new?panel=gondolas',
-    sistema: 'gondolas',
+    etapasActivas: etapasPanelCfg(slug).map((e) => e.nombre),
+    colores: coloresDePanel(slug),
+    base: '/' + slug,
+    nuevoHref: '/deals/new?panel=' + slug,
+    sistema: slug,
   };
 }
 
-function gondolasPipelineData(req) {
+function panelPipelineData(req, slug) {
   const scope = req.query.scope === 'todos' ? 'todos' : 'mios';
   const closed = req.query.cerrados === '1';
-  const params = [];
-  const where = ["d.panel = 'gondolas'"];
+  const params = [slug];
+  const where = ['d.panel = ?'];
   if (closed) where.push("d.etapa IN ('Ganado','Perdido')");
   else { where.push("(d.etapa NOT IN ('Ganado','Perdido') OR d.fecha_cierre >= ?)"); params.push(inicioMes()); }
   if (scope === 'mios') { where.push('d.user_id = ?'); params.push(req.user.id); }
@@ -696,185 +720,188 @@ function gondolasPipelineData(req) {
   return { deals, scope, closed };
 }
 
-// Sumas de un vendedor en el período: campos dinámicos (JSON) + ventas aprobadas.
-function gondolasStats(userId, desde) {
+// Sumas de un vendedor en el período: campos dinámicos (JSON) + ventas aprobadas del panel.
+function panelStats(slug, userId, desde) {
   const tot = { ganados: 0, ingresos: 0 };
-  for (const c of camposGondolas()) tot['c' + c.id] = 0;
-  for (const row of db.prepare('SELECT valores FROM gondolas_activity WHERE user_id = ? AND fecha >= ?').all(userId, desde)) {
+  for (const c of camposPanel(slug)) tot['c' + c.id] = 0;
+  for (const row of db.prepare('SELECT valores FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(slug, userId, desde)) {
     try { const v = JSON.parse(row.valores || '{}'); for (const k of Object.keys(v)) if (k in tot) tot[k] += Number(v[k]) || 0; } catch {}
   }
-  const g = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(mrr),0) m FROM deals WHERE panel = 'gondolas' AND user_id = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND fecha_cierre >= ?").get(userId, desde);
+  const g = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(mrr),0) m FROM deals WHERE panel = ? AND user_id = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND fecha_cierre >= ?").get(slug, userId, desde);
   tot.ganados = g.n; tot.ingresos = g.m;
   return tot;
 }
 
-const gondolasGoals = (userId) => {
+const panelGoalsDe = (slug, userId) => {
   const out = { semana: {}, mes: {} };
-  for (const r of db.prepare('SELECT * FROM gondolas_goals WHERE user_id = ?').all(userId)) { try { out[r.periodo] = JSON.parse(r.valores || '{}'); } catch {} }
+  for (const r of db.prepare('SELECT * FROM panel_goals WHERE panel = ? AND user_id = ?').all(slug, userId)) { try { out[r.periodo] = JSON.parse(r.valores || '{}'); } catch {} }
   return out;
 };
 
-app.get('/gondolas', requireAuth, requireSistema('gondolas'), (req, res) => res.redirect('/gondolas/pipeline'));
-
-app.get('/gondolas/pipeline', requireAuth, requireSistema('gondolas'), (req, res) => {
-  res.send(V.pipelinePage({ user: req.user, ...gondolasPipelineData(req), ...gondolasOpts() }));
-});
-
-app.get('/gondolas/actividad', requireAuth, requireSistema('gondolas'), (req, res) => {
-  const hoy = hoyAR();
-  const campos = camposGondolas();
-  const today = db.prepare('SELECT * FROM gondolas_activity WHERE user_id = ? AND fecha = ?').get(req.user.id, hoy);
-  const history = db.prepare('SELECT * FROM gondolas_activity WHERE user_id = ? ORDER BY fecha DESC LIMIT 14').all(req.user.id);
-  res.send(V.gondolasActividadPage({ user: req.user, campos, today, history }));
-});
-
-app.post('/gondolas/actividad', requireAuth, requireSistema('gondolas'), (req, res) => {
-  const fecha = cleanDate(req.body.fecha) || hoyAR();
-  const valores = {};
-  for (const c of camposGondolas()) valores['c' + c.id] = cleanInt(req.body['c' + c.id]);
-  db.prepare(`INSERT INTO gondolas_activity (user_id, fecha, valores, notas) VALUES (?, ?, ?, ?)
-    ON CONFLICT(user_id, fecha) DO UPDATE SET valores = excluded.valores, notas = excluded.notas`)
-    .run(req.user.id, fecha, JSON.stringify(valores), clean(req.body.notas));
-  res.redirect('/gondolas/actividad');
-});
-
-app.get('/gondolas/objetivos', requireAuth, requireSistema('gondolas'), (req, res) => {
-  const esAdmin = req.user.role === 'admin';
-  const usuarios = esAdmin
-    ? db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY role = 'admin', name").all()
-    : [{ id: req.user.id, name: req.user.name }];
-  const desde = { semana: inicioSemana(), mes: inicioMes() };
-  const data = usuarios.map((u) => ({
-    u, goals: gondolasGoals(u.id),
-    stats: { semana: gondolasStats(u.id, desde.semana), mes: gondolasStats(u.id, desde.mes) },
-  }));
-  res.send(V.gondolasObjetivosPage({ user: req.user, campos: camposGondolas(), data, esAdmin }));
-});
-
-function guardarGoalsGondolas(userId, body) {
-  const campos = camposGondolas();
-  const up = db.prepare(`INSERT INTO gondolas_goals (user_id, periodo, valores) VALUES (?, ?, ?)
-    ON CONFLICT(user_id, periodo) DO UPDATE SET valores = excluded.valores`);
+function guardarGoalsPanel(slug, userId, body) {
+  const campos = camposPanel(slug);
+  const up = db.prepare(`INSERT INTO panel_goals (panel, user_id, periodo, valores) VALUES (?, ?, ?, ?)
+    ON CONFLICT(panel, user_id, periodo) DO UPDATE SET valores = excluded.valores`);
   for (const [pref, periodo] of [['s', 'semana'], ['m', 'mes']]) {
     const v = {};
     for (const c of campos) v['c' + c.id] = cleanNum(body[`${pref}_c${c.id}`]) || 0;
     v.ganados = cleanNum(body[`${pref}_ganados`]) || 0;
     v.ingresos = cleanNum(body[`${pref}_ingresos`]) || 0;
-    up.run(userId, periodo, JSON.stringify(v));
+    up.run(slug, userId, periodo, JSON.stringify(v));
   }
 }
 
-app.post('/gondolas/objetivos/:userId', requireAuth, requireAdmin, (req, res) => {
-  const target = db.prepare('SELECT id FROM users WHERE id = ?').get(req.params.userId);
-  if (target) guardarGoalsGondolas(target.id, req.body);
-  res.redirect('/gondolas/objetivos');
-});
+for (const PANEL of PANELES_COMERCIALES) {
+  const slug = PANEL.slug;
+  const base = '/' + slug;
+  const info = { slug, base, nombre: PANEL.nombre };
 
-app.post('/gondolas/objetivos-generales', requireAuth, requireAdmin, (req, res) => {
-  for (const u of db.prepare("SELECT id FROM users WHERE role = 'vendedor' AND active = 1").all()) guardarGoalsGondolas(u.id, req.body);
-  res.redirect('/gondolas/objetivos');
-});
+  app.get(base, requireAuth, requireSistema(slug), (req, res) => res.redirect(base + '/pipeline'));
 
-app.get('/gondolas/ranking', requireAuth, requireSistema('gondolas'), (req, res) => {
-  const periodo = req.query.p === 'mes' ? 'mes' : 'semana';
-  const desde = periodo === 'mes' ? inicioMes() : inicioSemana();
-  const campos = camposGondolas();
-  const rows = db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer'").all()
-    .map((u) => {
-      const s = gondolasStats(u.id, desde);
-      const goal = gondolasGoals(u.id)[periodo];
-      const cumpl = goal && goal.ingresos > 0 ? Math.round((s.ingresos / goal.ingresos) * 100) : null;
-      return { name: u.name, ...s, cumpl };
-    })
-    .sort((a, b) => b.ingresos - a.ingresos || b.ganados - a.ganados);
-  res.send(V.gondolasRankingPage({ user: req.user, periodo, campos, rows }));
-});
+  app.get(base + '/pipeline', requireAuth, requireSistema(slug), (req, res) => {
+    res.send(V.pipelinePage({ user: req.user, ...panelPipelineData(req, slug), ...panelOpts(slug) }));
+  });
 
-app.get('/gondolas/dashboard', requireAuth, requireAdmin, (req, res) => {
-  const mesInicio = inicioMes();
-  const colores = coloresDePanel('gondolas');
-  const funnel = {};
-  for (const r of db.prepare("SELECT etapa, COUNT(*) n FROM deals WHERE panel = 'gondolas' AND etapa NOT IN ('Ganado','Perdido') GROUP BY etapa").all()) funnel[r.etapa] = r.n;
-  const activos = Object.values(funnel).reduce((a, b) => a + b, 0);
-  const g = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(mrr),0) m FROM deals WHERE panel = 'gondolas' AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND fecha_cierre >= ?").get(mesInicio);
-  const c90 = db.prepare("SELECT etapa, COUNT(*) n FROM deals WHERE panel = 'gondolas' AND (etapa = 'Perdido' OR (etapa = 'Ganado' AND aprobacion = 'aprobado')) AND fecha_cierre >= date('now','-90 days') GROUP BY etapa").all();
-  const gg = c90.find((r) => r.etapa === 'Ganado')?.n || 0, pp = c90.find((r) => r.etapa === 'Perdido')?.n || 0;
-  const winRate = gg + pp > 0 ? Math.round((gg / (gg + pp)) * 100) : null;
-  const sinPaso = db.prepare(`SELECT d.id, d.empresa, d.etapa, d.updated_at, u.name vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
-    WHERE d.panel = 'gondolas' AND d.etapa NOT IN ('Ganado','Perdido') AND d.fecha_proximo_paso IS NULL ORDER BY d.updated_at ASC`).all();
-  const campos = camposGondolas();
-  const porVendedor = db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all()
-    .map((u) => ({ name: u.name, ...gondolasStats(u.id, mesInicio) }));
-  res.send(V.gondolasDashboardPage({
-    user: req.user,
-    k: { funnel, activos, ingresosMes: g.m, ganadosMes: g.n, winRate, sinPaso, porVendedor },
-    campos, colores, etapas: etapasGondolas().map((e) => e.nombre),
-  }));
-});
+  app.get(base + '/actividad', requireAuth, requireSistema(slug), (req, res) => {
+    const hoy = hoyAR();
+    const today = db.prepare('SELECT * FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha = ?').get(slug, req.user.id, hoy);
+    const history = db.prepare('SELECT * FROM panel_activity WHERE panel = ? AND user_id = ? ORDER BY fecha DESC LIMIT 14').all(slug, req.user.id);
+    res.send(V.panelActividadPage({ user: req.user, campos: camposPanel(slug), today, history, info }));
+  });
 
-/* --- configuración del panel góndolas (solo admin) --- */
+  app.post(base + '/actividad', requireAuth, requireSistema(slug), (req, res) => {
+    const fecha = cleanDate(req.body.fecha) || hoyAR();
+    const valores = {};
+    for (const c of camposPanel(slug)) valores['c' + c.id] = cleanInt(req.body['c' + c.id]);
+    db.prepare(`INSERT INTO panel_activity (panel, user_id, fecha, valores, notas) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(panel, user_id, fecha) DO UPDATE SET valores = excluded.valores, notas = excluded.notas`)
+      .run(slug, req.user.id, fecha, JSON.stringify(valores), clean(req.body.notas));
+    res.redirect(base + '/actividad');
+  });
 
-app.get('/gondolas/config', requireAuth, requireAdmin, (req, res) => {
-  res.send(V.gondolasConfigPage({ user: req.user, etapas: etapasGondolas(), campos: camposGondolas(), err: req.query.err }));
-});
+  app.get(base + '/objetivos', requireAuth, requireSistema(slug), (req, res) => {
+    const esAdmin = req.user.role === 'admin';
+    const usuarios = esAdmin
+      ? db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY role = 'admin', name").all()
+      : [{ id: req.user.id, name: req.user.name }];
+    const desde = { semana: inicioSemana(), mes: inicioMes() };
+    const data = usuarios.map((u) => ({
+      u, goals: panelGoalsDe(slug, u.id),
+      stats: { semana: panelStats(slug, u.id, desde.semana), mes: panelStats(slug, u.id, desde.mes) },
+    }));
+    res.send(V.panelObjetivosPage({ user: req.user, campos: camposPanel(slug), data, esAdmin, info }));
+  });
 
-app.post('/gondolas/config/etapas', requireAuth, requireAdmin, (req, res) => {
-  const nombre = clean(req.body.nombre);
-  if (nombre && !['Ganado', 'Perdido'].includes(nombre)) {
-    const max = db.prepare('SELECT COALESCE(MAX(orden),0) m FROM gondolas_etapas').get().m;
-    try { db.prepare('INSERT INTO gondolas_etapas (nombre, orden) VALUES (?, ?)').run(nombre, max + 1); } catch {}
-  }
-  res.redirect('/gondolas/config');
-});
+  app.post(base + '/objetivos/:userId', requireAuth, requireAdmin, (req, res) => {
+    const target = db.prepare('SELECT id FROM users WHERE id = ?').get(req.params.userId);
+    if (target) guardarGoalsPanel(slug, target.id, req.body);
+    res.redirect(base + '/objetivos');
+  });
 
-app.post('/gondolas/config/etapas/:id', requireAuth, requireAdmin, (req, res) => {
-  const etapa = db.prepare('SELECT * FROM gondolas_etapas WHERE id = ?').get(req.params.id);
-  if (!etapa) return res.redirect('/gondolas/config');
-  const accion = req.body.accion;
-  if (accion === 'renombrar') {
+  app.post(base + '/objetivos-generales', requireAuth, requireAdmin, (req, res) => {
+    for (const u of db.prepare("SELECT id FROM users WHERE role = 'vendedor' AND active = 1").all()) guardarGoalsPanel(slug, u.id, req.body);
+    res.redirect(base + '/objetivos');
+  });
+
+  app.get(base + '/ranking', requireAuth, requireSistema(slug), (req, res) => {
+    const periodo = req.query.p === 'mes' ? 'mes' : 'semana';
+    const desde = periodo === 'mes' ? inicioMes() : inicioSemana();
+    const rows = db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer'").all()
+      .map((u) => {
+        const st = panelStats(slug, u.id, desde);
+        const goal = panelGoalsDe(slug, u.id)[periodo];
+        const cumpl = goal && goal.ingresos > 0 ? Math.round((st.ingresos / goal.ingresos) * 100) : null;
+        return { name: u.name, ...st, cumpl };
+      })
+      .sort((a, b) => b.ingresos - a.ingresos || b.ganados - a.ganados);
+    res.send(V.panelRankingPage({ user: req.user, periodo, campos: camposPanel(slug), rows, info }));
+  });
+
+  app.get(base + '/dashboard', requireAuth, requireAdmin, (req, res) => {
+    const mesInicio = inicioMes();
+    const colores = coloresDePanel(slug);
+    const funnel = {};
+    for (const r of db.prepare("SELECT etapa, COUNT(*) n FROM deals WHERE panel = ? AND etapa NOT IN ('Ganado','Perdido') GROUP BY etapa").all(slug)) funnel[r.etapa] = r.n;
+    const activos = Object.values(funnel).reduce((a, b) => a + b, 0);
+    const g = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(mrr),0) m FROM deals WHERE panel = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND fecha_cierre >= ?").get(slug, mesInicio);
+    const c90 = db.prepare("SELECT etapa, COUNT(*) n FROM deals WHERE panel = ? AND (etapa = 'Perdido' OR (etapa = 'Ganado' AND aprobacion = 'aprobado')) AND fecha_cierre >= date('now','-90 days') GROUP BY etapa").all(slug);
+    const gg = c90.find((r) => r.etapa === 'Ganado')?.n || 0, pp = c90.find((r) => r.etapa === 'Perdido')?.n || 0;
+    const winRate = gg + pp > 0 ? Math.round((gg / (gg + pp)) * 100) : null;
+    const sinPaso = db.prepare(`SELECT d.id, d.empresa, d.etapa, d.updated_at, u.name vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
+      WHERE d.panel = ? AND d.etapa NOT IN ('Ganado','Perdido') AND d.fecha_proximo_paso IS NULL ORDER BY d.updated_at ASC`).all(slug);
+    const porVendedor = db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all()
+      .map((u) => ({ name: u.name, ...panelStats(slug, u.id, mesInicio) }));
+    res.send(V.panelDashboardPage({
+      user: req.user,
+      k: { funnel, activos, ingresosMes: g.m, ganadosMes: g.n, winRate, sinPaso, porVendedor },
+      campos: camposPanel(slug), colores, etapas: etapasPanelCfg(slug).map((e) => e.nombre), info,
+    }));
+  });
+
+  /* --- configuración del panel (solo admin) --- */
+
+  app.get(base + '/config', requireAuth, requireAdmin, (req, res) => {
+    res.send(V.panelConfigPage({ user: req.user, etapas: etapasPanelCfg(slug), campos: camposPanel(slug), err: req.query.err, info }));
+  });
+
+  app.post(base + '/config/etapas', requireAuth, requireAdmin, (req, res) => {
     const nombre = clean(req.body.nombre);
-    if (nombre && !['Ganado', 'Perdido'].includes(nombre) && nombre !== etapa.nombre) {
-      try {
-        db.prepare('UPDATE gondolas_etapas SET nombre = ? WHERE id = ?').run(nombre, etapa.id);
-        db.prepare("UPDATE deals SET etapa = ? WHERE panel = 'gondolas' AND etapa = ?").run(nombre, etapa.nombre);
-      } catch {}
+    if (nombre && !['Ganado', 'Perdido'].includes(nombre)) {
+      const max = db.prepare('SELECT COALESCE(MAX(orden),0) m FROM panel_etapas WHERE panel = ?').get(slug).m;
+      try { db.prepare('INSERT INTO panel_etapas (panel, nombre, orden) VALUES (?, ?, ?)').run(slug, nombre, max + 1); } catch {}
     }
-  } else if (accion === 'subir' || accion === 'bajar') {
-    const dir = accion === 'subir' ? -1 : 1;
-    const vecino = db.prepare('SELECT * FROM gondolas_etapas WHERE orden = ?').get(etapa.orden + dir);
-    if (vecino) {
-      db.prepare('UPDATE gondolas_etapas SET orden = ? WHERE id = ?').run(vecino.orden, etapa.id);
-      db.prepare('UPDATE gondolas_etapas SET orden = ? WHERE id = ?').run(etapa.orden, vecino.id);
+    res.redirect(base + '/config');
+  });
+
+  app.post(base + '/config/etapas/:id', requireAuth, requireAdmin, (req, res) => {
+    const etapa = db.prepare('SELECT * FROM panel_etapas WHERE id = ? AND panel = ?').get(req.params.id, slug);
+    if (!etapa) return res.redirect(base + '/config');
+    const accion = req.body.accion;
+    if (accion === 'renombrar') {
+      const nombre = clean(req.body.nombre);
+      if (nombre && !['Ganado', 'Perdido'].includes(nombre) && nombre !== etapa.nombre) {
+        try {
+          db.prepare('UPDATE panel_etapas SET nombre = ? WHERE id = ?').run(nombre, etapa.id);
+          db.prepare('UPDATE deals SET etapa = ? WHERE panel = ? AND etapa = ?').run(nombre, slug, etapa.nombre);
+        } catch {}
+      }
+    } else if (accion === 'subir' || accion === 'bajar') {
+      const dir = accion === 'subir' ? -1 : 1;
+      const vecino = db.prepare('SELECT * FROM panel_etapas WHERE panel = ? AND orden = ?').get(slug, etapa.orden + dir);
+      if (vecino) {
+        db.prepare('UPDATE panel_etapas SET orden = ? WHERE id = ?').run(vecino.orden, etapa.id);
+        db.prepare('UPDATE panel_etapas SET orden = ? WHERE id = ?').run(etapa.orden, vecino.id);
+      }
+    } else if (accion === 'borrar') {
+      const enUso = db.prepare('SELECT COUNT(*) c FROM deals WHERE panel = ? AND etapa = ?').get(slug, etapa.nombre).c;
+      if (enUso > 0) return res.redirect(base + '/config?err=etapa-en-uso');
+      if (db.prepare('SELECT COUNT(*) c FROM panel_etapas WHERE panel = ?').get(slug).c <= 1) return res.redirect(base + '/config?err=ultima-etapa');
+      db.prepare('DELETE FROM panel_etapas WHERE id = ?').run(etapa.id);
     }
-  } else if (accion === 'borrar') {
-    const enUso = db.prepare("SELECT COUNT(*) c FROM deals WHERE panel = 'gondolas' AND etapa = ?").get(etapa.nombre).c;
-    if (enUso > 0) return res.redirect('/gondolas/config?err=etapa-en-uso');
-    if (db.prepare('SELECT COUNT(*) c FROM gondolas_etapas').get().c <= 1) return res.redirect('/gondolas/config?err=ultima-etapa');
-    db.prepare('DELETE FROM gondolas_etapas WHERE id = ?').run(etapa.id);
-  }
-  res.redirect('/gondolas/config');
-});
+    res.redirect(base + '/config');
+  });
 
-app.post('/gondolas/config/campos', requireAuth, requireAdmin, (req, res) => {
-  const label = clean(req.body.label);
-  if (label) {
-    const max = db.prepare('SELECT COALESCE(MAX(orden),0) m FROM gondolas_campos').get().m;
-    db.prepare('INSERT INTO gondolas_campos (label, orden) VALUES (?, ?)').run(label, max + 1);
-  }
-  res.redirect('/gondolas/config');
-});
-
-app.post('/gondolas/config/campos/:id', requireAuth, requireAdmin, (req, res) => {
-  const campo = db.prepare('SELECT * FROM gondolas_campos WHERE id = ?').get(req.params.id);
-  if (!campo) return res.redirect('/gondolas/config');
-  if (req.body.accion === 'renombrar') {
+  app.post(base + '/config/campos', requireAuth, requireAdmin, (req, res) => {
     const label = clean(req.body.label);
-    if (label) db.prepare('UPDATE gondolas_campos SET label = ? WHERE id = ?').run(label, campo.id);
-  } else if (req.body.accion === 'borrar') {
-    db.prepare('DELETE FROM gondolas_campos WHERE id = ?').run(campo.id);
-  }
-  res.redirect('/gondolas/config');
-});
+    if (label) {
+      const max = db.prepare('SELECT COALESCE(MAX(orden),0) m FROM panel_campos WHERE panel = ?').get(slug).m;
+      db.prepare('INSERT INTO panel_campos (panel, label, orden) VALUES (?, ?, ?)').run(slug, label, max + 1);
+    }
+    res.redirect(base + '/config');
+  });
+
+  app.post(base + '/config/campos/:id', requireAuth, requireAdmin, (req, res) => {
+    const campo = db.prepare('SELECT * FROM panel_campos WHERE id = ? AND panel = ?').get(req.params.id, slug);
+    if (!campo) return res.redirect(base + '/config');
+    if (req.body.accion === 'renombrar') {
+      const label = clean(req.body.label);
+      if (label) db.prepare('UPDATE panel_campos SET label = ? WHERE id = ?').run(label, campo.id);
+    } else if (req.body.accion === 'borrar') {
+      db.prepare('DELETE FROM panel_campos WHERE id = ?').run(campo.id);
+    }
+    res.redirect(base + '/config');
+  });
+}
 
 /* ---------------- panel de cobranza ---------------- */
 
@@ -945,7 +972,7 @@ app.get('/cobranza/:cid/invoice', requireAuth, requireSistema('cobranza'), (req,
 });
 
 app.get('/cobranza/reglas', requireAuth, requireAdmin, (req, res) => {
-  res.send(V.reglasPage({ user: req.user, reglas: C.getAllRules() }));
+  res.send(V.reglasPage({ user: req.user, reglas: C.getAllRules(), paneles: PANELES_COMERCIALES }));
 });
 
 app.post('/cobranza/reglas', requireAuth, requireAdmin, (req, res) => {
@@ -972,9 +999,11 @@ app.post('/cobranza/reglas', requireAuth, requireAdmin, (req, res) => {
       C.saveRules(tipo, { tipo: 'fases', fases, ...(nota ? { nota } : {}) });
     }
   }
-  // Rubro Góndolas: % plano cobrable al momento.
-  const gPct = cleanNum(req.body.g_pct);
-  if (gPct != null) C.saveRules('gondolas', { tipo: 'flat', pct: gPct, nota: 'Venta de góndolas: comisión única cobrable al momento.' });
+  // Rubros con % plano cobrable al momento (uno por panel comercial configurable).
+  for (const P of PANELES_COMERCIALES) {
+    const pct = cleanNum(req.body[`flat_${P.slug}`]);
+    if (pct != null) C.saveRules(P.slug, { tipo: 'flat', pct, nota: `Venta de ${P.nombre}: comisión única cobrable al momento.` });
+  }
   res.redirect('/cobranza/reglas');
 });
 
