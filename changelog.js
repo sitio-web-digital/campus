@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.10.1',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Importación de las leads históricas de la planilla (pre-sistema): 163 leads a los paneles Góndolas y Estanterías Reforzadas, con vendedor, etapa, valor cotizado, provincia y las notas/celular/fuente en el historial de cada lead.' },
+      { tipo: 'nuevo', texto: 'Etapas nuevas en Góndolas y Estanterías para reflejar el flujo real del equipo: Seguimiento, Frío y Caliente (editables en Config como siempre).' },
+    ],
+  },
+  {
     version: '2.10.0',
     fecha: '2026-08-17',
     cambios: [
