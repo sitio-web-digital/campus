@@ -108,14 +108,14 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
   if (sistema === 'cobranza') {
     links = `
         <a href="/cobranza" class="${active === 'cobranza' ? 'on' : ''}">${ICONS.cobranza}<span>Comisiones</span></a>
-        ${user && user.role === 'admin' ? `<a href="/cobranza/reglas" class="${active === 'reglas' ? 'on' : ''}">${ICONS.docs}<span>Reglas</span></a>` : ''}${perfilLink}`;
+        ${user && user.role === 'admin' ? `<a href="/cobranza/reglas" class="${active === 'reglas' ? 'on' : ''}">${ICONS.docs}<span>Reglas</span></a>` : ''}`;
   } else if (sistema === 'hub') {
-    links = perfilLink;
+    links = '';
   } else if (sistema === 'admin') {
     links = `
         <a href="/admin" class="${active === 'admin' ? 'on' : ''}">${ICONS.equipo}<span>Usuarios</span></a>
         <a href="/admin/comunicacion" class="${active === 'comunicacion' ? 'on' : ''}">${ICONS.bell}<span>Comunicación</span></a>
-        <a href="/admin/preferencias" class="${active === 'preferencias' ? 'on' : ''}">${ICONS.docs}<span>Preferencias</span></a>${perfilLink}`;
+        <a href="/admin/preferencias" class="${active === 'preferencias' ? 'on' : ''}">${ICONS.docs}<span>Preferencias</span></a>`;
   } else if (sistema === 'gondolas' || sistema === 'estanterias' || sistema === 'sitioweb') {
     const b = '/' + sistema;
     links = `
@@ -123,7 +123,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="${b}/actividad" class="${active === 'actividad' ? 'on' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="${b}/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
         ${user && user.role === 'admin' ? `<a href="${b}/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
-        <a href="${b}/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>` : ''}${perfilLink}`;
+        <a href="${b}/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>` : ''}`;
   } else {
     links = `
         <a href="/pipeline" class="${active === 'pipeline' ? 'on' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
@@ -132,7 +132,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         ${user && user.role === 'admin' ? `<a href="/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
         <a href="/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>
         <a href="/admin" class="${active === 'equipo' ? 'on' : ''}">${ICONS.equipo}<span>Equipo</span></a>` : ''}
-        <a href="/documentacion" class="${active === 'docs' ? 'on' : ''}">${ICONS.docs}<span>Docs</span></a>${perfilLink}`;
+        <a href="/documentacion" class="${active === 'docs' ? 'on' : ''}">${ICONS.docs}<span>Docs</span></a>`;
   }
   const nav = user ? `
   <nav class="nav">
@@ -140,6 +140,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
       <span class="brand-row">${sysSwitch(sistema, user)}${bell}${themeBtn}</span>
       <div class="nav-links">${links}
       </div>
+      ${perfilLink}
     </div>
   </nav>` : '';
   return `<!doctype html>
@@ -931,7 +932,11 @@ html.dark .theme-btn .ic-luna { display:none; }
 /* ---------- fotos de perfil ---------- */
 .avatar { width:1.7rem; height:1.7rem; border-radius:50%; object-fit:cover; flex-shrink:0; display:inline-block; vertical-align:middle; }
 .avatar-ini { display:inline-flex; align-items:center; justify-content:center; background:var(--accent-soft); color:var(--accent-ink); font-size:.62rem; font-weight:700; letter-spacing:.02em; }
-.nav-user { display:inline-flex; align-items:center; gap:.42rem; }
+.nav-links { margin-left:auto; }
+.nav-user { display:inline-flex; align-items:center; gap:.42rem; flex-shrink:0; color:rgba(255,255,255,.85); text-decoration:none; font-weight:600; font-size:.8rem; padding:.25rem .45rem; border-radius:8px; transition:background .15s, color .15s; }
+.nav-user:hover { background:rgba(255,255,255,.1); color:#fff; text-decoration:none; }
+.nav-user.on { background:rgba(255,255,255,.15); color:#fff; }
+@media (max-width:640px) { .nav-user { padding:.2rem; } .nav-user > span:not(.avatar) { display:none; } }
 .nav-user .avatar { width:1.55rem; height:1.55rem; border:1.5px solid rgba(255,255,255,.35); }
 .nav-user .avatar-ini { background:rgba(255,255,255,.16); color:#fff; border:none; }
 .users-tbl .avatar { width:2rem; height:2rem; }
