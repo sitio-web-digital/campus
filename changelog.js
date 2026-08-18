@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.15.1',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'fix', texto: 'El rediseño ahora arranca en modo oscuro como la maqueta original, con el interruptor Claro / Oscuro (arriba a la derecha) que recuerda tu elección en cada dispositivo. El login se mantiene claro en navy corporativo.' },
+    ],
+  },
+  {
     version: '2.15.0',
     fecha: '2026-08-17',
     cambios: [

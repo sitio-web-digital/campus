@@ -137,12 +137,18 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>try{if((localStorage.getItem('c4d-theme-v2')||'dark')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <title>${esc(title)} · Campus C4D</title>
 <link rel="icon" href="${FAVICON}">
 <style>${CSS}</style>
 </head>
 <body class="${bodyClass || ''}">
 ${nav}
+${user ? `
+<div class="theme-sw" role="group" aria-label="Tema">
+  <button type="button" data-t="light">Claro</button>
+  <button type="button" data-t="dark">Oscuro</button>
+</div>` : ''}
 <main class="wrap">
 ${msg ? `<div class="flash ok">${esc(msg)}</div>` : ''}
 ${err ? `<div class="flash bad">${esc(err)}</div>` : ''}
@@ -178,6 +184,18 @@ function cerrarAnuncio(url) {
     var m = document.getElementById('anuncioModal'); if (m) m.remove();
   });
 }
+// Interruptor Claro/Oscuro (persistido en el navegador; el tema ya se aplicó antes de pintar).
+(function () {
+  var root = document.documentElement, K = 'c4d-theme-v2';
+  function set(t) {
+    root.classList.toggle('dark', t === 'dark');
+    try { localStorage.setItem(K, t); } catch (e) {}
+    document.querySelectorAll('.theme-sw button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === t); });
+  }
+  var saved = 'dark'; try { saved = localStorage.getItem(K) || 'dark'; } catch (e) {}
+  set(saved);
+  document.querySelectorAll('.theme-sw button').forEach(function (b) { b.addEventListener('click', function () { set(b.dataset.t); }); });
+})();
 </script>` : ''}
 ${user ? `
 <script>
@@ -896,6 +914,14 @@ html.dark .login-bg .btn:hover { background:var(--login-ink); }
   .btn.small { min-height:32px; }
   input, select, textarea { padding:.5rem .6rem; font-size:16px; }
 }
+
+/* ---------- interruptor de tema Claro/Oscuro (del rediseño) ---------- */
+.theme-sw { position:fixed; right:1rem; top:3.1rem; z-index:60; display:flex; gap:.25rem; background:#0A2540; border:1px solid rgba(255,255,255,.18); border-radius:8px; padding:3px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
+.theme-sw button { background:transparent; border:none; color:rgba(255,255,255,.6); font:600 .72rem/1 "IBM Plex Sans",sans-serif; padding:.4rem .7rem; border-radius:6px; cursor:pointer; }
+.theme-sw button.on { background:rgba(255,255,255,.16); color:#fff; }
+html.dark .theme-sw { background:#181F27; border-color:#33404C; }
+.login-bg .theme-sw { display:none; }
+@media (max-width:640px) { .theme-sw { top:auto; bottom:4.4rem; right:.7rem; } }
 `;
 
 /* ---------------- páginas ---------------- */
