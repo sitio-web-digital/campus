@@ -967,19 +967,26 @@ html.dark .theme-btn .ic-luna { display:none; }
 .curso-acciones { display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.55rem; }
 
 /* ---------- notificaciones con actor (foto + nombre + hora) ---------- */
-.np-item { display:flex; gap:.6rem; align-items:flex-start; }
-.np-av { width:2rem; height:2rem; border-radius:50%; object-fit:cover; flex-shrink:0; margin-top:.1rem; display:inline-block; }
-.np-av-ini { display:inline-flex; align-items:center; justify-content:center; background:var(--accent-soft); color:var(--accent-ink); font-size:.58rem; font-weight:700; letter-spacing:.02em; }
-.np-c { display:flex; flex-direction:column; gap:.14rem; min-width:0; flex:1; font-size:inherit; color:inherit; margin:0; }
-.np-head { display:flex; justify-content:space-between; align-items:baseline; gap:.6rem; font-size:.76rem; color:inherit; margin:0; }
-.np-head strong { font-size:.76rem; }
-.np-head time { font-size:.64rem; color:var(--faint); white-space:nowrap; font-weight:500; }
-.np-txt { display:block; font-size:.82rem; line-height:1.45; color:inherit; margin:0; }
+/* El popup abre hacia la derecha de la campanita (anclado a la izquierda de la barra) para no salirse de pantalla. */
+.noti-pop { left:0; right:auto; }
+@media (max-width:640px) { .noti-pop { left:.5rem; right:.5rem; } }
+.np-item { display:flex; gap:.65rem; align-items:flex-start; }
+/* especificidad .np-item span: se neutralizan sus display/margen para la estructura nueva */
+.np-item span { margin:0; }
+.np-item .np-av, .np-item img.np-av { width:2.1rem; height:2.1rem; border-radius:50%; object-fit:cover; flex-shrink:0; margin:.1rem 0 0; display:block; }
+.np-item span.np-av-ini { display:inline-flex; align-items:center; justify-content:center; padding:0; line-height:1; background:var(--accent-soft); color:var(--accent-ink); font-size:.55rem; font-weight:700; letter-spacing:0; }
+.np-item .np-c { display:flex; flex-direction:column; gap:.16rem; min-width:0; flex:1; font-size:inherit; color:inherit; margin:0; }
+.np-item .np-head { display:flex; justify-content:space-between; align-items:baseline; gap:.8rem; font-size:.76rem; color:inherit; margin:0; }
+.np-item .np-head strong { font-size:.76rem; font-weight:600; }
+.np-item .np-head time { font-size:.64rem; color:var(--faint); white-space:nowrap; font-weight:500; flex-shrink:0; margin-left:auto; }
+.np-item .np-txt { display:block; font-size:.82rem; line-height:1.45; color:inherit; margin:0; }
 .noti-row { display:flex; gap:.7rem; align-items:flex-start; }
-.noti-row .avatar { width:2.2rem; height:2.2rem; margin-top:.1rem; }
+.noti-row .avatar { width:2.2rem; height:2.2rem; margin:.1rem 0 0; }
+.noti-row .avatar-ini { padding:0; line-height:1; letter-spacing:0; font-size:.6rem; }
 .noti-c { flex:1; min-width:0; }
-.noti-head { display:flex; justify-content:space-between; align-items:baseline; gap:.7rem; margin-bottom:.15rem; }
-.noti-head strong { font-size:.82rem; }
+.noti .noti-head { display:flex; justify-content:space-between; align-items:baseline; gap:.8rem; margin-bottom:.15rem; }
+.noti .noti-head strong { font-size:.82rem; }
+.noti .noti-head .f { margin:0; flex-shrink:0; margin-left:auto; }
 `;
 
 /* ---------------- páginas ---------------- */
