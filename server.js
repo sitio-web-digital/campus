@@ -240,8 +240,26 @@ app.get('/hub', requireAuth, (req, res) => res.send(V.hubPage({ user: req.user }
 
 /* ---------------- pipeline / deals ---------------- */
 
+// El admin supervisa: su pipeline arranca en "Todos"; el vendedor, en "Míos".
+const scopeDefault = (req) => (req.query.scope ? (req.query.scope === 'todos' ? 'todos' : 'mios') : (req.user.role === 'admin' ? 'todos' : 'mios'));
+
+// Filtros del tablero: búsqueda de texto + vendedor + origen (los selectores se arman con lo que hay).
+function filtrarPipeline(req, deals) {
+  const q = clean(req.query.q) || '';
+  const fVendedor = parseInt(req.query.vendedor, 10) || null;
+  const fOrigen = clean(req.query.origen) || null;
+  const origenes = [...new Set(deals.map((d) => d.origen).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const vendedores = [...new Map(deals.map((d) => [d.user_id, d.vendedor_name]))].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  const totalSinFiltro = deals.length;
+  const ql = q.toLowerCase();
+  if (ql) deals = deals.filter((d) => [d.empresa, d.decisor, d.ciudad, d.provincia, d.origen, d.vendedor_name].some((v) => v && v.toLowerCase().includes(ql)));
+  if (fVendedor) deals = deals.filter((d) => d.user_id === fVendedor);
+  if (fOrigen) deals = deals.filter((d) => d.origen === fOrigen);
+  return { deals, q, fVendedor, fOrigen, origenes, vendedores, totalSinFiltro };
+}
+
 function pipelineData(req) {
-  const scope = req.query.scope === 'todos' ? 'todos' : 'mios';
+  const scope = scopeDefault(req);
   const closed = req.query.cerrados === '1';
   const params = [];
   const where = [];
@@ -259,7 +277,7 @@ function pipelineData(req) {
     WHERE ${where.join(' AND ')}
     ORDER BY d.fecha_proximo_paso IS NULL DESC, d.fecha_proximo_paso ASC, d.updated_at DESC
   `).all(...params);
-  return { deals, scope, closed };
+  return { scope, closed, ...filtrarPipeline(req, deals) };
 }
 
 app.get('/pipeline', requireAuth, requireSistema('cfd'), (req, res) => {
@@ -890,7 +908,7 @@ function panelOpts(slug) {
 }
 
 function panelPipelineData(req, slug) {
-  const scope = req.query.scope === 'todos' ? 'todos' : 'mios';
+  const scope = scopeDefault(req);
   const closed = req.query.cerrados === '1';
   const params = [slug];
   const where = ['d.panel = ?'];
@@ -899,7 +917,7 @@ function panelPipelineData(req, slug) {
   if (scope === 'mios') { where.push('d.user_id = ?'); params.push(req.user.id); }
   const deals = db.prepare(`SELECT d.*, u.name AS vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
     WHERE ${where.join(' AND ')} ORDER BY d.fecha_proximo_paso IS NULL DESC, d.fecha_proximo_paso ASC, d.updated_at DESC`).all(...params);
-  return { deals, scope, closed };
+  return { scope, closed, ...filtrarPipeline(req, deals) };
 }
 
 // Sumas de un vendedor en el período: campos dinámicos (JSON) + ventas aprobadas del panel.

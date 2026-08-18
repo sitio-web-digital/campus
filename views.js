@@ -561,6 +561,13 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .card--accent { border-left:4px solid var(--role); }
 .row-actions { display:flex; gap:.4rem; flex-wrap:wrap; justify-content:flex-end; }
 
+/* --- filtros del pipeline --- */
+.filtros { display:flex; gap:.4rem; flex-wrap:wrap; align-items:center; margin:-.4rem 0 .9rem; }
+.filtros input[name=q] { flex:1; min-width:12rem; max-width:24rem; padding:.45rem .7rem; font-size:.9rem; }
+.filtros select { width:auto; padding:.45rem .6rem; font-size:.88rem; }
+.fresultado { white-space:nowrap; }
+@media (max-width:640px) { .filtros input[name=q] { max-width:none; min-width:0; flex:1 1 100%; } }
+
 /* --- administración: tabla de usuarios y ficha --- */
 .rowlink { cursor:pointer; }
 .rowlink a { text-decoration:none; color:var(--accent-ink); }
@@ -649,7 +656,7 @@ function loginPage({ err, seeded }) {
   });
 }
 
-function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPAS_ACTIVAS, colores = ETAPA_COLOR, base = '', nuevoHref = '/deals/new', sistema = 'comercial' }) {
+function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPAS_ACTIVAS, colores = ETAPA_COLOR, base = '', nuevoHref = '/deals/new', sistema = 'comercial', q = '', fVendedor = null, fOrigen = null, origenes = [], vendedores = [], totalSinFiltro = 0 }) {
   const colorDe = (etapa) => colores[etapa] || '#8494A6';
   const puedeMover = (d) => user.role === 'admin' || d.user_id === user.id;
   const kcard = (d) => {
@@ -684,22 +691,46 @@ function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPA
     : [...etapasActivas.map((e) => col(e)), col('Ganado', 'mes'), col('Perdido', 'mes')].join('');
   const nCols = closed ? 2 : etapasActivas.length + 2;
   const pipeUrl = `${base}/pipeline`;
+  // Los filtros activos viajan en todos los links (Míos/Todos, Tablero/Cerrados) para no perderse al cambiar de vista.
+  const qsF = [q ? 'q=' + encodeURIComponent(q) : '', fVendedor ? 'vendedor=' + fVendedor : '', fOrigen ? 'origen=' + encodeURIComponent(fOrigen) : ''].filter(Boolean).join('&');
+  const amp = qsF ? '&' + qsF : '';
+  const filtrando = !!(q || fVendedor || fOrigen);
   return layout({
     title: 'Pipeline', user, active: 'pipeline', sistema,
     body: `
   <div class="toolbar">
     <div class="seg">
-      <a href="${pipeUrl}?scope=mios${closed ? '&cerrados=1' : ''}" class="${scope === 'mios' ? 'on' : ''}">Míos</a>
-      <a href="${pipeUrl}?scope=todos${closed ? '&cerrados=1' : ''}" class="${scope === 'todos' ? 'on' : ''}">Todos</a>
+      <a href="${pipeUrl}?scope=mios${closed ? '&cerrados=1' : ''}${amp}" class="${scope === 'mios' ? 'on' : ''}">Míos</a>
+      <a href="${pipeUrl}?scope=todos${closed ? '&cerrados=1' : ''}${amp}" class="${scope === 'todos' ? 'on' : ''}">Todos</a>
     </div>
     <div class="seg">
-      <a href="${pipeUrl}?scope=${scope}" class="${!closed ? 'on' : ''}">Tablero</a>
-      <a href="${pipeUrl}?scope=${scope}&cerrados=1" class="${closed ? 'on' : ''}">Cerrados</a>
+      <a href="${pipeUrl}?scope=${scope}${amp}" class="${!closed ? 'on' : ''}">Tablero</a>
+      <a href="${pipeUrl}?scope=${scope}&cerrados=1${amp}" class="${closed ? 'on' : ''}">Cerrados</a>
     </div>
     <div class="sp"></div>
     <a class="btn" href="${nuevoHref}">+ Nuevo deal</a>
   </div>
-  ${deals.length ? '' : `<div class="card"><p class="muted" style="margin:0">No hay deals acá todavía. Cargá el primero con “+ Nuevo deal” — la regla del equipo: apenas se agenda la primera reunión, el deal se carga.</p></div>`}
+  <form method="get" action="${pipeUrl}" class="filtros">
+    <input type="hidden" name="scope" value="${scope}">
+    ${closed ? '<input type="hidden" name="cerrados" value="1">' : ''}
+    <input name="q" value="${esc(q)}" placeholder="Buscar empresa, contacto, ciudad, provincia…" aria-label="Buscar leads">
+    ${scope === 'todos' && vendedores.length > 1 ? `
+    <select name="vendedor" onchange="this.form.submit()">
+      <option value="">Vendedor: todos</option>
+      ${vendedores.map((v) => `<option value="${v.id}" ${v.id === fVendedor ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}
+    </select>` : ''}
+    ${origenes.length > 1 ? `
+    <select name="origen" onchange="this.form.submit()">
+      <option value="">Origen: todos</option>
+      ${origenes.map((o) => `<option value="${esc(o)}" ${o === fOrigen ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+    </select>` : ''}
+    <button class="btn secondary small">Buscar</button>
+    ${filtrando ? `<a class="btn secondary small" href="${pipeUrl}?scope=${scope}${closed ? '&cerrados=1' : ''}">Limpiar</a>
+    <span class="small muted fresultado">${deals.length} de ${totalSinFiltro} lead${totalSinFiltro === 1 ? '' : 's'}</span>` : ''}
+  </form>
+  ${deals.length ? '' : filtrando
+    ? `<div class="card"><p class="muted" style="margin:0">Ninguna lead coincide con la búsqueda. Probá con menos filtros o tocá "Limpiar".</p></div>`
+    : `<div class="card"><p class="muted" style="margin:0">No hay deals acá todavía. Cargá el primero con “+ Nuevo deal” — la regla del equipo: apenas se agenda la primera reunión, el deal se carga.</p></div>`}
   <div class="board" style="--ncols:${nCols}">${columnas}</div>
   <p class="caption">Arrastrá una tarjeta a otra columna para cambiarla de etapa (al soltar en Perdido se abre la ficha para cargar el motivo). Las columnas Ganado y Perdido del tablero muestran solo los cierres del mes; el historial completo está en "Cerrados".</p>
   ${modal || ''}

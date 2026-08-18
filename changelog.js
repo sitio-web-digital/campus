@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.11.0',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Filtros en el pipeline: búsqueda por texto (empresa, contacto, ciudad, provincia, origen, vendedor) más selectores de vendedor y origen, con contador de resultados. Los filtros se mantienen al cambiar entre Míos/Todos y Tablero/Cerrados.' },
+      { tipo: 'mejora', texto: 'El administrador entra al pipeline viendo "Todos" por defecto (supervisa al equipo); los vendedores siguen arrancando en "Míos".' },
+    ],
+  },
+  {
     version: '2.10.5',
     fecha: '2026-08-17',
     cambios: [
