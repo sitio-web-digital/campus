@@ -561,12 +561,13 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .card--accent { border-left:4px solid var(--role); }
 .row-actions { display:flex; gap:.4rem; flex-wrap:wrap; justify-content:flex-end; }
 
-/* --- filtros del pipeline --- */
-.filtros { display:flex; gap:.4rem; flex-wrap:wrap; align-items:center; margin:-.4rem 0 .9rem; }
-.filtros input[name=q] { flex:1; min-width:12rem; max-width:24rem; padding:.45rem .7rem; font-size:.9rem; }
-.filtros select { width:auto; padding:.45rem .6rem; font-size:.88rem; }
-.fresultado { white-space:nowrap; }
-@media (max-width:640px) { .filtros input[name=q] { max-width:none; min-width:0; flex:1 1 100%; } }
+/* --- filtros del pipeline: una sola línea compacta (se desliza si no entra) --- */
+.filtros { display:flex; gap:.35rem; flex-wrap:nowrap; align-items:center; margin:-.4rem 0 .9rem; overflow-x:auto; scrollbar-width:none; }
+.filtros::-webkit-scrollbar { display:none; }
+.filtros input[name=q] { flex:1 1 auto; min-width:8.5rem; max-width:17rem; padding:.3rem .55rem; font-size:.8rem; border-radius:8px; }
+.filtros select { width:auto; flex-shrink:0; padding:.3rem .4rem; font-size:.76rem; border-radius:8px; color:var(--muted); font-weight:600; }
+.filtros .btn.small { flex-shrink:0; padding:.3rem .6rem; font-size:.76rem; }
+.fresultado { flex-shrink:0; font-size:.74rem; }
 
 /* --- administración: tabla de usuarios y ficha --- */
 .rowlink { cursor:pointer; }
