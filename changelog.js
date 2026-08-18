@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.14.1',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'mejora', texto: 'Panel Administración reorganizado en secciones: Usuarios (tabla del equipo y altas), Comunicación (avisos con quién los vio y alertas modales) y Preferencias (mis notificaciones).' },
+      { tipo: 'mejora', texto: 'Mi perfil ahora es una página propia del Campus, fuera de la navegación del panel comercial.' },
+    ],
+  },
+  {
     version: '2.14.0',
     fecha: '2026-08-17',
     cambios: [

@@ -103,7 +103,9 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
     links = perfilLink;
   } else if (sistema === 'admin') {
     links = `
-        <a href="/admin" class="${active === 'admin' ? 'on' : ''}">${ICONS.equipo}<span>Usuarios</span></a>${perfilLink}`;
+        <a href="/admin" class="${active === 'admin' ? 'on' : ''}">${ICONS.equipo}<span>Usuarios</span></a>
+        <a href="/admin/comunicacion" class="${active === 'comunicacion' ? 'on' : ''}">${ICONS.bell}<span>Comunicación</span></a>
+        <a href="/admin/preferencias" class="${active === 'preferencias' ? 'on' : ''}">${ICONS.docs}<span>Preferencias</span></a>${perfilLink}`;
   } else if (sistema === 'gondolas' || sistema === 'estanterias' || sistema === 'sitioweb') {
     const b = '/' + sistema;
     links = `
@@ -1119,26 +1121,53 @@ const rolOpts = (sel) => Object.entries(ROL_LABEL).map(([v, l]) => `<option valu
 const permChecks = (sistemas, u) => sistemas.map(([slug, nombre]) => `
     <label class="perm"><input type="checkbox" name="permisos" value="${slug}" ${u && u.permisos.includes(slug) ? 'checked' : ''}> ${esc(nombre)}</label>`).join('');
 
-function adminPage({ user, users, sistemas, prefs = {}, avisos = [], banners = [], totalUsuarios = 0 }) {
-  const vistosDetalle = (lista, fmtQuien) => `
-    <details style="margin-top:.4rem"><summary class="small" style="cursor:pointer;color:var(--accent-ink);font-weight:600">Ver quién lo vio</summary>
-      <div class="hist" style="margin-top:.3rem">${lista.length ? lista.map(fmtQuien).join('') : '<p class="muted small" style="margin:.3rem 0 0">Nadie todavía.</p>'}</div>
-    </details>`;
+function adminPage({ user, users, sistemas }) {
   return layout({
     title: 'Administración', user, active: 'admin', sistema: 'admin',
     body: `
   <h1>Usuarios y permisos</h1>
+  <p class="small muted">Tocá un usuario para ver su ficha: datos, rol, permisos y el historial de todo lo que hizo en el sistema.</p>
+  <div class="tablewrap"><table class="users-tbl">
+    <thead><tr><th>Usuario</th><th>Rol</th><th>Sistemas</th><th>Estado</th><th>Alta</th><th>Último login</th><th>Última interacción</th></tr></thead>
+    <tbody>${users.map((u) => `
+      <tr class="rowlink ${u.active ? '' : 'inactivo'}" onclick="location='/admin/usuarios/${u.id}'">
+        <td><a href="/admin/usuarios/${u.id}" onclick="event.stopPropagation()"><strong>${esc(u.name)}</strong></a>${u.id === user.id ? ' <span class="muted small">(vos)</span>' : ''}<div class="small muted">${esc(u.email)}</div></td>
+        <td>${chipRol(u.role)}</td>
+        <td class="small muted">${u.role === 'admin' ? 'Todos' : (u.permisos.length || '—')}</td>
+        <td>${u.active ? '<span class="chip chip--estado-pagado">Activo</span>' : '<span class="chip chip--estado-cancelado">Inactivo</span>'}</td>
+        <td class="small">${fecha(u.created_at)}</td>
+        <td class="small">${u.last_login_at ? tiempoRel(u.last_login_at) : '<span class="muted">Nunca entró</span>'}</td>
+        <td class="small">${u.last_seen_at ? tiempoRel(u.last_seen_at) : '—'}</td>
+      </tr>`).join('')}</tbody>
+  </table></div>
+  <p class="caption">Los administradores tienen acceso total a todos los sistemas (los permisos no les aplican). "Última interacción" es la última vez que la persona usó el sistema, aunque no haya vuelto a loguearse.</p>
 
-  <div class="card">
-    <h3 style="margin-top:0">Mis notificaciones</h3>
-    <p class="small muted">Elegí qué eventos del equipo te notifican. El paso a <strong>Ganado</strong> no se puede silenciar, y los avisos manuales siempre llegan a sus destinatarios.</p>
-    <form method="post" action="/admin/mis-notificaciones" class="perm-row">
-      <label class="perm"><input type="checkbox" name="deal_nuevo" ${prefs.deal_nuevo === false ? '' : 'checked'}> Deal nuevo</label>
-      <label class="perm"><input type="checkbox" name="cambio_etapa" ${prefs.cambio_etapa === false ? '' : 'checked'}> Cambios de etapa</label>
-      <label class="perm" style="opacity:.65"><input type="checkbox" checked disabled> Paso a Ganado / requiere aprobación (siempre activa)</label>
-      <button class="btn small">Guardar</button>
-    </form>
-  </div>
+  <h2>Crear usuario</h2>
+  <form method="post" action="/admin/usuarios" class="card">
+    <div class="grid2">
+      <div><label>Nombre</label><input name="name" required placeholder="Nombre y apellido"></div>
+      <div><label>Email (será su usuario)</label><input name="email" type="email" required></div>
+      <div><label>Contraseña inicial</label><input name="password" required minlength="6" placeholder="Mínimo 6 caracteres"></div>
+      <div><label>Rol</label><select name="role">${rolOpts('vendedor')}</select></div>
+    </div>
+    <label>Permisos por sistema</label>
+    <div class="perm-row">${permChecks(sistemas, { permisos: ['cfd', 'cobranza'] })}</div>
+    <div style="margin-top:1rem"><button class="btn">Crear usuario</button></div>
+  </form>`
+  });
+}
+
+// Lista desplegable de quién vio un aviso o una alerta.
+const vistosDetalle = (lista, fmtQuien) => `
+    <details style="margin-top:.4rem"><summary class="small" style="cursor:pointer;color:var(--accent-ink);font-weight:600">Ver quién lo vio</summary>
+      <div class="hist" style="margin-top:.3rem">${lista.length ? lista.map(fmtQuien).join('') : '<p class="muted small" style="margin:.3rem 0 0">Nadie todavía.</p>'}</div>
+    </details>`;
+
+function adminComunicacionPage({ user, users, avisos = [], banners = [], totalUsuarios = 0 }) {
+  return layout({
+    title: 'Comunicación', user, active: 'comunicacion', sistema: 'admin',
+    body: `
+  <h1>Comunicación con el equipo</h1>
 
   <div class="card card--accent">
     <h3 style="margin-top:0">Enviar aviso al equipo</h3>
@@ -1196,37 +1225,26 @@ function adminPage({ user, users, sistemas, prefs = {}, avisos = [], banners = [
       <div class="small muted">${esc(b.texto)}</div>
       ${vistosDetalle(b.quienes, (q) => `<div class="hist-item"><span class="chip" style="background:#3E9B57">Visto</span><span>${esc(q.name)}</span><span class="cuando" style="margin-left:auto">${fechaHora(q.visto_at)}</span></div>`)}
     </div>`).join('')}` : ''}
+  </div>`
+  });
+}
+
+function adminPreferenciasPage({ user, prefs = {} }) {
+  return layout({
+    title: 'Preferencias', user, active: 'preferencias', sistema: 'admin',
+    body: `
+  <h1>Mis preferencias</h1>
+  <div class="card">
+    <h3 style="margin-top:0">Mis notificaciones</h3>
+    <p class="small muted">Elegí qué eventos del equipo te notifican. El paso a <strong>Ganado</strong> no se puede silenciar, y los avisos manuales siempre llegan a sus destinatarios.</p>
+    <form method="post" action="/admin/mis-notificaciones" class="perm-row">
+      <label class="perm"><input type="checkbox" name="deal_nuevo" ${prefs.deal_nuevo === false ? '' : 'checked'}> Deal nuevo</label>
+      <label class="perm"><input type="checkbox" name="cambio_etapa" ${prefs.cambio_etapa === false ? '' : 'checked'}> Cambios de etapa</label>
+      <label class="perm" style="opacity:.65"><input type="checkbox" checked disabled> Paso a Ganado / requiere aprobación (siempre activa)</label>
+      <button class="btn small">Guardar</button>
+    </form>
   </div>
-
-  <h2>Equipo</h2>
-  <p class="small muted">Tocá un usuario para ver su ficha: datos, rol, permisos y el historial de todo lo que hizo en el sistema.</p>
-  <div class="tablewrap"><table class="users-tbl">
-    <thead><tr><th>Usuario</th><th>Rol</th><th>Sistemas</th><th>Estado</th><th>Alta</th><th>Último login</th><th>Última interacción</th></tr></thead>
-    <tbody>${users.map((u) => `
-      <tr class="rowlink ${u.active ? '' : 'inactivo'}" onclick="location='/admin/usuarios/${u.id}'">
-        <td><a href="/admin/usuarios/${u.id}" onclick="event.stopPropagation()"><strong>${esc(u.name)}</strong></a>${u.id === user.id ? ' <span class="muted small">(vos)</span>' : ''}<div class="small muted">${esc(u.email)}</div></td>
-        <td>${chipRol(u.role)}</td>
-        <td class="small muted">${u.role === 'admin' ? 'Todos' : (u.permisos.length || '—')}</td>
-        <td>${u.active ? '<span class="chip chip--estado-pagado">Activo</span>' : '<span class="chip chip--estado-cancelado">Inactivo</span>'}</td>
-        <td class="small">${fecha(u.created_at)}</td>
-        <td class="small">${u.last_login_at ? tiempoRel(u.last_login_at) : '<span class="muted">Nunca entró</span>'}</td>
-        <td class="small">${u.last_seen_at ? tiempoRel(u.last_seen_at) : '—'}</td>
-      </tr>`).join('')}</tbody>
-  </table></div>
-  <p class="caption">Los administradores tienen acceso total a todos los sistemas (los permisos no les aplican). "Última interacción" es la última vez que la persona usó el sistema, aunque no haya vuelto a loguearse.</p>
-
-  <h2>Crear usuario</h2>
-  <form method="post" action="/admin/usuarios" class="card">
-    <div class="grid2">
-      <div><label>Nombre</label><input name="name" required placeholder="Nombre y apellido"></div>
-      <div><label>Email (será su usuario)</label><input name="email" type="email" required></div>
-      <div><label>Contraseña inicial</label><input name="password" required minlength="6" placeholder="Mínimo 6 caracteres"></div>
-      <div><label>Rol</label><select name="role">${rolOpts('vendedor')}</select></div>
-    </div>
-    <label>Permisos por sistema</label>
-    <div class="perm-row">${permChecks(sistemas, { permisos: ['cfd', 'cobranza'] })}</div>
-    <div style="margin-top:1rem"><button class="btn">Crear usuario</button></div>
-  </form>`
+  <p class="small muted">Tu contraseña y el cierre de sesión están en <a href="/perfil">Mi perfil</a>.</p>`
   });
 }
 
@@ -1282,7 +1300,7 @@ function adminUserPage({ user, target, sistemas, historial = [], resetInfo }) {
 
 function perfilPage({ user }) {
   return layout({
-    title: 'Perfil', user, active: 'perfil',
+    title: 'Perfil', user, active: 'perfil', sistema: 'hub',
     body: `
   <h1>Mi perfil</h1>
   <div class="card">
@@ -2383,7 +2401,7 @@ function changelogPage({ user, versiones }) {
 }
 
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, adminPage, adminUserPage, perfilPage, docsPage, changelogPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,

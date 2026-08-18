@@ -482,16 +482,26 @@ function permisosDeBody(body) {
 // El viejo /equipo redirige al panel nuevo.
 app.get('/equipo', requireAuth, requireAdmin, (req, res) => res.redirect('/admin'));
 
+// Sección Usuarios: tabla del equipo + alta.
 app.get('/admin', requireAuth, requireAdmin, (req, res) => {
-  let prefs = {}; try { prefs = JSON.parse(db.prepare('SELECT notif_prefs FROM users WHERE id = ?').get(req.user.id).notif_prefs || '{}'); } catch {}
-  // Avisos enviados (por lote) con quién los vio, y alertas modales con sus vistos.
+  res.send(V.adminPage({ user: req.user, users: usuariosAdmin(), sistemas: SISTEMAS }));
+});
+
+// Sección Comunicación: avisos (con quién los vio) y alertas modales.
+app.get('/admin/comunicacion', requireAuth, requireAdmin, (req, res) => {
   const avisos = db.prepare(`SELECT lote, MIN(texto) texto, MIN(created_at) created_at, COUNT(*) total, SUM(leida) vistos
     FROM notifications WHERE lote IS NOT NULL GROUP BY lote ORDER BY MIN(created_at) DESC LIMIT 10`).all()
     .map((a) => ({ ...a, destinatarios: db.prepare('SELECT u.name, n.leida, n.leida_at FROM notifications n JOIN users u ON u.id = n.user_id WHERE n.lote = ? ORDER BY n.leida DESC, u.name').all(a.lote) }));
   const totalUsuarios = db.prepare('SELECT COUNT(*) c FROM users WHERE active = 1').get().c;
   const banners = db.prepare('SELECT b.*, (SELECT COUNT(*) FROM banner_vistos v WHERE v.banner_id = b.id) vistos FROM banners b ORDER BY b.id DESC LIMIT 10').all()
     .map((b) => ({ ...b, quienes: db.prepare('SELECT u.name, v.visto_at FROM banner_vistos v JOIN users u ON u.id = v.user_id WHERE v.banner_id = ? ORDER BY v.visto_at').all(b.id) }));
-  res.send(V.adminPage({ user: req.user, users: usuariosAdmin(), sistemas: SISTEMAS, prefs, avisos, banners, totalUsuarios }));
+  res.send(V.adminComunicacionPage({ user: req.user, users: usuariosAdmin(), avisos, banners, totalUsuarios }));
+});
+
+// Sección Preferencias: notificaciones del propio admin.
+app.get('/admin/preferencias', requireAuth, requireAdmin, (req, res) => {
+  let prefs = {}; try { prefs = JSON.parse(db.prepare('SELECT notif_prefs FROM users WHERE id = ?').get(req.user.id).notif_prefs || '{}'); } catch {}
+  res.send(V.adminPreferenciasPage({ user: req.user, prefs }));
 });
 
 // Ficha del usuario: datos, permisos y su historial de acciones.
@@ -599,19 +609,19 @@ app.post('/admin/banners', requireAuth, requireAdmin, (req, res) => {
   const titulo = clean(req.body.titulo);
   const texto = clean(req.body.texto);
   if (titulo && texto) db.prepare('INSERT INTO banners (titulo, texto, created_by) VALUES (?, ?, ?)').run(titulo, texto, req.user.id);
-  res.redirect('/admin');
+  res.redirect('/admin/comunicacion');
 });
 
 app.post('/admin/banners/:id/toggle', requireAuth, requireAdmin, (req, res) => {
   db.prepare('UPDATE banners SET activo = 1 - activo WHERE id = ?').run(req.params.id);
-  res.redirect('/admin');
+  res.redirect('/admin/comunicacion');
 });
 
 // Preferencias de notificaciones del admin (el paso a Ganado no se puede silenciar).
 app.post('/admin/mis-notificaciones', requireAuth, requireAdmin, (req, res) => {
   const prefs = { deal_nuevo: req.body.deal_nuevo === 'on', cambio_etapa: req.body.cambio_etapa === 'on' };
   db.prepare('UPDATE users SET notif_prefs = ? WHERE id = ?').run(JSON.stringify(prefs), req.user.id);
-  res.redirect('/admin');
+  res.redirect('/admin/preferencias');
 });
 
 // Aviso manual del admin: a un usuario puntual o global por rol.
@@ -627,7 +637,7 @@ app.post('/admin/notificar', requireAuth, requireAdmin, (req, res) => {
     const lote = 'aviso-' + Date.now();
     for (const u of usuarios) if (u.id !== req.user.id) notifyUser(u.id, msg, '/notificaciones', lote);
   }
-  res.redirect('/admin');
+  res.redirect('/admin/comunicacion');
 });
 
 app.post('/admin/usuarios/:id/reset', requireAuth, requireAdmin, (req, res) => {
