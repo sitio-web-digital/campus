@@ -660,7 +660,7 @@ function loginPage({ err, seeded }) {
   });
 }
 
-function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPAS_ACTIVAS, colores = ETAPA_COLOR, base = '', nuevoHref = '/deals/new', sistema = 'comercial', q = '', fVendedor = null, fOrigen = null, origenes = [], vendedores = [], totalSinFiltro = 0 }) {
+function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPAS_ACTIVAS, colores = ETAPA_COLOR, base = '', nuevoHref = '/deals/new', sistema = 'comercial', q = '', fVendedor = null, fOrigen = null, fEtapa = null, origenes = [], vendedores = [], totalSinFiltro = 0 }) {
   const colorDe = (etapa) => colores[etapa] || '#8494A6';
   const puedeMover = (d) => user.role === 'admin' || d.user_id === user.id;
   const kcard = (d) => {
@@ -696,15 +696,16 @@ function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPA
   const nCols = closed ? 2 : etapasActivas.length + 2;
   const pipeUrl = `${base}/pipeline`;
   // Los filtros activos viajan en todos los links (Míos/Todos, Tablero/Cerrados) para no perderse al cambiar de vista.
-  const qsF = [q ? 'q=' + encodeURIComponent(q) : '', fVendedor ? 'vendedor=' + fVendedor : '', fOrigen ? 'origen=' + encodeURIComponent(fOrigen) : ''].filter(Boolean).join('&');
+  const qsF = [q ? 'q=' + encodeURIComponent(q) : '', fVendedor ? 'vendedor=' + fVendedor : '', fOrigen ? 'origen=' + encodeURIComponent(fOrigen) : '', fEtapa ? 'etapa=' + encodeURIComponent(fEtapa) : ''].filter(Boolean).join('&');
   const amp = qsF ? '&' + qsF : '';
-  const filtrando = !!(q || fVendedor || fOrigen);
+  const filtrando = !!(q || fVendedor || fOrigen || fEtapa);
   return layout({
     title: 'Pipeline', user, active: 'pipeline', sistema,
     body: `
   <form method="get" action="${pipeUrl}" class="pipebar">
     <input type="hidden" name="scope" value="${scope}">
     ${closed ? '<input type="hidden" name="cerrados" value="1">' : ''}
+    ${fEtapa ? `<input type="hidden" name="etapa" value="${esc(fEtapa)}">` : ''}
     <div class="seg">
       <a href="${pipeUrl}?scope=mios${closed ? '&cerrados=1' : ''}${amp}" class="${scope === 'mios' ? 'on' : ''}">Míos</a>
       <a href="${pipeUrl}?scope=todos${closed ? '&cerrados=1' : ''}${amp}" class="${scope === 'todos' ? 'on' : ''}">Todos</a>
@@ -729,6 +730,7 @@ function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPA
     <span class="small muted fresultado">${deals.length} de ${totalSinFiltro} lead${totalSinFiltro === 1 ? '' : 's'}</span>` : ''}
     <a class="btn small nuevo" href="${nuevoHref}">+ Nuevo deal</a>
   </form>
+  ${fEtapa ? `<p class="small muted" style="margin:-.4rem 0 .8rem">Mostrando solo las leads en <strong>${esc(fEtapa)}</strong> — arrastralas a otra columna (o cambiales la etapa desde la ficha) y cuando la columna quede vacía vas a poder borrarla en Config.</p>` : ''}
   ${deals.length ? '' : filtrando
     ? `<div class="card"><p class="muted" style="margin:0">Ninguna lead coincide con la búsqueda. Probá con menos filtros o tocá "Limpiar".</p></div>`
     : `<div class="card"><p class="muted" style="margin:0">No hay deals acá todavía. Cargá el primero con “+ Nuevo deal” — la regla del equipo: apenas se agenda la primera reunión, el deal se carga.</p></div>`}
@@ -1995,11 +1997,18 @@ function panelDashboardPage({ user, k, campos, colores, etapas, info }) {
   });
 }
 
-function panelConfigPage({ user, etapas, campos, err, info, campanas = [] }) {
-  const ERRS = { 'etapa-en-uso': 'No se puede borrar esa etapa: tiene deals adentro. Movelos a otra etapa primero.', 'ultima-etapa': 'Tiene que quedar al menos una etapa activa.' };
+function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, campanas = [] }) {
+  const ERRS = { 'ultima-etapa': 'Tiene que quedar al menos una etapa activa.' };
+  // Etapa con leads adentro: cartel con la cantidad y acceso directo a esas leads (regla: primero verlas y moverlas, después borrar).
+  const cartelEtapa = err === 'etapa-en-uso' ? `
+  <div class="flash bad" style="display:flex;gap:.6rem .9rem;align-items:center;flex-wrap:wrap">
+    <span style="flex:1;min-width:14rem">No se borró la etapa <strong>${esc(errEtapa || '')}</strong>: tiene <strong>${errN} lead${errN === 1 ? '' : 's'}</strong> adentro. Primero miralas y movelas a otra etapa (arrastrándolas en el tablero o desde su ficha); cuando la columna quede vacía, volvé a borrarla.</span>
+    <a class="btn small" href="${info.base}/pipeline?scope=todos&etapa=${encodeURIComponent(errEtapa || '')}">Ver esas leads</a>
+  </div>` : '';
   return layout({
     title: `Config · ${info.nombre}`, user, active: 'config', sistema: info.slug, err: ERRS[err],
     body: `
+  ${cartelEtapa}
   <h1>Configuración del panel</h1>
   <p class="small muted">Acá moldeás el panel de ${esc(info.nombre)}: las etapas del pipeline y los campos de la carga diaria (que también definen las métricas de los objetivos). <strong>Ganado y Perdido son fijas</strong>: sostienen la lógica de aprobación y comisiones.</p>
 

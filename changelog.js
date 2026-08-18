@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.11.1',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'mejora', texto: 'Borrar una etapa con leads adentro ahora muestra un cartel con la cantidad exacta y el botón "Ver esas leads", que abre el pipeline filtrado por esa columna para moverlas (arrastrando o desde la ficha). Vacía la columna, se puede borrar.' },
+      { tipo: 'nuevo', texto: 'El pipeline acepta filtro por etapa (?etapa=...), combinable con la búsqueda y los demás filtros.' },
+    ],
+  },
+  {
     version: '2.11.0',
     fecha: '2026-08-17',
     cambios: [

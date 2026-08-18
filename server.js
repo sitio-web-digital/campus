@@ -248,6 +248,7 @@ function filtrarPipeline(req, deals) {
   const q = clean(req.query.q) || '';
   const fVendedor = parseInt(req.query.vendedor, 10) || null;
   const fOrigen = clean(req.query.origen) || null;
+  const fEtapa = clean(req.query.etapa) || null;
   const origenes = [...new Set(deals.map((d) => d.origen).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const vendedores = [...new Map(deals.map((d) => [d.user_id, d.vendedor_name]))].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   const totalSinFiltro = deals.length;
@@ -255,7 +256,8 @@ function filtrarPipeline(req, deals) {
   if (ql) deals = deals.filter((d) => [d.empresa, d.decisor, d.ciudad, d.provincia, d.origen, d.vendedor_name].some((v) => v && v.toLowerCase().includes(ql)));
   if (fVendedor) deals = deals.filter((d) => d.user_id === fVendedor);
   if (fOrigen) deals = deals.filter((d) => d.origen === fOrigen);
-  return { deals, q, fVendedor, fOrigen, origenes, vendedores, totalSinFiltro };
+  if (fEtapa) deals = deals.filter((d) => d.etapa === fEtapa);
+  return { deals, q, fVendedor, fOrigen, fEtapa, origenes, vendedores, totalSinFiltro };
 }
 
 function pipelineData(req) {
@@ -1044,7 +1046,7 @@ for (const PANEL of PANELES_COMERCIALES) {
   /* --- configuración del panel (solo admin) --- */
 
   app.get(base + '/config', requireAuth, requireAdmin, (req, res) => {
-    res.send(V.panelConfigPage({ user: req.user, etapas: etapasPanelCfg(slug), campos: camposPanel(slug), err: req.query.err, info, campanas: campanasDePanel(slug) }));
+    res.send(V.panelConfigPage({ user: req.user, etapas: etapasPanelCfg(slug), campos: camposPanel(slug), err: req.query.err, errEtapa: clean(req.query.etapa), errN: parseInt(req.query.n, 10) || 0, info, campanas: campanasDePanel(slug) }));
   });
 
   app.post(base + '/config/etapas', requireAuth, requireAdmin, (req, res) => {
@@ -1077,7 +1079,7 @@ for (const PANEL of PANELES_COMERCIALES) {
       }
     } else if (accion === 'borrar') {
       const enUso = db.prepare('SELECT COUNT(*) c FROM deals WHERE panel = ? AND etapa = ?').get(slug, etapa.nombre).c;
-      if (enUso > 0) return res.redirect(base + '/config?err=etapa-en-uso');
+      if (enUso > 0) return res.redirect(`${base}/config?err=etapa-en-uso&etapa=${encodeURIComponent(etapa.nombre)}&n=${enUso}`);
       if (db.prepare('SELECT COUNT(*) c FROM panel_etapas WHERE panel = ?').get(slug).c <= 1) return res.redirect(base + '/config?err=ultima-etapa');
       db.prepare('DELETE FROM panel_etapas WHERE id = ?').run(etapa.id);
     }
