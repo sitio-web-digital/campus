@@ -20,6 +20,18 @@ const upload = multer({
   fileFilter: (req, file, cb) => cb(null, ['.pdf', '.png', '.jpg', '.jpeg'].includes(path.extname(file.originalname).toLowerCase())),
 });
 
+// Fotos de perfil: viven en data/ (persisten con el volumen del contenedor).
+const AVATAR_DIR = path.join(__dirname, 'data', 'avatars');
+if (!fs.existsSync(AVATAR_DIR)) fs.mkdirSync(AVATAR_DIR, { recursive: true });
+const uploadAvatar = multer({
+  storage: multer.diskStorage({
+    destination: AVATAR_DIR,
+    filename: (req, file, cb) => cb(null, `u${req.user.id}-${Date.now()}${path.extname(file.originalname).toLowerCase()}`),
+  }),
+  limits: { fileSize: 3 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => cb(null, ['.png', '.jpg', '.jpeg', '.webp'].includes(path.extname(file.originalname).toLowerCase())),
+});
+
 const app = express();
 app.set('trust proxy', 1);
 app.get('/health', (req, res) => res.json({ ok: true }));
@@ -46,7 +58,7 @@ if (seeded) {
 
 function currentUser(req) {
   if (!req.session.uid) return null;
-  const u = db.prepare('SELECT id, name, email, role, active, permisos, last_seen_at, last_version_vista FROM users WHERE id = ? AND active = 1').get(req.session.uid) || null;
+  const u = db.prepare('SELECT id, name, email, role, active, permisos, last_seen_at, last_version_vista, avatar FROM users WHERE id = ? AND active = 1').get(req.session.uid) || null;
   if (u) { try { u.permisos = JSON.parse(u.permisos || '[]'); } catch { u.permisos = []; } }
   return u;
 }
@@ -449,7 +461,7 @@ function seriePorDia(slug, campoKey, desde, hasta = '9999-12-31') {
 const ROLES = ['admin', 'vendedor', 'developer'];
 
 function usuariosAdmin() {
-  return db.prepare('SELECT id, name, email, role, active, permisos, created_at, last_login_at, last_seen_at FROM users ORDER BY role, name').all()
+  return db.prepare('SELECT id, name, email, role, active, permisos, avatar, created_at, last_login_at, last_seen_at FROM users ORDER BY role, name').all()
     .map((u) => { try { u.permisos = JSON.parse(u.permisos || '[]'); } catch { u.permisos = []; } return u; });
 }
 
@@ -1224,6 +1236,31 @@ app.get('/changelog', requireAuth, (req, res) => res.send(V.changelogPage({ user
 /* ---------------- perfil ---------------- */
 
 app.get('/perfil', requireAuth, (req, res) => res.send(V.perfilPage({ user: req.user })));
+
+// Foto de perfil: subir (reemplaza la anterior) y quitar.
+app.post('/perfil/foto', requireAuth, uploadAvatar.single('foto'), (req, res) => {
+  if (req.file) {
+    const anterior = db.prepare('SELECT avatar FROM users WHERE id = ?').get(req.user.id).avatar;
+    db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(req.file.filename, req.user.id);
+    if (anterior) { try { fs.unlinkSync(path.join(AVATAR_DIR, anterior)); } catch {} }
+  }
+  res.redirect('/perfil');
+});
+
+app.post('/perfil/foto/quitar', requireAuth, (req, res) => {
+  const anterior = db.prepare('SELECT avatar FROM users WHERE id = ?').get(req.user.id).avatar;
+  db.prepare('UPDATE users SET avatar = NULL WHERE id = ?').run(req.user.id);
+  if (anterior) { try { fs.unlinkSync(path.join(AVATAR_DIR, anterior)); } catch {} }
+  res.redirect('/perfil');
+});
+
+// Sirve la foto de un usuario (cualquier usuario logueado puede verlas: aparecen en listas y nav).
+app.get('/avatars/:uid', requireAuth, (req, res) => {
+  const u = db.prepare('SELECT avatar FROM users WHERE id = ?').get(parseInt(req.params.uid, 10));
+  if (!u || !u.avatar || !/^[\w.-]+$/.test(u.avatar)) return res.status(404).end();
+  res.setHeader('Cache-Control', 'private, max-age=86400');
+  res.sendFile(path.join(AVATAR_DIR, u.avatar), (err) => { if (err && !res.headersSent) res.status(404).end(); });
+});
 
 app.post('/perfil/password', requireAuth, (req, res) => {
   const full = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);

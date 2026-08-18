@@ -89,11 +89,21 @@ function sysSwitch(sistema, user) {
   </details>`;
 }
 
+// Foto de perfil: imagen subida o iniciales sobre fondo de acento.
+const avatar = (u, cls = '') => (u && u.avatar
+  ? `<img class="avatar ${cls}" src="/avatars/${u.id}?v=${encodeURIComponent(u.avatar)}" alt="">`
+  : `<span class="avatar avatar-ini ${cls}">${esc(((u && u.name) || '?').trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase())}</span>`);
+
 function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'comercial' }) {
   const bell = user ? `
       <a class="bell ${active === 'notis' ? 'on' : ''}" href="/notificaciones" aria-label="Notificaciones">${ICONS.bell}${user.unread > 0 ? `<span class="bell-badge">${user.unread > 99 ? '99+' : user.unread}</span>` : ''}</a>` : '';
+  const themeBtn = user ? `
+      <button class="theme-btn" type="button" aria-label="Cambiar tema" title="Tema claro / oscuro">
+        <svg class="ic-sol" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="10" r="3.6"/><path d="M10 2.2v1.9M10 15.9v1.9M2.2 10h1.9M15.9 10h1.9M4.5 4.5l1.35 1.35M14.15 14.15l1.35 1.35M15.5 4.5l-1.35 1.35M5.85 14.15L4.5 15.5"/></svg>
+        <svg class="ic-luna" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 12.2A6.8 6.8 0 0 1 7.8 3.5a6.8 6.8 0 1 0 8.7 8.7z"/></svg>
+      </button>` : '';
   const perfilLink = `
-        <a href="/perfil" class="${active === 'perfil' ? 'on' : ''}">${ICONS.perfil}<span>${user ? esc(user.name.split(' ')[0]) : ''}</span></a>`;
+        <a href="/perfil" class="nav-user ${active === 'perfil' ? 'on' : ''}">${user ? avatar(user) : ''}<span>${user ? esc(user.name.split(' ')[0]) : ''}</span></a>`;
   let links = '';
   if (sistema === 'cobranza') {
     links = `
@@ -127,7 +137,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
   const nav = user ? `
   <nav class="nav">
     <div class="nav-inner">
-      <span class="brand-row">${sysSwitch(sistema, user)}${bell}</span>
+      <span class="brand-row">${sysSwitch(sistema, user)}${bell}${themeBtn}</span>
       <div class="nav-links">${links}
       </div>
     </div>
@@ -144,11 +154,6 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
 </head>
 <body class="${bodyClass || ''}">
 ${nav}
-${user ? `
-<div class="theme-sw" role="group" aria-label="Tema">
-  <button type="button" data-t="light">Claro</button>
-  <button type="button" data-t="dark">Oscuro</button>
-</div>` : ''}
 <main class="wrap">
 ${msg ? `<div class="flash ok">${esc(msg)}</div>` : ''}
 ${err ? `<div class="flash bad">${esc(err)}</div>` : ''}
@@ -184,17 +189,16 @@ function cerrarAnuncio(url) {
     var m = document.getElementById('anuncioModal'); if (m) m.remove();
   });
 }
-// Interruptor Claro/Oscuro (persistido en el navegador; el tema ya se aplicó antes de pintar).
+// Interruptor de tema en la barra (persistido en el navegador; ya se aplicó antes de pintar).
 (function () {
   var root = document.documentElement, K = 'c4d-theme-v2';
-  function set(t) {
-    root.classList.toggle('dark', t === 'dark');
-    try { localStorage.setItem(K, t); } catch (e) {}
-    document.querySelectorAll('.theme-sw button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === t); });
-  }
-  var saved = 'dark'; try { saved = localStorage.getItem(K) || 'dark'; } catch (e) {}
-  set(saved);
-  document.querySelectorAll('.theme-sw button').forEach(function (b) { b.addEventListener('click', function () { set(b.dataset.t); }); });
+  document.querySelectorAll('.theme-btn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var t = root.classList.contains('dark') ? 'light' : 'dark';
+      root.classList.toggle('dark', t === 'dark');
+      try { localStorage.setItem(K, t); } catch (e) {}
+    });
+  });
 })();
 </script>` : ''}
 ${user ? `
@@ -915,13 +919,25 @@ html.dark .login-bg .btn:hover { background:var(--login-ink); }
   input, select, textarea { padding:.5rem .6rem; font-size:16px; }
 }
 
-/* ---------- interruptor de tema Claro/Oscuro (del rediseño) ---------- */
-.theme-sw { position:fixed; right:1rem; top:3.1rem; z-index:60; display:flex; gap:.25rem; background:#0A2540; border:1px solid rgba(255,255,255,.18); border-radius:8px; padding:3px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
-.theme-sw button { background:transparent; border:none; color:rgba(255,255,255,.6); font:600 .72rem/1 "IBM Plex Sans",sans-serif; padding:.4rem .7rem; border-radius:6px; cursor:pointer; }
-.theme-sw button.on { background:rgba(255,255,255,.16); color:#fff; }
-html.dark .theme-sw { background:#181F27; border-color:#33404C; }
-.login-bg .theme-sw { display:none; }
-@media (max-width:640px) { .theme-sw { top:auto; bottom:4.4rem; right:.7rem; } }
+/* ---------- interruptor de tema en la barra (ícono sol/luna) ---------- */
+.theme-btn { display:inline-flex; align-items:center; justify-content:center; width:2.15rem; height:2.15rem; border-radius:8px; border:none; background:transparent; color:rgba(255,255,255,.72); cursor:pointer; transition:background .15s, color .15s; }
+.theme-btn:hover { background:rgba(255,255,255,.12); color:#fff; }
+.theme-btn svg { width:1.15rem; height:1.15rem; }
+.theme-btn .ic-sol { display:none; }
+html.dark .theme-btn .ic-sol { display:block; }
+html.dark .theme-btn .ic-luna { display:none; }
+
+/* ---------- fotos de perfil ---------- */
+.avatar { width:1.7rem; height:1.7rem; border-radius:50%; object-fit:cover; flex-shrink:0; display:inline-block; vertical-align:middle; }
+.avatar-ini { display:inline-flex; align-items:center; justify-content:center; background:var(--accent-soft); color:var(--accent-ink); font-size:.62rem; font-weight:700; letter-spacing:.02em; }
+.nav-user { display:inline-flex; align-items:center; gap:.42rem; }
+.nav-user .avatar { width:1.55rem; height:1.55rem; border:1.5px solid rgba(255,255,255,.35); }
+.nav-user .avatar-ini { background:rgba(255,255,255,.16); color:#fff; border:none; }
+.users-tbl .avatar { width:2rem; height:2rem; }
+.ucel { display:flex; align-items:center; gap:.6rem; min-width:11rem; }
+.ucel > div { min-width:0; }
+.avatar-xl { width:4.2rem; height:4.2rem; font-size:1.3rem; }
+.perfil-foto { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
 `;
 
 /* ---------------- páginas ---------------- */
@@ -1387,7 +1403,7 @@ function adminPage({ user, users, sistemas }) {
     <thead><tr><th>Usuario</th><th>Rol</th><th>Sistemas</th><th>Estado</th><th>Alta</th><th>Último login</th><th>Última interacción</th></tr></thead>
     <tbody>${users.map((u) => `
       <tr class="rowlink ${u.active ? '' : 'inactivo'}" onclick="location='/admin/usuarios/${u.id}'">
-        <td><a href="/admin/usuarios/${u.id}" onclick="event.stopPropagation()"><strong>${esc(u.name)}</strong></a>${u.id === user.id ? ' <span class="muted small">(vos)</span>' : ''}<div class="small muted">${esc(u.email)}</div></td>
+        <td><div class="ucel">${avatar(u)}<div><a href="/admin/usuarios/${u.id}" onclick="event.stopPropagation()"><strong>${esc(u.name)}</strong></a>${u.id === user.id ? ' <span class="muted small">(vos)</span>' : ''}<div class="small muted">${esc(u.email)}</div></div></div></td>
         <td>${chipRol(u.role)}</td>
         <td class="small muted">${u.role === 'admin' ? 'Todos' : (u.permisos.length || '—')}</td>
         <td>${u.active ? '<span class="chip chip--estado-pagado">Activo</span>' : '<span class="chip chip--estado-cancelado">Inactivo</span>'}</td>
@@ -1518,7 +1534,7 @@ function adminUserPage({ user, target, sistemas, historial = [], resetInfo }) {
     msg: resetInfo ? `Nueva clave temporal para ${resetInfo.name}: ${resetInfo.password} — pasásela por un canal seguro y pedile que la cambie en Perfil.` : null,
     body: `
   <div class="toolbar"><a class="btn secondary small" href="/admin">← Usuarios</a></div>
-  <h1 style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">${esc(target.name)} ${chipRol(target.role)}${target.active ? '' : '<span class="chip chip--estado-cancelado">Inactivo</span>'}</h1>
+  <h1 style="display:flex;align-items:center;gap:.7rem;flex-wrap:wrap">${avatar(target, 'avatar-xl')} ${esc(target.name)} ${chipRol(target.role)}${target.active ? '' : '<span class="chip chip--estado-cancelado">Inactivo</span>'}</h1>
 
   <div class="card">
     <div class="udata">
@@ -1560,7 +1576,18 @@ function perfilPage({ user }) {
     body: `
   <h1>Mi perfil</h1>
   <div class="card">
-    <p><strong>${esc(user.name)}</strong> · ${esc(user.email)} · rol: ${user.role}</p>
+    <div class="perfil-foto">
+      ${avatar(user, 'avatar-xl')}
+      <div style="flex:1;min-width:14rem">
+        <p style="margin:.1rem 0"><strong>${esc(user.name)}</strong> · ${esc(user.email)} · rol: ${user.role}</p>
+        <form method="post" action="/perfil/foto" enctype="multipart/form-data" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.5rem">
+          <input type="file" name="foto" accept=".jpg,.jpeg,.png,.webp" required style="width:auto;flex:1;min-width:11rem">
+          <button class="btn small">${user.avatar ? 'Cambiar foto' : 'Subir foto'}</button>
+          ${user.avatar ? '<button class="btn secondary small" formaction="/perfil/foto/quitar" formenctype="application/x-www-form-urlencoded" formnovalidate>Quitar</button>' : ''}
+        </form>
+        <p class="caption" style="margin:.4rem 0 0">JPG, PNG o WebP, hasta 3 MB. Tu foto aparece en la barra superior y en las listas del equipo.</p>
+      </div>
+    </div>
   </div>
   <h2>Cambiar mi contraseña</h2>
   <form method="post" action="/perfil/password" class="card">

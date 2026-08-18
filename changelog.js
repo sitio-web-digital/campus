@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.15.2',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Fotos de perfil: cada usuario puede subir la suya en Mi perfil (JPG/PNG/WebP hasta 3 MB). La foto aparece arriba a la derecha junto a tu nombre, en la lista de usuarios de Administración y en la ficha; quien no tiene foto muestra sus iniciales.' },
+      { tipo: 'mejora', texto: 'El interruptor de tema ahora es un ícono sol/luna en la propia barra superior, junto a la campanita (chau píldora flotante que tapaba contenido).' },
+    ],
+  },
+  {
     version: '2.15.1',
     fecha: '2026-08-17',
     cambios: [

@@ -275,6 +275,11 @@ db.exec(`CREATE TABLE IF NOT EXISTS user_events (
 if (!userCols2.includes('last_version_vista')) {
   db.exec('ALTER TABLE users ADD COLUMN last_version_vista TEXT');
 }
+
+// Migración 2.15.2: foto de perfil del usuario (archivo en data/avatars).
+if (!userCols2.includes('avatar')) {
+  db.exec('ALTER TABLE users ADD COLUMN avatar TEXT');
+}
 const notiCols = db.prepare('PRAGMA table_info(notifications)').all().map((c) => c.name);
 if (!notiCols.includes('lote')) {
   db.exec('ALTER TABLE notifications ADD COLUMN lote TEXT');
