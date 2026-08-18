@@ -988,6 +988,11 @@ html.dark .theme-btn .ic-luna { display:none; }
 .curso-img { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; background:#10151B; }
 .curso-imglink + .curso-body { border-top:1px solid var(--line); }
 .curso-file { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:0 0 .35rem; font-size:.72rem; color:var(--faint); }
+.curso-lock { background:linear-gradient(140deg, #3E4854, #262E37); }
+.curso-bloqueada { opacity:.78; }
+.curso-num { display:inline-flex; align-items:center; justify-content:center; width:1.35rem; height:1.35rem; border-radius:50%; background:var(--surface2); color:var(--muted); font-size:.68rem; font-weight:700; flex-shrink:0; }
+.curso-flecha { padding:.15rem .45rem; font-size:.72rem; }
+.curso-flecha[disabled] { opacity:.35; cursor:default; }
 
 /* ---------- notificaciones con actor (foto + nombre + hora) ---------- */
 /* El popup abre hacia la derecha de la campanita (anclado a la izquierda de la barra) para no salirse de pantalla. */
@@ -2602,7 +2607,21 @@ function campusPage({ user, empresa, empresas, items }) {
   const ICONO_DOC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h8L19.5 8v12A1.5 1.5 0 0 1 18 21.5H6A1.5 1.5 0 0 1 4.5 20V4A1.5 1.5 0 0 1 6 2.5z"/><path d="M14 2.5V8h5.5"/><path d="M8 13h8M8 16.5h5.5"/></svg>`;
   const ICONO_LINK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a5 5 0 0 0 7.1 0l2.9-2.9a5 5 0 0 0-7.1-7.1l-1.6 1.6"/><path d="M14 10a5 5 0 0 0-7.1 0l-2.9 2.9a5 5 0 0 0 7.1 7.1l1.6-1.6"/></svg>`;
   const EXT_INFO = { pdf: ['PDF', 'ext-pdf'], doc: ['WORD', 'ext-doc'], docx: ['WORD', 'ext-doc'], xls: ['EXCEL', 'ext-xls'], xlsx: ['EXCEL', 'ext-xls'], ppt: ['PPT', 'ext-ppt'], pptx: ['PPT', 'ext-ppt'] };
-  const card = (it) => {
+  const CANDADO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>`;
+  const card = (it, idx, total) => {
+    // Bloqueado para el vendedor: portada con candado, sin reproductor ni botones.
+    if (it.bloqueado) {
+      return `
+    <div class="curso-card card curso-bloqueada">
+      <div class="curso-doc curso-lock">${CANDADO}<span class="curso-ext">BLOQUEADO</span></div>
+      <div class="curso-body">
+        <div class="curso-head"><span class="chip curso-tag" style="background:#5B6773">${idx + 1} de ${total}</span></div>
+        <h3 style="margin:.3rem 0 .2rem">${esc(it.titulo)}</h3>
+        <p class="small muted" style="margin:0 0 .3rem">Se desbloquea al completar <strong>«${esc(it.requiere || 'el contenido anterior')}»</strong>${/\.(mp4|webm|mov)$/i.test(it.archivo || '') || it.url ? '' : ''}.</p>
+        <div class="curso-meta small muted">${esc(it.autor)} · ${fechaHora(it.created_at)}</div>
+      </div>
+    </div>`;
+    }
     let media = '';
     let tipo = 'Documento';
     const yt = idYouTube(it.url), vm = idVimeo(it.url);
@@ -2630,8 +2649,17 @@ function campusPage({ user, empresa, empresas, items }) {
       ${media}
       <div class="curso-body">
         <div class="curso-head">
-          <span class="chip curso-tag tag-${tipo.toLowerCase()}">${tipo}</span>
-          ${esAdmin ? `<a class="small muted" href="/campus/estadisticas#item-${it.id}" title="Ver estadísticas">${it.vistos || 0} vista${it.vistos === 1 ? '' : 's'}</a>` : ''}
+          <span style="display:inline-flex;gap:.35rem;align-items:center">
+            <span class="curso-num">${idx + 1}</span>
+            <span class="chip curso-tag tag-${tipo.toLowerCase()}">${tipo}</span>
+            ${!esAdmin && it.completado ? '<span class="chip" style="background:#2F7D4F">Completado</span>' : ''}
+          </span>
+          <span style="display:inline-flex;gap:.3rem;align-items:center">
+            ${esAdmin ? `
+            <form method="post" action="/campus/items/${it.id}/mover" style="display:inline"><input type="hidden" name="dir" value="subir"><button class="btn secondary small curso-flecha" ${idx === 0 ? 'disabled' : ''} title="Subir en el orden">↑</button></form>
+            <form method="post" action="/campus/items/${it.id}/mover" style="display:inline"><input type="hidden" name="dir" value="bajar"><button class="btn secondary small curso-flecha" ${idx === total - 1 ? 'disabled' : ''} title="Bajar en el orden">↓</button></form>
+            <a class="small muted" href="/campus/estadisticas#item-${it.id}" title="Ver estadísticas">${it.vistos || 0} vista${it.vistos === 1 ? '' : 's'}</a>` : ''}
+          </span>
         </div>
         <h3 style="margin:.3rem 0 .2rem">${esc(it.titulo)}</h3>
         ${it.descripcion ? `<p class="small muted" style="margin:0 0 .5rem">${esc(it.descripcion)}</p>` : ''}
@@ -2674,7 +2702,7 @@ function campusPage({ user, empresa, empresas, items }) {
     </form>
     <p class="caption">Con link de YouTube/Vimeo el video queda embebido. Los archivos se guardan en el servidor (hasta 512 MB). Solo los administradores pueden publicar.</p>
   </div>` : ''}
-  ${items.length ? `<div class="campus-grid">${items.map(card).join('')}</div>`
+  ${items.length ? `${esAdmin ? '<p class="small muted" style="margin:-.3rem 0 .7rem">El orden de las tarjetas es el orden del curso: los vendedores desbloquean cada contenido al completar el anterior (videos subidos: 80% reproducido). Usá las flechas para reordenar.</p>' : ''}<div class="campus-grid">${items.map((it, idx) => card(it, idx, items.length)).join('')}</div>`
     : `<div class="card"><p class="muted" style="margin:0">Todavía no hay contenido de ${esc(nombreEmpresa)}. ${esAdmin ? 'Publicá el primero con "+ Subir contenido".' : 'Administración va a ir subiendo documentación y videos acá.'}</p></div>`}
   <script>
   (function () {

@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.18.0',
+    fecha: '2026-08-18',
+    cambios: [
+      { tipo: 'nuevo', texto: 'El campus ahora es un curso secuencial: el admin ordena los contenidos con flechas (el número de cada tarjeta marca la secuencia) y los vendedores desbloquean cada uno al completar el anterior — videos subidos exigen el 80% reproducido de verdad; YouTube, documentos y enlaces se completan al abrirlos.' },
+      { tipo: 'nuevo', texto: 'Las tarjetas bloqueadas muestran candado y qué contenido falta completar; el vendedor ve el chip verde Completado en lo que ya terminó. El bloqueo también se valida en el servidor (no se puede saltear por URL).' },
+    ],
+  },
+  {
     version: '2.17.2',
     fecha: '2026-08-18',
     cambios: [

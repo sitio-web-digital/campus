@@ -290,9 +290,19 @@ db.exec(`CREATE TABLE IF NOT EXISTS campus_items (
   url TEXT,
   archivo TEXT,
   archivo_nombre TEXT,
+  orden INTEGER NOT NULL DEFAULT 0,
   created_by INTEGER NOT NULL REFERENCES users(id),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );`);
+
+// Migración 2.18.0: orden del contenido del campus (curso secuencial).
+try {
+  const ciCols = db.prepare('PRAGMA table_info(campus_items)').all().map((c) => c.name);
+  if (ciCols.length && !ciCols.includes('orden')) {
+    db.exec('ALTER TABLE campus_items ADD COLUMN orden INTEGER NOT NULL DEFAULT 0');
+    db.exec('UPDATE campus_items SET orden = id');
+  }
+} catch {}
 
 // Migración 2.17.1: validación de video completo — tiempo realmente reproducido y marca de completado.
 try {

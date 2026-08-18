@@ -1221,6 +1221,29 @@ const uploadCampus = multer({
 });
 const empresaCampus = (e) => (CAMPUS_EMPRESAS.some(([s]) => s === e) ? e : 'general');
 
+// Un contenido está "completado" para el usuario: video subido → 80% real reproducido;
+// YouTube/Vimeo, documentos y enlaces → lo reprodujo/abrió al menos una vez.
+function itemCompletadoCampus(item, userId) {
+  const v = db.prepare('SELECT * FROM campus_vistas WHERE item_id = ? AND user_id = ?').get(item.id, userId);
+  if (!v) return false;
+  if (/\.(mp4|webm|mov)$/i.test(item.archivo || '')) return !!v.completado_at;
+  return v.veces > 0 || v.segundos > 0;
+}
+
+// Curso secuencial: cada contenido se desbloquea al completar el anterior de su empresa (los admins ven todo).
+function itemBloqueadoCampus(user, itemId) {
+  if (user.role === 'admin') return false;
+  const it = db.prepare('SELECT * FROM campus_items WHERE id = ?').get(itemId);
+  if (!it) return true;
+  const lista = db.prepare('SELECT * FROM campus_items WHERE empresa = ? ORDER BY orden ASC, id ASC').all(it.empresa);
+  let prevOk = true;
+  for (const x of lista) {
+    if (x.id === it.id) return !prevOk;
+    prevOk = itemCompletadoCampus(x, user.id);
+  }
+  return true;
+}
+
 // Registra que un usuario vio un contenido (una fila por usuario+contenido; cuenta las veces).
 function registrarVistaCampus(itemId, userId) {
   db.prepare(`INSERT INTO campus_vistas (item_id, user_id, veces) VALUES (?, ?, 1)
@@ -1234,6 +1257,7 @@ app.get('/campus', requireAuth, (req, res) => res.redirect('/campus/general'));
 app.get('/campus/archivo/:id', requireAuth, (req, res) => {
   const it = db.prepare('SELECT id, archivo, archivo_nombre FROM campus_items WHERE id = ?').get(req.params.id);
   if (!it || !it.archivo || !/^[\w.-]+$/.test(it.archivo)) return res.status(404).end();
+  if (itemBloqueadoCampus(req.user, it.id)) return res.status(403).send('Este contenido se desbloquea al completar el anterior.');
   if (!req.headers.range && !req.query.thumb) registrarVistaCampus(it.id, req.user.id);
   res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(it.archivo_nombre || it.archivo)}"`);
   res.sendFile(path.join(CAMPUS_DIR, it.archivo), (err) => { if (err && !res.headersSent) res.status(404).end(); });
@@ -1241,7 +1265,9 @@ app.get('/campus/archivo/:id', requireAuth, (req, res) => {
 
 // Beacon de vista (play de un video embebido, click en un enlace externo).
 app.post('/campus/vista/:id', requireAuth, (req, res) => {
-  if (db.prepare('SELECT 1 FROM campus_items WHERE id = ?').get(req.params.id)) registrarVistaCampus(req.params.id, req.user.id);
+  if (db.prepare('SELECT 1 FROM campus_items WHERE id = ?').get(req.params.id) && !itemBloqueadoCampus(req.user, req.params.id)) {
+    registrarVistaCampus(req.params.id, req.user.id);
+  }
   res.json({ ok: true });
 });
 
@@ -1252,7 +1278,7 @@ app.post('/campus/progreso/:id', requireAuth, (req, res) => {
   const seg = Math.max(0, parseFloat(req.body.segundos) || 0);
   const dur = Math.max(0, parseFloat(req.body.duracion) || 0) || null;
   const rep = Math.max(0, Math.min(30, parseFloat(req.body.rep) || 0)); // delta acotado (se manda cada ~10s)
-  if (db.prepare('SELECT 1 FROM campus_items WHERE id = ?').get(req.params.id)) {
+  if (db.prepare('SELECT 1 FROM campus_items WHERE id = ?').get(req.params.id) && !itemBloqueadoCampus(req.user, req.params.id)) {
     db.prepare(`INSERT INTO campus_vistas (item_id, user_id, veces, segundos, duracion, reproducido) VALUES (?, ?, 1, ?, ?, ?)
       ON CONFLICT(item_id, user_id) DO UPDATE SET segundos = MAX(segundos, excluded.segundos),
         duracion = COALESCE(excluded.duracion, duracion), reproducido = reproducido + excluded.reproducido,
@@ -1294,7 +1320,16 @@ app.get('/campus/:empresa', requireAuth, (req, res) => {
   const empresa = empresaCampus(req.params.empresa);
   const items = db.prepare(`SELECT i.*, u.name AS autor,
       (SELECT COUNT(*) FROM campus_vistas v WHERE v.item_id = i.id) AS vistos
-    FROM campus_items i JOIN users u ON u.id = i.created_by WHERE i.empresa = ? ORDER BY i.id DESC`).all(empresa);
+    FROM campus_items i JOIN users u ON u.id = i.created_by WHERE i.empresa = ? ORDER BY i.orden ASC, i.id ASC`).all(empresa);
+  // Cadena de desbloqueo: un contenido se abre cuando el anterior está completado.
+  let prevOk = true, prevTitulo = null;
+  for (const it of items) {
+    it.completado = itemCompletadoCampus(it, req.user.id);
+    it.bloqueado = req.user.role !== 'admin' && !prevOk;
+    it.requiere = it.bloqueado ? prevTitulo : null;
+    prevOk = it.completado;
+    prevTitulo = it.titulo;
+  }
   res.send(V.campusPage({ user: req.user, empresa, empresas: CAMPUS_EMPRESAS, items }));
 });
 
@@ -1303,12 +1338,29 @@ app.post('/campus/items', requireAuth, requireAdmin, uploadCampus.single('archiv
   const titulo = clean(req.body.titulo);
   const url = clean(req.body.url);
   if (titulo && (url || req.file)) {
-    db.prepare('INSERT INTO campus_items (empresa, titulo, descripcion, url, archivo, archivo_nombre, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run(empresa, titulo, clean(req.body.descripcion), url || null, req.file ? req.file.filename : null, req.file ? req.file.originalname : null, req.user.id);
+    const orden = (db.prepare('SELECT COALESCE(MAX(orden), 0) m FROM campus_items WHERE empresa = ?').get(empresa).m) + 1;
+    db.prepare('INSERT INTO campus_items (empresa, titulo, descripcion, url, archivo, archivo_nombre, orden, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(empresa, titulo, clean(req.body.descripcion), url || null, req.file ? req.file.filename : null, req.file ? req.file.originalname : null, orden, req.user.id);
   } else if (req.file) {
     try { fs.unlinkSync(path.join(CAMPUS_DIR, req.file.filename)); } catch {}
   }
   res.redirect(`/campus/${empresa}`);
+});
+
+app.post('/campus/items/:id/mover', requireAuth, requireAdmin, (req, res) => {
+  const it = db.prepare('SELECT * FROM campus_items WHERE id = ?').get(req.params.id);
+  if (it) {
+    const dir = req.body.dir === 'subir' ? 'DESC' : 'ASC';
+    const vecino = db.prepare(`SELECT * FROM campus_items WHERE empresa = ? AND (orden ${req.body.dir === 'subir' ? '<' : '>'} ? OR (orden = ? AND id ${req.body.dir === 'subir' ? '<' : '>'} ?)) ORDER BY orden ${dir}, id ${dir} LIMIT 1`)
+      .get(it.empresa, it.orden, it.orden, it.id);
+    if (vecino) {
+      db.prepare('UPDATE campus_items SET orden = ? WHERE id = ?').run(vecino.orden, it.id);
+      db.prepare('UPDATE campus_items SET orden = ? WHERE id = ?').run(it.orden, vecino.id);
+      // si compartían el mismo orden (datos viejos), se separan para que el swap sea real
+      if (vecino.orden === it.orden) db.prepare('UPDATE campus_items SET orden = orden + 1 WHERE id = ?').run(vecino.id);
+    }
+  }
+  res.redirect(`/campus/${it ? it.empresa : 'general'}`);
 });
 
 app.post('/campus/items/:id/borrar', requireAuth, requireAdmin, (req, res) => {
