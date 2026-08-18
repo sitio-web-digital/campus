@@ -699,7 +699,7 @@ tr.inactivo td { opacity:.5; }
 .login-bg .btn.secondary { background:#fff; color:var(--login-ink); border-color:#CBD5E1; }
 .login-bg a { color:var(--login-ink); }
 .login-bg label { color:#54657A; }
-.login-bg input, .login-bg select, .login-bg textarea { background:#fff; color:#0F1D2E; border-color:#CBD5E1; }
+.login-bg input, .login-bg select, .login-bg textarea { background-color:#fff; color:#0F1D2E; border-color:#CBD5E1; }
 .login-bg input::placeholder { color:#8A99AB; }
 .login-bg input:focus, .login-bg select:focus, .login-bg textarea:focus { border-color:#1D6FB8; box-shadow:0 0 0 3px #E3EDF8; }
 .login-bg .card, .login-bg .split-form { background:#fff; }
@@ -792,10 +792,11 @@ html.dark .btn.secondary:hover { background:#2A343F; color:#E3EAF1; }
 html.dark .btn.danger { background:#8E3B38; border-color:transparent; color:#F6E3E2; }
 html.dark .btn.danger:hover { background:#A34541; }
 
-html.dark input, html.dark select, html.dark textarea { background:var(--surface3); color:var(--ink); border-color:var(--line2); }
+html.dark input, html.dark select, html.dark textarea { background-color:var(--surface3); color:var(--ink); border-color:var(--line2); }
 html.dark input:hover, html.dark select:hover, html.dark textarea:hover { border-color:#41505E; }
 html.dark input:focus, html.dark select:focus, html.dark textarea:focus { border-color:var(--role); box-shadow:0 0 0 3px rgba(87,184,171,.18); }
 html.dark input::placeholder, html.dark textarea::placeholder { color:var(--faint); }
+select, html.dark select { background-repeat:no-repeat; background-position:right .45rem center; background-size:.7rem; }
 html.dark select { background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 8l3-3.5' fill='none' stroke='%2398A4B0' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E"); }
 html.dark input[type=checkbox], html.dark input[type=radio] { accent-color:var(--role); }
 
@@ -849,7 +850,7 @@ html.dark svg [stroke="#C05450"] { stroke:#D6706B; }
 /* el login no participa del modo oscuro */
 html.dark .login-bg, html.dark .login-bg .split-form, html.dark .login-bg .card { background:#F4F7FA; color:#0F1D2E; }
 html.dark .login-bg .split-form, html.dark .login-bg .card { background:#fff; }
-html.dark .login-bg input, html.dark .login-bg select { background:#fff; color:#0F1D2E; border-color:#CBD5E1; }
+html.dark .login-bg input, html.dark .login-bg select { background-color:#fff; color:#0F1D2E; border-color:#CBD5E1; }
 html.dark .login-bg h1, html.dark .login-bg .sf-inner h1 { color:#0F1D2E; }
 html.dark .login-bg .split-brand, html.dark .login-bg .split-brand .sb-title { color:#fff; }
 html.dark .login-bg .btn { background:var(--login); color:#fff; }
