@@ -1,6 +1,6 @@
 {
   "name": "panel-comercial",
-  "version": "2.13.0",
+  "version": "2.14.0",
   "description": "Panel comercial B2B: pipeline de ventas, actividad diaria y dashboard de KPIs",
   "main": "server.js",
   "scripts": {

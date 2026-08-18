@@ -2,6 +2,16 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.14.0',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Al entrar después de una actualización, el sistema muestra una ventana con la versión nueva y sus cambios (como esta). Se cierra con "Entendido" y no vuelve a aparecer.' },
+      { tipo: 'nuevo', texto: 'Alertas en ventana desde Administración: publicás un comunicado y le aparece a todo el equipo como modal al entrar, hasta que cada uno lo confirme. Podés ver quién lo vio y cuándo, y apagarla.' },
+      { tipo: 'nuevo', texto: 'Los avisos manuales ahora muestran quién los vio: en Administración, cada aviso enviado lista sus destinatarios con visto/sin ver y la hora.' },
+      { tipo: 'mejora', texto: 'Campañas: la carga quedó solo en Config (la vieja pestaña del dashboard redirige), y el dashboard sumó métricas de campañas y gráficas de torta de leads e ingresos por campaña.' },
+    ],
+  },
+  {
     version: '2.13.0',
     fecha: '2026-08-17',
     cambios: [

@@ -146,6 +146,37 @@ ${msg ? `<div class="flash ok">${esc(msg)}</div>` : ''}
 ${err ? `<div class="flash bad">${esc(err)}</div>` : ''}
 ${body}
 </main>
+${user && user.modalBanner ? `
+<div class="modal-back anuncio" id="anuncioModal">
+  <div class="modal anuncio-box">
+    <span class="anuncio-tag">Aviso de administración</span>
+    <h2>${esc(user.modalBanner.titulo)}</h2>
+    <p style="margin:.4rem 0 1.1rem; line-height:1.6">${esc(user.modalBanner.texto)}</p>
+    <button class="btn" onclick="cerrarAnuncio('/banners/${user.modalBanner.id}/visto')">Entendido</button>
+  </div>
+</div>` : user && user.modalChangelog ? `
+<div class="modal-back anuncio" id="anuncioModal">
+  <div class="modal anuncio-box">
+    <span class="anuncio-tag">Actualización del sistema</span>
+    <h2>Novedades de la versión ${esc(user.modalChangelog.version)}</h2>
+    <p class="small muted" style="margin:.2rem 0 .8rem">${esc(user.modalChangelog.fecha)}</p>
+    <ul class="cl-lista">
+      ${user.modalChangelog.cambios.map((c) => `<li><span class="chip cl-${c.tipo}">${c.tipo === 'nuevo' ? 'Nuevo' : c.tipo === 'fix' ? 'Arreglo' : 'Mejora'}</span><span>${esc(c.texto)}</span></li>`).join('')}
+    </ul>
+    <div style="display:flex; gap:.6rem; align-items:center; margin-top:1.1rem">
+      <button class="btn" onclick="cerrarAnuncio('/changelog/visto')">Entendido</button>
+      <a class="small" href="/changelog" onclick="fetch('/changelog/visto',{method:'POST'})">Ver historial completo</a>
+    </div>
+  </div>
+</div>` : ''}
+${user ? `
+<script>
+function cerrarAnuncio(url) {
+  fetch(url, { method: 'POST' }).finally(function () {
+    var m = document.getElementById('anuncioModal'); if (m) m.remove();
+  });
+}
+</script>` : ''}
 ${user ? `
 <script>
 (function () {
@@ -573,6 +604,19 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .pipebar .btn.nuevo { margin-left:auto; white-space:nowrap; }
 .fresultado { flex-shrink:0; font-size:.74rem; }
 
+/* --- ventana modal de anuncios (alertas del admin y changelog) --- */
+.anuncio { z-index:120; display:grid; place-items:center; }
+.anuncio-box { max-width:34rem; width:calc(100% - 2rem); margin:0; padding:1.4rem 1.5rem 1.5rem; border-radius:16px; background:var(--surface); }
+.anuncio-box h2 { margin:.35rem 0 .2rem; font-size:1.2rem; }
+.anuncio-tag { font-size:.62rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--role); }
+.cl-lista { list-style:none; margin:.4rem 0 0; padding:0; display:grid; gap:.55rem; }
+.cl-lista li { display:flex; gap:.55rem; align-items:baseline; font-size:.88rem; line-height:1.5; }
+.cl-lista .chip { flex-shrink:0; }
+.chip.cl-nuevo { background:#3E9B57; }
+.chip.cl-mejora { background:#1D6FB8; }
+.chip.cl-fix { background:#C08A2E; }
+@media (max-width:640px) { .anuncio { padding:1rem; } .anuncio .modal.anuncio-box { min-height:0; border-radius:16px; } }
+
 /* --- administración: tabla de usuarios y ficha --- */
 .rowlink { cursor:pointer; }
 .rowlink a { text-decoration:none; color:var(--accent-ink); }
@@ -959,9 +1003,9 @@ function funnelBars(counts, etapas = ETAPAS_ACTIVAS, colores = ETAPA_COLOR) {
   }).join('');
 }
 
-function donut(items) {
+function donut(items, fmt = (v) => v, vacio = 'Sin datos en este período.') {
   const total = items.reduce((a, i) => a + i.n, 0);
-  if (!total) return '<p class="muted small">Sin deals perdidos todavía.</p>';
+  if (!total) return `<p class="muted small">${vacio}</p>`;
   const palette = ['#C05450', '#C08A2E', '#1D6FB8', '#8494A6', '#54657A', '#7A5AB5', '#3E9B57'];
   let acc = 0;
   const C = 2 * Math.PI * 40;
@@ -971,7 +1015,7 @@ function donut(items) {
     acc += frac;
     return seg;
   }).join('');
-  const legend = items.map((it, i) => `<div class="small" style="display:flex;align-items:center;gap:.4rem"><span style="width:.7rem;height:.7rem;border-radius:3px;background:${palette[i % palette.length]};flex-shrink:0"></span>${esc(it.label)} <strong style="margin-left:auto">${it.n}</strong></div>`).join('');
+  const legend = items.map((it, i) => `<div class="small" style="display:flex;align-items:center;gap:.4rem"><span style="width:.7rem;height:.7rem;border-radius:3px;background:${palette[i % palette.length]};flex-shrink:0"></span>${esc(it.label)} <strong style="margin-left:auto">${fmt(it.n)}</strong></div>`).join('');
   return `<div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
     <svg viewBox="0 0 100 100" width="130" height="130" role="img" aria-label="Motivos de pérdida">${segs}</svg>
     <div style="flex:1;min-width:150px;display:grid;gap:.3rem">${legend}</div>
@@ -1075,7 +1119,11 @@ const rolOpts = (sel) => Object.entries(ROL_LABEL).map(([v, l]) => `<option valu
 const permChecks = (sistemas, u) => sistemas.map(([slug, nombre]) => `
     <label class="perm"><input type="checkbox" name="permisos" value="${slug}" ${u && u.permisos.includes(slug) ? 'checked' : ''}> ${esc(nombre)}</label>`).join('');
 
-function adminPage({ user, users, sistemas, prefs = {} }) {
+function adminPage({ user, users, sistemas, prefs = {}, avisos = [], banners = [], totalUsuarios = 0 }) {
+  const vistosDetalle = (lista, fmtQuien) => `
+    <details style="margin-top:.4rem"><summary class="small" style="cursor:pointer;color:var(--accent-ink);font-weight:600">Ver quién lo vio</summary>
+      <div class="hist" style="margin-top:.3rem">${lista.length ? lista.map(fmtQuien).join('') : '<p class="muted small" style="margin:.3rem 0 0">Nadie todavía.</p>'}</div>
+    </details>`;
   return layout({
     title: 'Administración', user, active: 'admin', sistema: 'admin',
     body: `
@@ -1116,6 +1164,38 @@ function adminPage({ user, users, sistemas, prefs = {} }) {
       </div>
       <div style="margin-top:.9rem"><button class="btn">Enviar aviso</button></div>
     </form>
+    ${avisos.length ? `
+    <h4 style="margin:1.1rem 0 .3rem">Avisos enviados</h4>
+    ${avisos.map((a) => `
+    <div class="cfg-row" style="display:block">
+      <div class="small"><strong>${esc(a.texto)}</strong> <span class="muted">· ${fechaHora(a.created_at)} · visto por <strong>${a.vistos} de ${a.total}</strong></span></div>
+      ${vistosDetalle(a.destinatarios, (d) => `<div class="hist-item"><span class="chip" style="background:${d.leida ? '#3E9B57' : '#8494A6'}">${d.leida ? 'Visto' : 'Sin ver'}</span><span>${esc(d.name)}</span><span class="cuando" style="margin-left:auto">${d.leida_at ? fechaHora(d.leida_at) : ''}</span></div>`)}
+    </div>`).join('')}` : ''}
+  </div>
+
+  <div class="card card--accent">
+    <h3 style="margin-top:0">Alerta en ventana (modal)</h3>
+    <p class="small muted">Le aparece a <strong>todo el equipo</strong> como ventana al entrar al sistema, hasta que cada uno toque "Entendido". Para comunicados importantes que no pueden pasar de largo.</p>
+    <form method="post" action="/admin/banners">
+      <div class="grid2">
+        <div><label>Título</label><input name="titulo" required maxlength="80" placeholder="Ej: Reunión general obligatoria"></div>
+        <div><label>Mensaje</label><input name="texto" required maxlength="400" placeholder="Ej: mañana viernes 9:00 en la oficina. Traer notebook."></div>
+      </div>
+      <div style="margin-top:.9rem"><button class="btn">Publicar alerta</button></div>
+    </form>
+    ${banners.length ? `
+    <h4 style="margin:1.1rem 0 .3rem">Alertas publicadas</h4>
+    ${banners.map((b) => `
+    <div class="cfg-row" style="display:block">
+      <div class="small" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+        <strong>${esc(b.titulo)}</strong>
+        ${b.activo ? '<span class="chip" style="background:#3E9B57">Activa</span>' : '<span class="chip chip--estado-cancelado">Apagada</span>'}
+        <span class="muted">${fechaHora(b.created_at)} · visto por <strong>${b.vistos} de ${totalUsuarios}</strong></span>
+        <form method="post" action="/admin/banners/${b.id}/toggle" style="display:inline;margin-left:auto"><button class="btn secondary small">${b.activo ? 'Apagar' : 'Reactivar'}</button></form>
+      </div>
+      <div class="small muted">${esc(b.texto)}</div>
+      ${vistosDetalle(b.quienes, (q) => `<div class="hist-item"><span class="chip" style="background:#3E9B57">Visto</span><span>${esc(q.name)}</span><span class="cuando" style="margin-left:auto">${fechaHora(q.visto_at)}</span></div>`)}
+    </div>`).join('')}` : ''}
   </div>
 
   <h2>Equipo</h2>
@@ -1422,7 +1502,6 @@ function dashboardUnificadoPage({ user, info, p, off, periodos, desde, hasta, r,
     title: `Dashboard · ${info.nombre}`, user, active: 'dashboard', sistema: info.slug,
     body: `
   <h1>Dashboard ${esc(info.nombre)}</h1>
-  ${esCfd ? dashHeader('dashboard') : ''}
   <div class="toolbar">
     <div class="seg">
       <a href="${dashUrl}?p=dia" class="${p === 'dia' ? 'on' : ''}">Diario</a>
@@ -1484,6 +1563,22 @@ function dashboardUnificadoPage({ user, info, p, off, periodos, desde, hasta, r,
     </div>
   </div>
 
+  <h2>Campañas del período</h2>
+  <div class="tiles">
+    <div class="tile"><div class="v">${campanas.filter((c) => c.nombre !== 'Sin campaña' && (c.leads || c.ganadas)).length}</div><div class="l">Campañas con movimiento</div></div>
+    <div class="tile"><div class="v">${campanas.reduce((a, c) => a + (c.nombre === 'Sin campaña' ? 0 : c.leads), 0)} / ${campanas.reduce((a, c) => a + c.leads, 0)}</div><div class="l">Leads con campaña / totales</div></div>
+    <div class="tile"><div class="v">${(campanas.filter((c) => c.nombre !== 'Sin campaña').sort((a, b) => b.ganadas - a.ganadas || b.ingresos - a.ingresos)[0] || {}).nombre || '—'}</div><div class="l">Campaña líder del período</div></div>
+  </div>
+  <div class="charts">
+    <div class="card">
+      <h3 style="margin-top:0">Leads por campaña</h3>
+      ${donut(campanas.filter((c) => c.leads > 0).map((c) => ({ label: c.nombre, n: c.leads })))}
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Ingresos por campaña</h3>
+      ${donut(campanas.filter((c) => c.ingresos > 0).map((c) => ({ label: c.nombre, n: c.ingresos })), money, 'Sin ventas con campaña en este período.')}
+    </div>
+  </div>
   ${tablaCampanas(campanas)}
 
   <h2>Por vendedor — actividad y resultados del período</h2>
@@ -1509,7 +1604,6 @@ function dashboardUnificadoPage({ user, info, p, off, periodos, desde, hasta, r,
 // Tabla de campañas ganadoras (compartida por los dashboards).
 function tablaCampanas(campanas) {
   return `
-  <h2>Campañas: de dónde vienen las leads</h2>
   <div class="tablewrap"><table>
     <thead><tr><th>Campaña</th><th>Leads</th><th>Ganadas</th><th>Perdidas</th><th>Ingresos</th><th>Conversión</th></tr></thead>
     <tbody>${campanas.length ? campanas.map((c) => `
@@ -1520,7 +1614,7 @@ function tablaCampanas(campanas) {
         <td>${c.perdidas}</td>
         <td><strong>${money(c.ingresos)}</strong></td>
         <td>${c.leads > 0 ? Math.round((c.ganadas / c.leads) * 100) + '%' : '—'}</td>
-      </tr>`).join('') : '<tr><td colspan="6" class="muted">Sin leads con campaña todavía. Creá campañas en Administración → Campañas y elegilas al cargar la lead.</td></tr>'}</tbody>
+      </tr>`).join('') : '<tr><td colspan="6" class="muted">Sin leads con campaña todavía. Creá campañas en la Config del panel y elegilas al cargar la lead.</td></tr>'}</tbody>
   </table></div>
   <p class="caption">Ordenadas por ganadas e ingresos: las de arriba son tus ángulos ganadores. "Conversión" = ganadas ÷ leads de la campaña.</p>`;
 }
@@ -2292,5 +2386,5 @@ module.exports = {
   loginPage, pipelinePage, dealFormModal, adminPage, adminUserPage, perfilPage, docsPage, changelogPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
-  panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage, campanasPage,
+  panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,
 };

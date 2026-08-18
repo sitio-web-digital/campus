@@ -271,6 +271,30 @@ db.exec(`CREATE TABLE IF NOT EXISTS user_events (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );`);
 
+// Migración 2.14.0: changelog al entrar, avisos con "visto por" y alertas modales del admin.
+if (!userCols2.includes('last_version_vista')) {
+  db.exec('ALTER TABLE users ADD COLUMN last_version_vista TEXT');
+}
+const notiCols = db.prepare('PRAGMA table_info(notifications)').all().map((c) => c.name);
+if (!notiCols.includes('lote')) {
+  db.exec('ALTER TABLE notifications ADD COLUMN lote TEXT');
+  db.exec('ALTER TABLE notifications ADD COLUMN leida_at TEXT');
+}
+db.exec(`CREATE TABLE IF NOT EXISTS banners (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  titulo TEXT NOT NULL,
+  texto TEXT NOT NULL,
+  created_by INTEGER NOT NULL REFERENCES users(id),
+  activo INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS banner_vistos (
+  banner_id INTEGER NOT NULL REFERENCES banners(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  visto_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (banner_id, user_id)
+);`);
+
 // Sistemas del ecosistema (para permisos por usuario).
 const SISTEMAS = [
   ['cfd', 'Comercial Cloud For Deploy'],

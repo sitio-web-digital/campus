@@ -46,7 +46,7 @@ if (seeded) {
 
 function currentUser(req) {
   if (!req.session.uid) return null;
-  const u = db.prepare('SELECT id, name, email, role, active, permisos, last_seen_at FROM users WHERE id = ? AND active = 1').get(req.session.uid) || null;
+  const u = db.prepare('SELECT id, name, email, role, active, permisos, last_seen_at, last_version_vista FROM users WHERE id = ? AND active = 1').get(req.session.uid) || null;
   if (u) { try { u.permisos = JSON.parse(u.permisos || '[]'); } catch { u.permisos = []; } }
   return u;
 }
@@ -64,6 +64,11 @@ function requireAuth(req, res, next) {
   if (!user.last_seen_at || user.last_seen_at < haceUnMin) {
     db.prepare("UPDATE users SET last_seen_at = datetime('now') WHERE id = ?").run(user.id);
   }
+  // Ventana modal pendiente: primero una alerta del admin no vista; si no hay, el changelog de la versión nueva.
+  user.modalBanner = db.prepare(`SELECT b.* FROM banners b WHERE b.activo = 1
+    AND NOT EXISTS (SELECT 1 FROM banner_vistos v WHERE v.banner_id = b.id AND v.user_id = ?)
+    ORDER BY b.id DESC LIMIT 1`).get(user.id) || null;
+  if (!user.modalBanner && user.last_version_vista !== CHANGELOG[0].version) user.modalChangelog = CHANGELOG[0];
   req.user = user;
   next();
 }
@@ -92,8 +97,8 @@ function notifyAdmins(actorId, texto, url, tipo = 'otro') {
 }
 
 // Notifica a un usuario puntual (ej: al vendedor cuando le aprueban una venta).
-function notifyUser(userId, texto, url) {
-  db.prepare('INSERT INTO notifications (user_id, texto, url) VALUES (?, ?, ?)').run(userId, texto, url);
+function notifyUser(userId, texto, url, lote = null) {
+  db.prepare('INSERT INTO notifications (user_id, texto, url, lote) VALUES (?, ?, ?, ?)').run(userId, texto, url, lote);
 }
 
 const CAMPOS_DEAL = {
@@ -479,7 +484,14 @@ app.get('/equipo', requireAuth, requireAdmin, (req, res) => res.redirect('/admin
 
 app.get('/admin', requireAuth, requireAdmin, (req, res) => {
   let prefs = {}; try { prefs = JSON.parse(db.prepare('SELECT notif_prefs FROM users WHERE id = ?').get(req.user.id).notif_prefs || '{}'); } catch {}
-  res.send(V.adminPage({ user: req.user, users: usuariosAdmin(), sistemas: SISTEMAS, prefs }));
+  // Avisos enviados (por lote) con quién los vio, y alertas modales con sus vistos.
+  const avisos = db.prepare(`SELECT lote, MIN(texto) texto, MIN(created_at) created_at, COUNT(*) total, SUM(leida) vistos
+    FROM notifications WHERE lote IS NOT NULL GROUP BY lote ORDER BY MIN(created_at) DESC LIMIT 10`).all()
+    .map((a) => ({ ...a, destinatarios: db.prepare('SELECT u.name, n.leida, n.leida_at FROM notifications n JOIN users u ON u.id = n.user_id WHERE n.lote = ? ORDER BY n.leida DESC, u.name').all(a.lote) }));
+  const totalUsuarios = db.prepare('SELECT COUNT(*) c FROM users WHERE active = 1').get().c;
+  const banners = db.prepare('SELECT b.*, (SELECT COUNT(*) FROM banner_vistos v WHERE v.banner_id = b.id) vistos FROM banners b ORDER BY b.id DESC LIMIT 10').all()
+    .map((b) => ({ ...b, quienes: db.prepare('SELECT u.name, v.visto_at FROM banner_vistos v JOIN users u ON u.id = v.user_id WHERE v.banner_id = ? ORDER BY v.visto_at').all(b.id) }));
+  res.send(V.adminPage({ user: req.user, users: usuariosAdmin(), sistemas: SISTEMAS, prefs, avisos, banners, totalUsuarios }));
 });
 
 // Ficha del usuario: datos, permisos y su historial de acciones.
@@ -548,11 +560,9 @@ function registrarRutasCampanas(basePath, panel, backUrl) {
   });
 }
 
-// CFD: pestaña Campañas junto a Dashboard/Reportes.
-app.get('/campanas', requireAuth, requireAdmin, (req, res) => {
-  res.send(V.campanasPage({ user: req.user, campanas: campanasDePanel('cfd') }));
-});
-registrarRutasCampanas('/campanas', 'cfd', '/campanas');
+// Las campañas se gestionan en la Config de cada panel (la vieja pestaña redirige).
+app.get('/campanas', requireAuth, requireAdmin, (req, res) => res.redirect('/config'));
+registrarRutasCampanas('/campanas', 'cfd', '/config');
 for (const P of PANELES_COMERCIALES) {
   if (P.slug === 'cfd') continue; // CFD ya quedó registrado arriba (pestaña Campañas del dashboard)
   registrarRutasCampanas(`${baseDePanel(P.slug)}/campanas`, P.slug, `${baseDePanel(P.slug)}/config`);
@@ -572,6 +582,31 @@ function statsCampanas(panel, desde = '0000-01-01', hasta = '9999-12-31') {
     ORDER BY ganadas DESC, ingresos DESC, leads DESC`).all({ panel, desde, hasta });
 }
 
+/* --- ventanas modales: changelog al entrar y alertas del admin --- */
+
+app.post('/changelog/visto', requireAuth, (req, res) => {
+  db.prepare('UPDATE users SET last_version_vista = ? WHERE id = ?').run(CHANGELOG[0].version, req.user.id);
+  res.json({ ok: true });
+});
+
+app.post('/banners/:id/visto', requireAuth, (req, res) => {
+  db.prepare('INSERT OR IGNORE INTO banner_vistos (banner_id, user_id) VALUES (?, ?)').run(req.params.id, req.user.id);
+  res.json({ ok: true });
+});
+
+// Alerta modal del admin: le aparece a cada usuario al entrar hasta que toque "Entendido".
+app.post('/admin/banners', requireAuth, requireAdmin, (req, res) => {
+  const titulo = clean(req.body.titulo);
+  const texto = clean(req.body.texto);
+  if (titulo && texto) db.prepare('INSERT INTO banners (titulo, texto, created_by) VALUES (?, ?, ?)').run(titulo, texto, req.user.id);
+  res.redirect('/admin');
+});
+
+app.post('/admin/banners/:id/toggle', requireAuth, requireAdmin, (req, res) => {
+  db.prepare('UPDATE banners SET activo = 1 - activo WHERE id = ?').run(req.params.id);
+  res.redirect('/admin');
+});
+
 // Preferencias de notificaciones del admin (el paso a Ganado no se puede silenciar).
 app.post('/admin/mis-notificaciones', requireAuth, requireAdmin, (req, res) => {
   const prefs = { deal_nuevo: req.body.deal_nuevo === 'on', cambio_etapa: req.body.cambio_etapa === 'on' };
@@ -589,7 +624,8 @@ app.post('/admin/notificar', requireAuth, requireAdmin, (req, res) => {
     else if (['vendedor', 'developer', 'admin'].includes(destino)) usuarios = db.prepare('SELECT id FROM users WHERE role = ? AND active = 1').all(destino);
     else usuarios = db.prepare('SELECT id FROM users WHERE active = 1').all();
     const msg = `Aviso de ${req.user.name}: ${texto}`;
-    for (const u of usuarios) if (u.id !== req.user.id) notifyUser(u.id, msg, '/notificaciones');
+    const lote = 'aviso-' + Date.now();
+    for (const u of usuarios) if (u.id !== req.user.id) notifyUser(u.id, msg, '/notificaciones', lote);
   }
   res.redirect('/admin');
 });
@@ -1125,7 +1161,7 @@ app.get('/notificaciones/lista', requireAuth, (req, res) => {
   const items = db.prepare('SELECT texto, url, leida, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 15').all(req.user.id)
     .map((n) => ({ texto: n.texto, url: n.url || '/notificaciones', leida: !!n.leida, fecha: fechaHoraAR(n.created_at) }));
   res.json({ items });
-  db.prepare('UPDATE notifications SET leida = 1 WHERE user_id = ? AND leida = 0').run(req.user.id);
+  db.prepare("UPDATE notifications SET leida = 1, leida_at = datetime('now') WHERE user_id = ? AND leida = 0").run(req.user.id);
 });
 
 // Estado para el aviso en vivo (la campanita consulta esto cada 15 segundos).
@@ -1139,7 +1175,7 @@ app.get('/notificaciones', requireAuth, (req, res) => {
   const notis = db.prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 100').all(req.user.id);
   res.send(V.notificacionesPage({ user: req.user, notis }));
   // Se marcan como leídas después de mostrarlas: las no leídas se ven resaltadas una vez.
-  db.prepare('UPDATE notifications SET leida = 1 WHERE user_id = ? AND leida = 0').run(req.user.id);
+  db.prepare("UPDATE notifications SET leida = 1, leida_at = datetime('now') WHERE user_id = ? AND leida = 0").run(req.user.id);
 });
 
 /* ---------------- documentación y changelog ---------------- */
