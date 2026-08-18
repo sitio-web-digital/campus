@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.19.0',
+    fecha: '2026-08-18',
+    cambios: [
+      { tipo: 'nuevo', texto: 'El campus ahora se organiza en cursos: entrás a un curso y adentro están sus videos y documentos en orden, con la barra de progreso de cada uno. Todo el contenido existente pasó al curso "Cloud for deploy basico".' },
+      { tipo: 'nuevo', texto: 'Quiz por contenido: el admin arma preguntas de opción múltiple en cada video o PDF, y el vendedor necesita 70% para aprobar — sin quiz aprobado, el siguiente contenido del curso no se desbloquea. Intentos ilimitados; cuenta el mejor.' },
+      { tipo: 'mejora', texto: 'Las estadísticas suman los quizzes: nota de cada vendedor por contenido, quizzes aprobados en el ranking y en las tarjetas del resumen.' },
+    ],
+  },
+  {
     version: '2.18.0',
     fecha: '2026-08-18',
     cambios: [

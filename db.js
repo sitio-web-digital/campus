@@ -295,6 +295,47 @@ db.exec(`CREATE TABLE IF NOT EXISTS campus_items (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );`);
 
+// Migración 2.19.0: cursos del campus + quizzes por contenido.
+db.exec(`CREATE TABLE IF NOT EXISTS campus_cursos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  empresa TEXT NOT NULL,
+  nombre TEXT NOT NULL,
+  descripcion TEXT,
+  orden INTEGER NOT NULL DEFAULT 0,
+  created_by INTEGER NOT NULL REFERENCES users(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS campus_quiz_preguntas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_id INTEGER NOT NULL REFERENCES campus_items(id) ON DELETE CASCADE,
+  pregunta TEXT NOT NULL,
+  opciones TEXT NOT NULL,
+  correcta INTEGER NOT NULL DEFAULT 0,
+  orden INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS campus_quiz_intentos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_id INTEGER NOT NULL REFERENCES campus_items(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  puntaje INTEGER NOT NULL,
+  aprobado INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);`);
+try {
+  const ciCols2 = db.prepare('PRAGMA table_info(campus_items)').all().map((c) => c.name);
+  if (ciCols2.length && !ciCols2.includes('curso_id')) {
+    db.exec('ALTER TABLE campus_items ADD COLUMN curso_id INTEGER REFERENCES campus_cursos(id)');
+  }
+  // El primer curso existe siempre; todo el contenido que ya estaba cargado pasa adentro.
+  let curso = db.prepare("SELECT id FROM campus_cursos WHERE nombre = 'Cloud for deploy basico'").get();
+  if (!curso) {
+    const adminId = (db.prepare("SELECT id FROM users WHERE role = 'admin' ORDER BY id LIMIT 1").get() || { id: 1 }).id;
+    const r = db.prepare("INSERT INTO campus_cursos (empresa, nombre, descripcion, orden, created_by) VALUES ('cfd', 'Cloud for deploy basico', 'Formación inicial de Cloud For Deploy: mirá los contenidos en orden y aprobá los quizzes para avanzar.', 1, ?)").run(adminId);
+    curso = { id: r.lastInsertRowid };
+  }
+  db.prepare("UPDATE campus_items SET curso_id = ?, empresa = 'cfd' WHERE curso_id IS NULL").run(curso.id);
+} catch (e) { console.error('Migración cursos campus:', e.message); }
+
 // Migración 2.18.0: orden del contenido del campus (curso secuencial).
 try {
   const ciCols = db.prepare('PRAGMA table_info(campus_items)').all().map((c) => c.name);

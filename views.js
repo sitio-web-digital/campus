@@ -993,6 +993,12 @@ html.dark .theme-btn .ic-luna { display:none; }
 .curso-num { display:inline-flex; align-items:center; justify-content:center; width:1.35rem; height:1.35rem; border-radius:50%; background:var(--surface2); color:var(--muted); font-size:.68rem; font-weight:700; flex-shrink:0; }
 .curso-flecha { padding:.15rem .45rem; font-size:.72rem; }
 .curso-flecha[disabled] { opacity:.35; cursor:default; }
+.doc-curso { background:linear-gradient(140deg, #0E6E66, #0A3D39); }
+.doc-curso .ic, .doc-curso svg { width:2.6rem; height:2.6rem; }
+.quiz-preg { padding:.7rem 0; border-bottom:1px solid var(--line); }
+.quiz-preg:last-of-type { border-bottom:none; }
+.quiz-op { display:flex; align-items:center; gap:.5rem; padding:.3rem .2rem; font-size:.88rem; text-transform:none; letter-spacing:0; font-weight:500; color:var(--ink); margin:0; cursor:pointer; }
+.quiz-op input { width:auto; }
 
 /* ---------- notificaciones con actor (foto + nombre + hora) ---------- */
 /* El popup abre hacia la derecha de la campanita (anclado a la izquierda de la barra) para no salirse de pantalla. */
@@ -2601,15 +2607,65 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
 const idYouTube = (url) => ((url || '').match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/) || [])[1] || null;
 const idVimeo = (url) => ((url || '').match(/vimeo\.com\/(\d+)/) || [])[1] || null;
 
-function campusPage({ user, empresa, empresas, items }) {
+// Lista de cursos de una empresa (portada del campus).
+function campusPage({ user, empresa, empresas, cursos }) {
+  const esAdmin = user.role === 'admin';
+  const nombreEmpresa = (empresas.find(([sl]) => sl === empresa) || [])[1] || '';
+  return layout({
+    title: 'Campus de formación', user, active: 'campus', sistema: 'campus',
+    body: `
+  <h1>Campus de formación</h1>
+  <p class="small muted">Elegí la empresa y entrá a un curso: los contenidos se hacen en orden y cada uno se desbloquea al completar el anterior (y aprobar su quiz, si tiene).</p>
+  <div class="toolbar">
+    <div class="seg">
+      ${empresas.map(([slug, nombre]) => `<a href="/campus/${slug}" class="${slug === empresa ? 'on' : ''}">${esc(nombre)}</a>`).join('')}
+    </div>
+    <div class="sp"></div>
+    ${esAdmin ? `<button type="button" class="btn small" onclick="document.getElementById('nuevoCurso').classList.toggle('abierto')">+ Nuevo curso</button>` : ''}
+  </div>
+  ${esAdmin ? `
+  <div id="nuevoCurso" class="card card--accent curso-form">
+    <h3 style="margin-top:0">Crear curso en ${esc(nombreEmpresa)}</h3>
+    <form method="post" action="/campus/cursos">
+      <input type="hidden" name="empresa" value="${esc(empresa)}">
+      <div class="grid2">
+        <div><label>Nombre del curso *</label><input name="nombre" required maxlength="100" placeholder="Ej: Cloud for deploy basico"></div>
+        <div><label>Descripción</label><input name="descripcion" maxlength="300" placeholder="Qué aprende el vendedor en este curso"></div>
+      </div>
+      <div style="margin-top:.9rem"><button class="btn">Crear curso</button></div>
+    </form>
+  </div>` : ''}
+  ${cursos.length ? `<div class="campus-grid">${cursos.map((c) => {
+    const pct = c.total > 0 ? Math.round((c.completados / c.total) * 100) : 0;
+    return `
+    <div class="curso-card card">
+      <a class="curso-doc doc-curso" href="/campus/curso/${c.id}">${IC('<path d="M10 4L2.5 7.5 10 11l7.5-3.5L10 4z"/><path d="M5 9v4c0 1.2 2.2 2.5 5 2.5s5-1.3 5-2.5V9"/>')}<span class="curso-ext">CURSO</span></a>
+      <div class="curso-body">
+        <h3 style="margin:.1rem 0 .2rem">${esc(c.nombre)}</h3>
+        ${c.descripcion ? `<p class="small muted" style="margin:0 0 .5rem">${esc(c.descripcion)}</p>` : ''}
+        ${!esAdmin && c.total > 0 ? `
+        <div style="display:flex;align-items:center;gap:.5rem;margin:.2rem 0 .4rem"><span class="prog" style="flex:1"><i class="${pct >= 100 ? 'full' : ''}" style="width:${pct}%"></i></span><span class="small muted" style="white-space:nowrap">${c.completados}/${c.total}</span></div>` : ''}
+        <div class="curso-meta small muted">${c.total} contenido${c.total === 1 ? '' : 's'}</div>
+        <div class="curso-acciones">
+          <a class="btn small" href="/campus/curso/${c.id}">${!esAdmin && c.completados >= c.total && c.total > 0 ? 'Repasar curso' : 'Entrar al curso'}</a>
+          ${esAdmin && c.total === 0 ? `<form method="post" action="/campus/cursos/${c.id}" onsubmit="return confirm('¿Eliminar el curso vacío «${esc(c.nombre)}»?')" style="display:inline"><input type="hidden" name="accion" value="borrar"><button class="btn danger small">Eliminar</button></form>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('')}</div>`
+    : `<div class="card"><p class="muted" style="margin:0">Todavía no hay cursos de ${esc(nombreEmpresa)}. ${esAdmin ? 'Creá el primero con "+ Nuevo curso".' : 'Administración va a ir armando los cursos acá.'}</p></div>`}`
+  });
+}
+
+// Contenido de un curso: la secuencia de videos/documentos con bloqueo y quizzes.
+function campusCursoPage({ user, curso, empresas, items }) {
   const esAdmin = user.role === 'admin';
   const esVideoArchivo = (a) => /\.(mp4|webm|mov)$/i.test(a || '');
   const ICONO_DOC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h8L19.5 8v12A1.5 1.5 0 0 1 18 21.5H6A1.5 1.5 0 0 1 4.5 20V4A1.5 1.5 0 0 1 6 2.5z"/><path d="M14 2.5V8h5.5"/><path d="M8 13h8M8 16.5h5.5"/></svg>`;
   const ICONO_LINK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a5 5 0 0 0 7.1 0l2.9-2.9a5 5 0 0 0-7.1-7.1l-1.6 1.6"/><path d="M14 10a5 5 0 0 0-7.1 0l-2.9 2.9a5 5 0 0 0 7.1 7.1l1.6-1.6"/></svg>`;
-  const EXT_INFO = { pdf: ['PDF', 'ext-pdf'], doc: ['WORD', 'ext-doc'], docx: ['WORD', 'ext-doc'], xls: ['EXCEL', 'ext-xls'], xlsx: ['EXCEL', 'ext-xls'], ppt: ['PPT', 'ext-ppt'], pptx: ['PPT', 'ext-ppt'] };
   const CANDADO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>`;
+  const EXT_INFO = { pdf: ['PDF', 'ext-pdf'], doc: ['WORD', 'ext-doc'], docx: ['WORD', 'ext-doc'], xls: ['EXCEL', 'ext-xls'], xlsx: ['EXCEL', 'ext-xls'], ppt: ['PPT', 'ext-ppt'], pptx: ['PPT', 'ext-ppt'] };
   const card = (it, idx, total) => {
-    // Bloqueado para el vendedor: portada con candado, sin reproductor ni botones.
     if (it.bloqueado) {
       return `
     <div class="curso-card card curso-bloqueada">
@@ -2617,7 +2673,7 @@ function campusPage({ user, empresa, empresas, items }) {
       <div class="curso-body">
         <div class="curso-head"><span class="chip curso-tag" style="background:#5B6773">${idx + 1} de ${total}</span></div>
         <h3 style="margin:.3rem 0 .2rem">${esc(it.titulo)}</h3>
-        <p class="small muted" style="margin:0 0 .3rem">Se desbloquea al completar <strong>«${esc(it.requiere || 'el contenido anterior')}»</strong>${/\.(mp4|webm|mov)$/i.test(it.archivo || '') || it.url ? '' : ''}.</p>
+        <p class="small muted" style="margin:0 0 .3rem">Se desbloquea al completar <strong>«${esc(it.requiere || 'el contenido anterior')}»</strong>${it.requiereQuiz ? ' y aprobar su quiz con 70%' : ''}.</p>
         <div class="curso-meta small muted">${esc(it.autor)} · ${fechaHora(it.created_at)}</div>
       </div>
     </div>`;
@@ -2630,7 +2686,6 @@ function campusPage({ user, empresa, empresas, items }) {
     if (yt || vm) {
       tipo = 'Video';
       const src = yt ? `https://www.youtube.com/embed/${yt}` : `https://player.vimeo.com/video/${vm}`;
-      // Facade: miniatura con play; el iframe real se carga al tocar (y ahí se registra la vista).
       media = `<button type="button" class="curso-fac" data-id="${it.id}" data-src="${src}"${yt ? ` style="background-image:url('https://i.ytimg.com/vi/${yt}/hqdefault.jpg')"` : ''} aria-label="Reproducir video"><span class="curso-play"></span></button>`;
     } else if (it.url) {
       tipo = 'Enlace';
@@ -2644,12 +2699,19 @@ function campusPage({ user, empresa, empresas, items }) {
       const [extLabel, extClase] = EXT_INFO[ext] || [ext.toUpperCase() || 'ARCHIVO', 'ext-otro'];
       media = `<a class="curso-doc ${extClase}" href="/campus/archivo/${it.id}" target="_blank" rel="noopener">${ICONO_DOC}<span class="curso-ext">${extLabel}</span></a>`;
     }
+    const quizEstado = !esAdmin && it.n_quiz > 0
+      ? (it.quizAprobado
+        ? `<span class="chip" style="background:#2F7D4F">Quiz aprobado${it.mejorPuntaje != null ? ' ' + it.mejorPuntaje + '%' : ''}</span>`
+        : it.mediaOk
+          ? `<a class="btn small" href="/campus/item/${it.id}/quiz">Rendir quiz${it.mejorPuntaje != null ? ` (mejor: ${it.mejorPuntaje}%)` : ''}</a>`
+          : `<span class="chip" style="background:#A8791F" title="Primero mirá el contenido; después rendís el quiz">Quiz pendiente</span>`)
+      : '';
     return `
     <div class="curso-card card">
       ${media}
       <div class="curso-body">
         <div class="curso-head">
-          <span style="display:inline-flex;gap:.35rem;align-items:center">
+          <span style="display:inline-flex;gap:.35rem;align-items:center;flex-wrap:wrap">
             <span class="curso-num">${idx + 1}</span>
             <span class="chip curso-tag tag-${tipo.toLowerCase()}">${tipo}</span>
             ${!esAdmin && it.completado ? '<span class="chip" style="background:#2F7D4F">Completado</span>' : ''}
@@ -2669,45 +2731,44 @@ function campusPage({ user, empresa, empresas, items }) {
           ${it.url && !yt && !vm ? `<a class="btn secondary small" href="${esc(it.url)}" target="_blank" rel="noopener" data-track="${it.id}">Abrir enlace</a>` : ''}
           ${it.archivo && !esVideoArchivo(it.archivo) && !esImagen ? `<a class="btn secondary small" href="/campus/archivo/${it.id}" target="_blank" rel="noopener">Abrir documento</a>` : ''}
           ${esImagen ? `<a class="btn secondary small" href="/campus/archivo/${it.id}" target="_blank" rel="noopener">Ver imagen</a>` : ''}
-          ${esAdmin ? `<form method="post" action="/campus/items/${it.id}/borrar" onsubmit="return confirm('¿Eliminar «${esc(it.titulo)}» del campus?')" style="display:inline"><button class="btn danger small">Eliminar</button></form>` : ''}
+          ${quizEstado}
+          ${esAdmin ? `<a class="btn secondary small" href="/campus/item/${it.id}/quiz">Quiz${it.n_quiz ? ` (${it.n_quiz})` : ''}</a>
+          <form method="post" action="/campus/items/${it.id}/borrar" onsubmit="return confirm('¿Eliminar «${esc(it.titulo)}» del curso?')" style="display:inline"><button class="btn danger small">Eliminar</button></form>` : ''}
         </div>
       </div>
     </div>`;
   };
-  const nombreEmpresa = (empresas.find(([sl]) => sl === empresa) || [])[1] || '';
   return layout({
-    title: 'Campus de formación', user, active: 'campus', sistema: 'campus',
+    title: `${curso.nombre} · Campus`, user, active: 'campus', sistema: 'campus',
     body: `
-  <h1>Campus de formación</h1>
-  <p class="small muted">Elegí la empresa y mirá la documentación y los videos de capacitación.</p>
   <div class="toolbar">
-    <div class="seg">
-      ${empresas.map(([slug, nombre]) => `<a href="/campus/${slug}" class="${slug === empresa ? 'on' : ''}">${esc(nombre)}</a>`).join('')}
-    </div>
+    <a class="btn secondary small" href="/campus/${esc(curso.empresa)}">← Cursos</a>
     <div class="sp"></div>
     ${esAdmin ? `<button type="button" class="btn small" onclick="document.getElementById('subirCampus').classList.toggle('abierto')">+ Subir contenido</button>` : ''}
   </div>
+  <h1>${esc(curso.nombre)}</h1>
+  ${curso.descripcion ? `<p class="small muted">${esc(curso.descripcion)}</p>` : ''}
   ${esAdmin ? `
   <div id="subirCampus" class="card card--accent curso-form">
-    <h3 style="margin-top:0">Subir contenido a ${esc(nombreEmpresa)}</h3>
+    <h3 style="margin-top:0">Subir contenido a «${esc(curso.nombre)}»</h3>
     <form method="post" action="/campus/items" enctype="multipart/form-data">
-      <input type="hidden" name="empresa" value="${esc(empresa)}">
+      <input type="hidden" name="curso_id" value="${curso.id}">
       <div class="grid2">
-        <div><label>Título *</label><input name="titulo" required maxlength="120" placeholder="Ej: Cómo cotizar una góndola paso a paso"></div>
+        <div><label>Título *</label><input name="titulo" required maxlength="120" placeholder="Ej: Cómo cotizar paso a paso"></div>
         <div><label>Descripción</label><input name="descripcion" maxlength="300" placeholder="Opcional: de qué trata y para quién es"></div>
         <div><label>Link de video (YouTube o Vimeo)</label><input name="url" type="url" placeholder="https://www.youtube.com/watch?v=…"></div>
         <div><label>O subí un archivo (video, PDF, imagen, Office)</label><input type="file" name="archivo" accept=".mp4,.webm,.mov,.pdf,.png,.jpg,.jpeg,.pptx,.docx,.xlsx"></div>
       </div>
-      <div style="margin-top:.9rem"><button class="btn">Publicar en el campus</button></div>
+      <div style="margin-top:.9rem"><button class="btn">Publicar en el curso</button></div>
     </form>
-    <p class="caption">Con link de YouTube/Vimeo el video queda embebido. Los archivos se guardan en el servidor (hasta 512 MB). Solo los administradores pueden publicar.</p>
-  </div>` : ''}
-  ${items.length ? `${esAdmin ? '<p class="small muted" style="margin:-.3rem 0 .7rem">El orden de las tarjetas es el orden del curso: los vendedores desbloquean cada contenido al completar el anterior (videos subidos: 80% reproducido). Usá las flechas para reordenar.</p>' : ''}<div class="campus-grid">${items.map((it, idx) => card(it, idx, items.length)).join('')}</div>`
-    : `<div class="card"><p class="muted" style="margin:0">Todavía no hay contenido de ${esc(nombreEmpresa)}. ${esAdmin ? 'Publicá el primero con "+ Subir contenido".' : 'Administración va a ir subiendo documentación y videos acá.'}</p></div>`}
+    <p class="caption">El contenido nuevo entra al final del curso; acomodalo con las flechas. Después de publicarlo podés armarle su quiz con el botón "Quiz".</p>
+  </div>
+  <p class="small muted" style="margin:-.2rem 0 .7rem">El orden de las tarjetas es el orden del curso: los vendedores desbloquean cada contenido al completar el anterior (videos subidos: 80% reproducido) y aprobar su quiz con 70% si tiene.</p>` : ''}
+  ${items.length ? `<div class="campus-grid">${items.map((it, idx) => card(it, idx, items.length)).join('')}</div>`
+    : `<div class="card"><p class="muted" style="margin:0">Este curso todavía no tiene contenido. ${esAdmin ? 'Publicá el primero con "+ Subir contenido".' : ''}</p></div>`}
   <script>
   (function () {
     function beacon(id) { fetch('/campus/vista/' + id, { method: 'POST' }).catch(function () {}); }
-    // Facades: al tocar, se registra la vista y se carga el reproductor real.
     document.querySelectorAll('.curso-fac').forEach(function (f) {
       f.addEventListener('click', function () {
         beacon(f.dataset.id);
@@ -2720,7 +2781,6 @@ function campusPage({ user, empresa, empresas, items }) {
         f.replaceWith(ifr);
       });
     });
-    // Videos subidos: vista al reproducir + progreso cada 10 segundos (y al pausar/terminar).
     document.querySelectorAll('video.curso-media').forEach(function (v) {
       var id = v.dataset.id, ultimo = 0, visto = false, prevT = 0, acc = 0;
       function progreso() {
@@ -2735,19 +2795,72 @@ function campusPage({ user, empresa, empresas, items }) {
       v.addEventListener('seeking', function () { prevT = v.currentTime; });
       v.addEventListener('timeupdate', function () {
         var d = v.currentTime - prevT;
-        if (d > 0 && d < 2) acc += d; // solo reproducción real: los saltos de barra no suman
+        if (d > 0 && d < 2) acc += d;
         prevT = v.currentTime;
         if (v.currentTime - ultimo >= 10) { ultimo = v.currentTime; progreso(); }
       });
       v.addEventListener('pause', progreso);
       v.addEventListener('ended', progreso);
     });
-    // Enlaces externos: se registra el click.
     document.querySelectorAll('[data-track]').forEach(function (a) {
       a.addEventListener('click', function () { beacon(a.dataset.track); });
     });
   })();
   </script>`
+  });
+}
+
+// Quiz de un contenido: examen para el vendedor, editor para el admin.
+function campusQuizPage({ user, item, preguntas, esAdmin, mediaOk, mejor, nota }) {
+  const volver = `/campus/curso/${item.cid || item.curso_id}`;
+  const resultado = nota != null ? (nota >= 70
+    ? `<div class="flash ok">Sacaste <strong>${nota}%</strong> — ¡quiz aprobado! El siguiente contenido del curso quedó desbloqueado.</div>`
+    : `<div class="flash bad">Sacaste <strong>${nota}%</strong> — necesitás 70% para aprobar. Repasá el contenido y volvé a intentar (los intentos son ilimitados).</div>`) : '';
+  const examen = preguntas.length ? `
+  <form method="post" action="/campus/item/${item.id}/quiz" class="card">
+    ${preguntas.map((q, i) => `
+    <div class="quiz-preg">
+      <p style="margin:.2rem 0 .4rem"><strong>${i + 1}. ${esc(q.pregunta)}</strong></p>
+      ${q.opciones.map((op, j) => `<label class="quiz-op"><input type="radio" name="r${q.id}" value="${j}" required> ${esc(op)}</label>`).join('')}
+    </div>`).join('')}
+    <div style="margin-top:1rem"><button class="btn">Entregar quiz</button></div>
+  </form>` : '<div class="card"><p class="muted" style="margin:0">Este contenido no tiene quiz todavía.</p></div>';
+  return layout({
+    title: `Quiz · ${item.titulo}`, user, active: 'campus', sistema: 'campus',
+    body: `
+  <div class="toolbar"><a class="btn secondary small" href="${volver}">← ${esc(item.curso_nombre || 'Curso')}</a></div>
+  <h1>Quiz: ${esc(item.titulo)}</h1>
+  ${resultado}
+  ${esAdmin ? `
+  <p class="small muted">Editor del quiz. Los vendedores necesitan <strong>70%</strong> para aprobar y desbloquear el siguiente contenido; los intentos son ilimitados y cuenta el mejor.</p>
+  <div class="card">
+    <h3 style="margin-top:0">Preguntas (${preguntas.length})</h3>
+    ${preguntas.length ? preguntas.map((q, i) => `
+    <div class="cfg-row" style="display:block">
+      <div class="small" style="display:flex;gap:.6rem;align-items:baseline"><strong style="flex:1">${i + 1}. ${esc(q.pregunta)}</strong>
+        <form method="post" action="/campus/quiz/preguntas/${q.id}/borrar" onsubmit="return confirm('¿Borrar esta pregunta?')" style="display:inline"><button class="btn danger small">Borrar</button></form>
+      </div>
+      <div class="small muted" style="margin-top:.15rem">${q.opciones.map((op, j) => `${j === q.correcta ? '<strong style="color:#2F7D4F">✓ ' + esc(op) + '</strong>' : esc(op)}`).join(' · ')}</div>
+    </div>`).join('') : '<p class="muted small" style="margin:0">Sin preguntas todavía — agregá la primera abajo.</p>'}
+  </div>
+  <div class="card card--accent">
+    <h3 style="margin-top:0">Agregar pregunta</h3>
+    <form method="post" action="/campus/item/${item.id}/quiz/preguntas">
+      <label>Pregunta *</label><input name="pregunta" required maxlength="300" placeholder="Ej: ¿Cuál es el primer paso al cotizar?">
+      <div class="grid2">
+        <div><label>Opción 1 *</label><input name="op1" required maxlength="200"></div>
+        <div><label>Opción 2 *</label><input name="op2" required maxlength="200"></div>
+        <div><label>Opción 3</label><input name="op3" maxlength="200"></div>
+        <div><label>Opción 4</label><input name="op4" maxlength="200"></div>
+        <div><label>Respuesta correcta</label><select name="correcta"><option value="0">Opción 1</option><option value="1">Opción 2</option><option value="2">Opción 3</option><option value="3">Opción 4</option></select></div>
+      </div>
+      <div style="margin-top:.9rem"><button class="btn">Agregar pregunta</button></div>
+    </form>
+  </div>
+  <h2>Vista previa (lo que ve el vendedor)</h2>
+  ${examen}` : `
+  ${mejor ? `<p class="small muted">Tu mejor intento: <strong>${mejor.puntaje}%</strong> (${mejor.intentos} intento${mejor.intentos === 1 ? '' : 's'})${mejor.aprobado ? ' — aprobado' : ''}.</p>` : `<p class="small muted">Necesitás <strong>70%</strong> para aprobar y desbloquear el siguiente contenido. Intentos ilimitados: cuenta el mejor.</p>`}
+  ${!mediaOk ? `<div class="flash bad">Primero mirá el contenido («${esc(item.titulo)}») — el quiz se habilita cuando lo completás.</div>` : examen}`}`
   });
 }
 
@@ -2758,31 +2871,32 @@ function campusStatsPage({ user, empresas, porItem, usuarios, totalVendedores })
     const h = Math.floor(seg / 3600), m = Math.round((seg % 3600) / 60);
     return h ? `${h} h ${m} m` : `${m} min`;
   };
-  const nombreEmp = (slug) => (empresas.find(([sl]) => sl === slug) || [])[1] || slug;
   const pctVideo = (v) => (v.duracion > 0 ? Math.min(100, Math.round((v.segundos / v.duracion) * 100)) : null);
   return layout({
     title: 'Estadísticas · Campus', user, active: 'stats', sistema: 'campus',
     body: `
   <div class="toolbar"><a class="btn secondary small" href="/campus">← Campus</a></div>
   <h1>Estadísticas de aprendizaje</h1>
-  <p class="small muted">Quién está mirando el material del campus, hasta dónde llegó en cada video subido y cuántas horas acumula cada uno. Los videos de YouTube/Vimeo registran la reproducción (no el minuto exacto).</p>
+  <p class="small muted">Quién mira el material, hasta dónde llegó en cada video subido, cómo le fue en los quizzes y cuántas horas acumula. Los videos de YouTube/Vimeo registran la reproducción (no el minuto exacto).</p>
 
   <div class="tiles">
     <div class="tile"><div class="v">${porItem.length}</div><div class="l">Contenidos publicados</div></div>
     <div class="tile"><div class="v">${porItem.reduce((a, i) => a + i.vistos.length, 0)}</div><div class="l">Vistas totales (persona × contenido)</div></div>
     <div class="tile"><div class="v">${horas(usuarios.reduce((a, u) => a + u.segundos, 0))}</div><div class="l">Horas de video del equipo</div></div>
     <div class="tile"><div class="v">${usuarios.reduce((a, u) => a + (u.completados || 0), 0)}</div><div class="l">Videos completados (al 80%)</div></div>
+    <div class="tile"><div class="v">${usuarios.reduce((a, u) => a + (u.quizzesAprobados || 0), 0)}</div><div class="l">Quizzes aprobados (70%)</div></div>
     <div class="tile"><div class="v">${usuarios.filter((u) => u.contenidos > 0).length} / ${usuarios.length}</div><div class="l">Personas que vieron algo</div></div>
   </div>
 
   <h2>Ranking del equipo</h2>
   <div class="tablewrap"><table>
-    <thead><tr><th>Persona</th><th>Contenidos vistos</th><th>Videos completados</th><th>Horas de video</th><th>Última actividad</th></tr></thead>
+    <thead><tr><th>Persona</th><th>Contenidos vistos</th><th>Videos completados</th><th>Quizzes aprobados</th><th>Horas de video</th><th>Última actividad</th></tr></thead>
     <tbody>${usuarios.map((u, i) => `
       <tr>
         <td><div class="ucel">${avatar(u)}<div><strong>${esc(u.name)}</strong>${i === 0 && u.segundos > 0 ? ' <span class="chip" style="background:#C08A2E">Top</span>' : ''}</div></div></td>
         <td>${u.contenidos}</td>
         <td>${u.completados || 0}</td>
+        <td>${u.quizzesAprobados || 0}</td>
         <td>${horas(u.segundos)}</td>
         <td class="small">${u.ultima ? fechaHora(u.ultima) : '<span class="muted">Nunca entró al material</span>'}</td>
       </tr>`).join('')}</tbody>
@@ -2795,7 +2909,8 @@ function campusStatsPage({ user, empresas, porItem, usuarios, totalVendedores })
       <div>
         <span class="chip curso-tag tag-${it.esVideo ? 'video' : 'documento'}">${it.esVideo ? 'Video' : 'Documento'}</span>
         <strong style="margin-left:.4rem">${esc(it.titulo)}</strong>
-        <span class="muted small"> · ${esc(nombreEmp(it.empresa))}</span>
+        <span class="muted small"> · ${esc(it.curso_nombre || 'Sin curso')}</span>
+        ${it.n_quiz ? `<span class="muted small"> · quiz de ${it.n_quiz} pregunta${it.n_quiz === 1 ? '' : 's'}</span>` : ''}
       </div>
       <span class="small muted">${it.vistos.length} de ${totalVendedores} vendedores lo vieron</span>
     </div>
@@ -2807,10 +2922,15 @@ function campusStatsPage({ user, empresas, porItem, usuarios, totalVendedores })
         const estado = v.completado_at
           ? `<span class="chip" style="background:#2F7D4F" title="Reprodujo al menos el 80% real del video (${fechaHora(v.completado_at)})">Completado</span>`
           : salto ? `<span class="chip" style="background:#A8791F" title="Llegó al final pero reproduciendo menos del 80%: adelantó la barra">Saltó al final</span>` : '';
+        const quiz = it.n_quiz
+          ? (v.quiz
+            ? `<span class="chip" style="background:${v.quiz.aprobado ? '#2F7D4F' : '#A8433E'}" title="${v.quiz.intentos} intento${v.quiz.intentos === 1 ? '' : 's'}">Quiz ${v.quiz.puntaje}%</span>`
+            : '<span class="chip" style="background:#5B6773">Quiz sin rendir</span>')
+          : '';
         return `<div class="hist-item">
           <span style="display:inline-flex;align-items:center;gap:.45rem;min-width:10rem">${avatar({ id: v.user_id, name: v.name, avatar: v.avatar })}${esc(v.name)}</span>
-          ${pct != null ? `<span style="flex:1;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap"><span class="prog" style="flex:1;min-width:5rem"><i class="${v.completado_at ? 'full' : ''}" style="width:${pct}%"></i></span><span class="small" style="white-space:nowrap">${pct}% · vio ${horas(v.reproducido || 0)} reales</span>${estado}</span>`
-            : `<span class="small muted" style="flex:1">${v.veces} apertura${v.veces === 1 ? '' : 's'}</span>`}
+          ${pct != null ? `<span style="flex:1;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap"><span class="prog" style="flex:1;min-width:5rem"><i class="${v.completado_at ? 'full' : ''}" style="width:${pct}%"></i></span><span class="small" style="white-space:nowrap">${pct}% · vio ${horas(v.reproducido || 0)} reales</span>${estado}${quiz}</span>`
+            : `<span class="small muted" style="flex:1;display:inline-flex;gap:.5rem;align-items:center;flex-wrap:wrap">${v.veces} apertura${v.veces === 1 ? '' : 's'}${quiz}</span>`}
           <span class="cuando">${fechaHora(v.ultima_vista)}</span>
         </div>`;
       }).join('')}
@@ -2989,7 +3109,7 @@ function changelogPage({ user, versiones }) {
 
 module.exports = {
   loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage,
-  notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusStatsPage,
+  notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusCursoPage, campusQuizPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,
 };

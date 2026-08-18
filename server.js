@@ -1207,7 +1207,7 @@ app.get('/notificaciones', requireAuth, (req, res) => {
   db.prepare("UPDATE notifications SET leida = 1, leida_at = datetime('now') WHERE user_id = ? AND leida = 0").run(req.user.id);
 });
 
-/* ---------------- campus de formación (docs y videos por empresa) ---------------- */
+/* ---------------- campus de formación (cursos con videos, docs y quizzes) ---------------- */
 
 const CAMPUS_DIR = path.join(__dirname, 'data', 'campus');
 if (!fs.existsSync(CAMPUS_DIR)) fs.mkdirSync(CAMPUS_DIR, { recursive: true });
@@ -1219,23 +1219,35 @@ const uploadCampus = multer({
   limits: { fileSize: 512 * 1024 * 1024 },
   fileFilter: (req, file, cb) => cb(null, ['.mp4', '.webm', '.mov', '.pdf', '.png', '.jpg', '.jpeg', '.pptx', '.docx', '.xlsx'].includes(path.extname(file.originalname).toLowerCase())),
 });
-const empresaCampus = (e) => (CAMPUS_EMPRESAS.some(([s]) => s === e) ? e : 'general');
+const empresaCampus = (e) => (CAMPUS_EMPRESAS.some(([sl]) => sl === e) ? e : 'general');
 
-// Un contenido está "completado" para el usuario: video subido → 80% real reproducido;
-// YouTube/Vimeo, documentos y enlaces → lo reprodujo/abrió al menos una vez.
-function itemCompletadoCampus(item, userId) {
+const preguntasDeItem = (itemId) => db.prepare('SELECT * FROM campus_quiz_preguntas WHERE item_id = ? ORDER BY orden, id').all(itemId)
+  .map((q) => { try { q.opciones = JSON.parse(q.opciones); } catch { q.opciones = []; } return q; });
+const mejorIntento = (itemId, userId) => db.prepare('SELECT MAX(puntaje) AS puntaje, MAX(aprobado) AS aprobado, COUNT(*) AS intentos FROM campus_quiz_intentos WHERE item_id = ? AND user_id = ?').get(itemId, userId);
+
+// Media completada: video subido → 80% reproducido de verdad; YouTube/docs/enlaces → abierto al menos una vez.
+function mediaCompletadaCampus(item, userId) {
   const v = db.prepare('SELECT * FROM campus_vistas WHERE item_id = ? AND user_id = ?').get(item.id, userId);
   if (!v) return false;
   if (/\.(mp4|webm|mov)$/i.test(item.archivo || '')) return !!v.completado_at;
   return v.veces > 0 || v.segundos > 0;
 }
 
-// Curso secuencial: cada contenido se desbloquea al completar el anterior de su empresa (los admins ven todo).
+// Completado = media vista + quiz aprobado al 70% (si el contenido tiene quiz).
+function itemCompletadoCampus(item, userId) {
+  if (!mediaCompletadaCampus(item, userId)) return false;
+  const nQuiz = db.prepare('SELECT COUNT(*) c FROM campus_quiz_preguntas WHERE item_id = ?').get(item.id).c;
+  if (!nQuiz) return true;
+  const mi = mejorIntento(item.id, userId);
+  return !!(mi && mi.aprobado);
+}
+
+// Curso secuencial: cada contenido se desbloquea al completar el anterior de su curso (los admins ven todo).
 function itemBloqueadoCampus(user, itemId) {
   if (user.role === 'admin') return false;
   const it = db.prepare('SELECT * FROM campus_items WHERE id = ?').get(itemId);
   if (!it) return true;
-  const lista = db.prepare('SELECT * FROM campus_items WHERE empresa = ? ORDER BY orden ASC, id ASC').all(it.empresa);
+  const lista = db.prepare('SELECT * FROM campus_items WHERE curso_id IS ? ORDER BY orden ASC, id ASC').all(it.curso_id);
   let prevOk = true;
   for (const x of lista) {
     if (x.id === it.id) return !prevOk;
@@ -1253,7 +1265,6 @@ function registrarVistaCampus(itemId, userId) {
 app.get('/campus', requireAuth, (req, res) => res.redirect('/campus/general'));
 
 // El archivo se sirve con soporte de rangos (los videos se pueden adelantar/atrasar).
-// Abrir un documento cuenta como vista (los navegadores piden el video por rangos: solo cuenta el primer pedido).
 app.get('/campus/archivo/:id', requireAuth, (req, res) => {
   const it = db.prepare('SELECT id, archivo, archivo_nombre FROM campus_items WHERE id = ?').get(req.params.id);
   if (!it || !it.archivo || !/^[\w.-]+$/.test(it.archivo)) return res.status(404).end();
@@ -1271,13 +1282,11 @@ app.post('/campus/vista/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// Progreso de un video subido: hasta dónde llegó (máximo histórico) + segundos realmente
-// reproducidos (el cliente manda el delta de reproducción real, no cuenta los saltos de barra).
-// "Completado" = reprodujo de verdad al menos el 80% del video (saltar la barra no suma).
+// Progreso de un video subido: máximo alcanzado + segundos realmente reproducidos (los saltos no suman).
 app.post('/campus/progreso/:id', requireAuth, (req, res) => {
   const seg = Math.max(0, parseFloat(req.body.segundos) || 0);
   const dur = Math.max(0, parseFloat(req.body.duracion) || 0) || null;
-  const rep = Math.max(0, Math.min(30, parseFloat(req.body.rep) || 0)); // delta acotado (se manda cada ~10s)
+  const rep = Math.max(0, Math.min(30, parseFloat(req.body.rep) || 0));
   if (db.prepare('SELECT 1 FROM campus_items WHERE id = ?').get(req.params.id) && !itemBloqueadoCampus(req.user, req.params.id)) {
     db.prepare(`INSERT INTO campus_vistas (item_id, user_id, veces, segundos, duracion, reproducido) VALUES (?, ?, 1, ?, ?, ?)
       ON CONFLICT(item_id, user_id) DO UPDATE SET segundos = MAX(segundos, excluded.segundos),
@@ -1291,14 +1300,20 @@ app.post('/campus/progreso/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// Estadísticas de aprendizaje (solo admin): quién vio qué, hasta dónde, y horas por persona.
+// Estadísticas de aprendizaje (solo admin): quién vio qué, hasta dónde, quizzes y horas por persona.
 app.get('/campus/estadisticas', requireAuth, requireAdmin, (req, res) => {
   const esVideo = (i) => !!(i.url || /\.(mp4|webm|mov)$/i.test(i.archivo || ''));
-  const items = db.prepare('SELECT i.*, u.name AS autor FROM campus_items i JOIN users u ON u.id = i.created_by ORDER BY i.id DESC').all();
-  const vistas = db.prepare(`SELECT v.*, u.name, u.avatar, u.role, u.active FROM campus_vistas v JOIN users u ON u.id = v.user_id`).all();
+  const items = db.prepare(`SELECT i.*, u.name AS autor, c.nombre AS curso_nombre,
+      (SELECT COUNT(*) FROM campus_quiz_preguntas q WHERE q.item_id = i.id) AS n_quiz
+    FROM campus_items i JOIN users u ON u.id = i.created_by LEFT JOIN campus_cursos c ON c.id = i.curso_id
+    ORDER BY i.curso_id, i.orden, i.id`).all();
+  const vistas = db.prepare('SELECT v.*, u.name, u.avatar, u.role, u.active FROM campus_vistas v JOIN users u ON u.id = v.user_id').all();
+  const intentos = db.prepare('SELECT item_id, user_id, MAX(puntaje) AS puntaje, MAX(aprobado) AS aprobado, COUNT(*) AS intentos FROM campus_quiz_intentos GROUP BY item_id, user_id').all();
+  const quizDe = (itemId, userId) => intentos.find((q) => q.item_id === itemId && q.user_id === userId) || null;
   const porItem = items.map((i) => ({
     ...i, esVideo: esVideo(i),
-    vistos: vistas.filter((v) => v.item_id === i.id).sort((a, b) => b.segundos - a.segundos || a.name.localeCompare(b.name)),
+    vistos: vistas.filter((v) => v.item_id === i.id).map((v) => ({ ...v, quiz: quizDe(i.id, v.user_id) }))
+      .sort((a, b) => b.segundos - a.segundos || a.name.localeCompare(b.name)),
   }));
   const usuarios = db.prepare("SELECT id, name, avatar, role FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all()
     .map((u) => {
@@ -1307,6 +1322,7 @@ app.get('/campus/estadisticas', requireAuth, requireAdmin, (req, res) => {
         ...u,
         contenidos: mias.length,
         completados: mias.filter((v) => v.completado_at).length,
+        quizzesAprobados: intentos.filter((q) => q.user_id === u.id && q.aprobado).length,
         segundos: mias.reduce((a, v) => a + (v.reproducido || v.segundos || 0), 0),
         ultima: mias.reduce((a, v) => (v.ultima_vista > a ? v.ultima_vista : a), ''),
       };
@@ -1316,51 +1332,94 @@ app.get('/campus/estadisticas', requireAuth, requireAdmin, (req, res) => {
   res.send(V.campusStatsPage({ user: req.user, empresas: CAMPUS_EMPRESAS, porItem, usuarios, totalVendedores }));
 });
 
-app.get('/campus/:empresa', requireAuth, (req, res) => {
-  const empresa = empresaCampus(req.params.empresa);
+// Un curso: sus contenidos en orden, con la cadena de desbloqueo y el estado de quiz de cada uno.
+app.get('/campus/curso/:id', requireAuth, (req, res) => {
+  const curso = db.prepare('SELECT * FROM campus_cursos WHERE id = ?').get(req.params.id);
+  if (!curso) return res.redirect('/campus');
   const items = db.prepare(`SELECT i.*, u.name AS autor,
-      (SELECT COUNT(*) FROM campus_vistas v WHERE v.item_id = i.id) AS vistos
-    FROM campus_items i JOIN users u ON u.id = i.created_by WHERE i.empresa = ? ORDER BY i.orden ASC, i.id ASC`).all(empresa);
-  // Cadena de desbloqueo: un contenido se abre cuando el anterior está completado.
-  let prevOk = true, prevTitulo = null;
+      (SELECT COUNT(*) FROM campus_vistas v WHERE v.item_id = i.id) AS vistos,
+      (SELECT COUNT(*) FROM campus_quiz_preguntas q WHERE q.item_id = i.id) AS n_quiz
+    FROM campus_items i JOIN users u ON u.id = i.created_by WHERE i.curso_id = ? ORDER BY i.orden ASC, i.id ASC`).all(curso.id);
+  let prevOk = true, prevTitulo = null, prevQuiz = false;
   for (const it of items) {
-    it.completado = itemCompletadoCampus(it, req.user.id);
+    it.mediaOk = mediaCompletadaCampus(it, req.user.id);
+    const mi = it.n_quiz ? mejorIntento(it.id, req.user.id) : null;
+    it.quizAprobado = !it.n_quiz || !!(mi && mi.aprobado);
+    it.mejorPuntaje = mi && mi.puntaje != null ? mi.puntaje : null;
+    it.completado = it.mediaOk && it.quizAprobado;
     it.bloqueado = req.user.role !== 'admin' && !prevOk;
     it.requiere = it.bloqueado ? prevTitulo : null;
+    it.requiereQuiz = it.bloqueado ? prevQuiz : false;
     prevOk = it.completado;
     prevTitulo = it.titulo;
+    prevQuiz = it.n_quiz > 0;
   }
-  res.send(V.campusPage({ user: req.user, empresa, empresas: CAMPUS_EMPRESAS, items }));
+  res.send(V.campusCursoPage({ user: req.user, curso, empresas: CAMPUS_EMPRESAS, items }));
+});
+
+// Cursos por empresa, con el progreso del usuario en cada uno.
+app.get('/campus/:empresa', requireAuth, (req, res) => {
+  const empresa = empresaCampus(req.params.empresa);
+  const cursos = db.prepare('SELECT * FROM campus_cursos WHERE empresa = ? ORDER BY orden ASC, id ASC').all(empresa)
+    .map((c) => {
+      const its = db.prepare('SELECT * FROM campus_items WHERE curso_id = ? ORDER BY orden ASC, id ASC').all(c.id);
+      return { ...c, total: its.length, completados: its.filter((i) => itemCompletadoCampus(i, req.user.id)).length };
+    });
+  res.send(V.campusPage({ user: req.user, empresa, empresas: CAMPUS_EMPRESAS, cursos }));
+});
+
+app.post('/campus/cursos', requireAuth, requireAdmin, (req, res) => {
+  const empresa = empresaCampus(req.body.empresa);
+  const nombre = clean(req.body.nombre);
+  if (nombre) {
+    const orden = (db.prepare('SELECT COALESCE(MAX(orden), 0) m FROM campus_cursos WHERE empresa = ?').get(empresa).m) + 1;
+    db.prepare('INSERT INTO campus_cursos (empresa, nombre, descripcion, orden, created_by) VALUES (?, ?, ?, ?, ?)')
+      .run(empresa, nombre, clean(req.body.descripcion), orden, req.user.id);
+  }
+  res.redirect(`/campus/${empresa}`);
+});
+
+app.post('/campus/cursos/:id', requireAuth, requireAdmin, (req, res) => {
+  const curso = db.prepare('SELECT * FROM campus_cursos WHERE id = ?').get(req.params.id);
+  if (curso) {
+    if (req.body.accion === 'renombrar') {
+      const nombre = clean(req.body.nombre);
+      if (nombre) db.prepare('UPDATE campus_cursos SET nombre = ?, descripcion = ? WHERE id = ?').run(nombre, clean(req.body.descripcion), curso.id);
+    } else if (req.body.accion === 'borrar') {
+      const con = db.prepare('SELECT COUNT(*) c FROM campus_items WHERE curso_id = ?').get(curso.id).c;
+      if (con === 0) db.prepare('DELETE FROM campus_cursos WHERE id = ?').run(curso.id);
+    }
+  }
+  res.redirect(`/campus/${curso ? curso.empresa : 'general'}`);
 });
 
 app.post('/campus/items', requireAuth, requireAdmin, uploadCampus.single('archivo'), (req, res) => {
-  const empresa = empresaCampus(req.body.empresa);
+  const curso = db.prepare('SELECT * FROM campus_cursos WHERE id = ?').get(parseInt(req.body.curso_id, 10));
   const titulo = clean(req.body.titulo);
   const url = clean(req.body.url);
-  if (titulo && (url || req.file)) {
-    const orden = (db.prepare('SELECT COALESCE(MAX(orden), 0) m FROM campus_items WHERE empresa = ?').get(empresa).m) + 1;
-    db.prepare('INSERT INTO campus_items (empresa, titulo, descripcion, url, archivo, archivo_nombre, orden, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(empresa, titulo, clean(req.body.descripcion), url || null, req.file ? req.file.filename : null, req.file ? req.file.originalname : null, orden, req.user.id);
+  if (curso && titulo && (url || req.file)) {
+    const orden = (db.prepare('SELECT COALESCE(MAX(orden), 0) m FROM campus_items WHERE curso_id = ?').get(curso.id).m) + 1;
+    db.prepare('INSERT INTO campus_items (empresa, curso_id, titulo, descripcion, url, archivo, archivo_nombre, orden, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(curso.empresa, curso.id, titulo, clean(req.body.descripcion), url || null, req.file ? req.file.filename : null, req.file ? req.file.originalname : null, orden, req.user.id);
   } else if (req.file) {
     try { fs.unlinkSync(path.join(CAMPUS_DIR, req.file.filename)); } catch {}
   }
-  res.redirect(`/campus/${empresa}`);
+  res.redirect(curso ? `/campus/curso/${curso.id}` : '/campus');
 });
 
 app.post('/campus/items/:id/mover', requireAuth, requireAdmin, (req, res) => {
   const it = db.prepare('SELECT * FROM campus_items WHERE id = ?').get(req.params.id);
   if (it) {
     const dir = req.body.dir === 'subir' ? 'DESC' : 'ASC';
-    const vecino = db.prepare(`SELECT * FROM campus_items WHERE empresa = ? AND (orden ${req.body.dir === 'subir' ? '<' : '>'} ? OR (orden = ? AND id ${req.body.dir === 'subir' ? '<' : '>'} ?)) ORDER BY orden ${dir}, id ${dir} LIMIT 1`)
-      .get(it.empresa, it.orden, it.orden, it.id);
+    const vecino = db.prepare(`SELECT * FROM campus_items WHERE curso_id IS ? AND (orden ${req.body.dir === 'subir' ? '<' : '>'} ? OR (orden = ? AND id ${req.body.dir === 'subir' ? '<' : '>'} ?)) ORDER BY orden ${dir}, id ${dir} LIMIT 1`)
+      .get(it.curso_id, it.orden, it.orden, it.id);
     if (vecino) {
       db.prepare('UPDATE campus_items SET orden = ? WHERE id = ?').run(vecino.orden, it.id);
       db.prepare('UPDATE campus_items SET orden = ? WHERE id = ?').run(it.orden, vecino.id);
-      // si compartían el mismo orden (datos viejos), se separan para que el swap sea real
       if (vecino.orden === it.orden) db.prepare('UPDATE campus_items SET orden = orden + 1 WHERE id = ?').run(vecino.id);
     }
   }
-  res.redirect(`/campus/${it ? it.empresa : 'general'}`);
+  res.redirect(it && it.curso_id ? `/campus/curso/${it.curso_id}` : '/campus');
 });
 
 app.post('/campus/items/:id/borrar', requireAuth, requireAdmin, (req, res) => {
@@ -1369,7 +1428,61 @@ app.post('/campus/items/:id/borrar', requireAuth, requireAdmin, (req, res) => {
     db.prepare('DELETE FROM campus_items WHERE id = ?').run(it.id);
     if (it.archivo) { try { fs.unlinkSync(path.join(CAMPUS_DIR, it.archivo)); } catch {} }
   }
-  res.redirect(`/campus/${it ? it.empresa : 'general'}`);
+  res.redirect(it && it.curso_id ? `/campus/curso/${it.curso_id}` : '/campus');
+});
+
+/* --- quiz por contenido: el vendedor necesita 70% para desbloquear el siguiente --- */
+
+app.get('/campus/item/:id/quiz', requireAuth, (req, res) => {
+  const item = db.prepare('SELECT i.*, c.nombre AS curso_nombre, c.id AS cid FROM campus_items i LEFT JOIN campus_cursos c ON c.id = i.curso_id WHERE i.id = ?').get(req.params.id);
+  if (!item) return res.redirect('/campus');
+  const esAdmin = req.user.role === 'admin';
+  if (!esAdmin && itemBloqueadoCampus(req.user, item.id)) return res.redirect(`/campus/curso/${item.cid}`);
+  const preguntas = preguntasDeItem(item.id);
+  const mediaOk = esAdmin || mediaCompletadaCampus(item, req.user.id);
+  const mi = mejorIntento(item.id, req.user.id);
+  res.send(V.campusQuizPage({
+    user: req.user, item, preguntas, esAdmin, mediaOk,
+    mejor: mi && mi.puntaje != null ? mi : null,
+    nota: req.query.nota != null ? parseInt(req.query.nota, 10) : null,
+  }));
+});
+
+app.post('/campus/item/:id/quiz/preguntas', requireAuth, requireAdmin, (req, res) => {
+  const item = db.prepare('SELECT id FROM campus_items WHERE id = ?').get(req.params.id);
+  const pregunta = clean(req.body.pregunta);
+  const opciones = [req.body.op1, req.body.op2, req.body.op3, req.body.op4].map((o) => clean(o)).filter(Boolean);
+  const correcta = Math.max(0, Math.min(opciones.length - 1, parseInt(req.body.correcta, 10) || 0));
+  if (item && pregunta && opciones.length >= 2) {
+    const orden = (db.prepare('SELECT COALESCE(MAX(orden), 0) m FROM campus_quiz_preguntas WHERE item_id = ?').get(item.id).m) + 1;
+    db.prepare('INSERT INTO campus_quiz_preguntas (item_id, pregunta, opciones, correcta, orden) VALUES (?, ?, ?, ?, ?)')
+      .run(item.id, pregunta, JSON.stringify(opciones), correcta, orden);
+  }
+  res.redirect(`/campus/item/${req.params.id}/quiz`);
+});
+
+app.post('/campus/quiz/preguntas/:qid/borrar', requireAuth, requireAdmin, (req, res) => {
+  const q = db.prepare('SELECT * FROM campus_quiz_preguntas WHERE id = ?').get(req.params.qid);
+  if (q) db.prepare('DELETE FROM campus_quiz_preguntas WHERE id = ?').run(q.id);
+  res.redirect(q ? `/campus/item/${q.item_id}/quiz` : '/campus');
+});
+
+app.post('/campus/item/:id/quiz', requireAuth, (req, res) => {
+  const item = db.prepare('SELECT * FROM campus_items WHERE id = ?').get(req.params.id);
+  if (!item || itemBloqueadoCampus(req.user, item.id)) return res.redirect('/campus');
+  if (!mediaCompletadaCampus(item, req.user.id) && req.user.role !== 'admin') return res.redirect(`/campus/item/${item.id}/quiz`);
+  const preguntas = preguntasDeItem(item.id);
+  if (!preguntas.length) return res.redirect(`/campus/curso/${item.curso_id}`);
+  let aciertos = 0;
+  for (const q of preguntas) {
+    if (parseInt(req.body['r' + q.id], 10) === q.correcta) aciertos++;
+  }
+  const puntaje = Math.round((aciertos / preguntas.length) * 100);
+  const aprobado = puntaje >= 70 ? 1 : 0;
+  if (req.user.role !== 'admin') {
+    db.prepare('INSERT INTO campus_quiz_intentos (item_id, user_id, puntaje, aprobado) VALUES (?, ?, ?, ?)').run(item.id, req.user.id, puntaje, aprobado);
+  }
+  res.redirect(`/campus/item/${item.id}/quiz?nota=${puntaje}`);
 });
 
 /* ---------------- documentación y changelog ---------------- */
