@@ -561,12 +561,15 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .card--accent { border-left:4px solid var(--role); }
 .row-actions { display:flex; gap:.4rem; flex-wrap:wrap; justify-content:flex-end; }
 
-/* --- filtros del pipeline: una sola línea compacta (se desliza si no entra) --- */
-.filtros { display:flex; gap:.35rem; flex-wrap:nowrap; align-items:center; margin:-.4rem 0 .9rem; overflow-x:auto; scrollbar-width:none; }
-.filtros::-webkit-scrollbar { display:none; }
-.filtros input[name=q] { flex:1 1 auto; min-width:8.5rem; max-width:17rem; padding:.3rem .55rem; font-size:.8rem; border-radius:8px; }
-.filtros select { width:auto; flex-shrink:0; padding:.3rem .4rem; font-size:.76rem; border-radius:8px; color:var(--muted); font-weight:600; }
-.filtros .btn.small { flex-shrink:0; padding:.3rem .6rem; font-size:.76rem; }
+/* --- barra única del pipeline: pestañas + búsqueda + filtros + nuevo deal en una línea --- */
+.pipebar { display:flex; gap:.35rem; flex-wrap:nowrap; align-items:center; margin:0 0 1rem; overflow-x:auto; scrollbar-width:none; }
+.pipebar::-webkit-scrollbar { display:none; }
+.pipebar .seg { flex-shrink:0; }
+.pipebar .seg a { padding:.3rem .55rem; font-size:.78rem; }
+.pipebar input[name=q] { flex:1 1 auto; min-width:8rem; max-width:16rem; padding:.3rem .55rem; font-size:.8rem; border-radius:8px; }
+.pipebar select { width:auto; flex-shrink:0; padding:.3rem .4rem; font-size:.76rem; border-radius:8px; color:var(--muted); font-weight:600; }
+.pipebar .btn.small { flex-shrink:0; padding:.3rem .6rem; font-size:.76rem; }
+.pipebar .btn.nuevo { margin-left:auto; white-space:nowrap; }
 .fresultado { flex-shrink:0; font-size:.74rem; }
 
 /* --- administración: tabla de usuarios y ficha --- */
@@ -699,7 +702,9 @@ function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPA
   return layout({
     title: 'Pipeline', user, active: 'pipeline', sistema,
     body: `
-  <div class="toolbar">
+  <form method="get" action="${pipeUrl}" class="pipebar">
+    <input type="hidden" name="scope" value="${scope}">
+    ${closed ? '<input type="hidden" name="cerrados" value="1">' : ''}
     <div class="seg">
       <a href="${pipeUrl}?scope=mios${closed ? '&cerrados=1' : ''}${amp}" class="${scope === 'mios' ? 'on' : ''}">Míos</a>
       <a href="${pipeUrl}?scope=todos${closed ? '&cerrados=1' : ''}${amp}" class="${scope === 'todos' ? 'on' : ''}">Todos</a>
@@ -708,13 +713,7 @@ function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPA
       <a href="${pipeUrl}?scope=${scope}${amp}" class="${!closed ? 'on' : ''}">Tablero</a>
       <a href="${pipeUrl}?scope=${scope}&cerrados=1${amp}" class="${closed ? 'on' : ''}">Cerrados</a>
     </div>
-    <div class="sp"></div>
-    <a class="btn" href="${nuevoHref}">+ Nuevo deal</a>
-  </div>
-  <form method="get" action="${pipeUrl}" class="filtros">
-    <input type="hidden" name="scope" value="${scope}">
-    ${closed ? '<input type="hidden" name="cerrados" value="1">' : ''}
-    <input name="q" value="${esc(q)}" placeholder="Buscar empresa, contacto, ciudad, provincia…" aria-label="Buscar leads">
+    <input name="q" value="${esc(q)}" placeholder="Buscar empresa, contacto, ciudad…" aria-label="Buscar leads">
     ${scope === 'todos' && vendedores.length > 1 ? `
     <select name="vendedor" onchange="this.form.submit()">
       <option value="">Vendedor: todos</option>
@@ -728,6 +727,7 @@ function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPA
     <button class="btn secondary small">Buscar</button>
     ${filtrando ? `<a class="btn secondary small" href="${pipeUrl}?scope=${scope}${closed ? '&cerrados=1' : ''}">Limpiar</a>
     <span class="small muted fresultado">${deals.length} de ${totalSinFiltro} lead${totalSinFiltro === 1 ? '' : 's'}</span>` : ''}
+    <a class="btn small nuevo" href="${nuevoHref}">+ Nuevo deal</a>
   </form>
   ${deals.length ? '' : filtrando
     ? `<div class="card"><p class="muted" style="margin:0">Ninguna lead coincide con la búsqueda. Probá con menos filtros o tocá "Limpiar".</p></div>`
