@@ -39,7 +39,7 @@ const ICONS = {
 };
 const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F3459'/%3E%3Ctext x='16' y='21' font-size='12' font-family='Helvetica,Arial' font-weight='bold' fill='white' text-anchor='middle'%3EC4D%3C/text%3E%3C/svg%3E";
 
-const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', hub: 'Campus C4D' };
+const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', hub: 'Campus C4D' };
 const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permisos || []).includes(s));
 
 // Ícono hoja para PuntoCO2 (plataforma de huella de carbono).
@@ -118,6 +118,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="/actividad" class="${active === 'actividad' ? 'on' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
         ${user && user.role === 'admin' ? `<a href="/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
+        <a href="/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>
         <a href="/admin" class="${active === 'equipo' ? 'on' : ''}">${ICONS.equipo}<span>Equipo</span></a>` : ''}
         <a href="/documentacion" class="${active === 'docs' ? 'on' : ''}">${ICONS.docs}<span>Docs</span></a>${perfilLink}`;
   }
@@ -944,15 +945,16 @@ function actividadPage({ user, today, history, fecha: fechaSel, ventana = [], ca
 
 /* --------- dashboard (gráficos SVG sin dependencias) --------- */
 
-function funnelBars(counts) {
-  const max = Math.max(1, ...ETAPAS_ACTIVAS.map((e) => counts[e] || 0));
-  return ETAPAS_ACTIVAS.map((e) => {
+function funnelBars(counts, etapas = ETAPAS_ACTIVAS, colores = ETAPA_COLOR) {
+  const max = Math.max(1, ...etapas.map((e) => counts[e] || 0));
+  return etapas.map((e) => {
     const v = counts[e] || 0;
     const pct = (v / max) * 100;
+    const color = colores[e] || '#8494A6';
     // C4D: el valor va dentro de la barra si hay lugar; si no, afuera a la derecha.
     const val = pct >= 60
-      ? `<div class="bar-fill" style="width:${pct}%;background:${ETAPA_COLOR[e]}"><span class="bar-val">${v}</span></div>`
-      : `<div class="bar-fill" style="width:${pct}%;background:${ETAPA_COLOR[e]}"></div><span class="bar-val" style="left:calc(${pct}% + .5rem)">${v}</span>`;
+      ? `<div class="bar-fill" style="width:${pct}%;background:${color}"><span class="bar-val">${v}</span></div>`
+      : `<div class="bar-fill" style="width:${pct}%;background:${color}"></div><span class="bar-val" style="left:calc(${pct}% + .5rem)">${v}</span>`;
     return `<div class="bar-row"><span class="bar-label">${esc(e)}</span><div class="bar-track">${val}</div></div>`;
   }).join('');
 }
@@ -994,9 +996,9 @@ function lineChart(points) {
   </svg>`;
 }
 
-function dashboardPage({ user, k }) {
+function dashboardPage({ user, k, campos = [], etapas = ETAPAS_ACTIVAS, colores = ETAPA_COLOR }) {
   return layout({
-    title: 'Dashboard', user, active: 'dashboard',
+    title: 'Dashboard', user, active: 'dashboard', sistema: 'cfd',
     body: `
   <h1>Dashboard global</h1>
   ${dashHeader('dashboard')}
@@ -1011,7 +1013,7 @@ function dashboardPage({ user, k }) {
   <div class="charts">
     <div class="card">
       <h2 style="margin-top:0">Funnel: deals activos por etapa</h2>
-      ${funnelBars(k.funnel)}
+      ${funnelBars(k.funnel, etapas, colores)}
       <p class="caption">Donde se acumulan deals está el cuello de botella: Contactado→Reunión = pitch/lista · Discovery→Propuesta = diagnóstico · Propuesta→Cierre = objeciones/urgencia.</p>
     </div>
     <div class="card">
@@ -1022,7 +1024,7 @@ function dashboardPage({ user, k }) {
   </div>
 
   <div class="card" style="margin-top:.75rem">
-    <h2 style="margin-top:0">Actividad del equipo: toques por día (14 días)</h2>
+    <h2 style="margin-top:0">Actividad del equipo: ${esc(k.curvaLabel || 'toques')} por día (14 días)</h2>
     ${lineChart(k.actividad)}
     <p class="caption">El indicador adelantado: la actividad de hoy son las ventas de dentro de 1-2 meses. Si esta línea cae, el pipeline se seca.</p>
   </div>
@@ -1032,19 +1034,19 @@ function dashboardPage({ user, k }) {
   <h2>Deals sin próximo paso definido</h2>
   <div class="tablewrap"><table>
     <thead><tr><th>Empresa</th><th>Vendedor</th><th>Etapa</th><th>Última actualización</th></tr></thead>
-    <tbody>${k.sinPaso.length ? k.sinPaso.map((d) => `<tr><td><a href="/deals/${d.id}">${esc(d.empresa)}</a></td><td>${esc(d.vendedor_name)}</td><td><span class="chip" style="background:${ETAPA_COLOR[d.etapa]}">${esc(d.etapa)}</span></td><td>${fecha(d.updated_at)}</td></tr>`).join('') : '<tr><td colspan="4" class="muted">Ninguno — todo el pipeline tiene próximo paso.</td></tr>'}</tbody>
+    <tbody>${k.sinPaso.length ? k.sinPaso.map((d) => `<tr><td><a href="/deals/${d.id}">${esc(d.empresa)}</a></td><td>${esc(d.vendedor_name)}</td><td><span class="chip" style="background:${colores[d.etapa] || '#8494A6'}">${esc(d.etapa)}</span></td><td>${fecha(d.updated_at)}</td></tr>`).join('') : '<tr><td colspan="4" class="muted">Ninguno — todo el pipeline tiene próximo paso.</td></tr>'}</tbody>
   </table></div>
 
   <h2>Deals estancados (sin cambios hace +14 días)</h2>
   <div class="tablewrap"><table>
     <thead><tr><th>Empresa</th><th>Vendedor</th><th>Etapa</th><th>Última actualización</th></tr></thead>
-    <tbody>${k.estancados.length ? k.estancados.map((d) => `<tr><td><a href="/deals/${d.id}">${esc(d.empresa)}</a></td><td>${esc(d.vendedor_name)}</td><td><span class="chip" style="background:${ETAPA_COLOR[d.etapa]}">${esc(d.etapa)}</span></td><td>${fecha(d.updated_at)}</td></tr>`).join('') : '<tr><td colspan="4" class="muted">Ninguno.</td></tr>'}</tbody>
+    <tbody>${k.estancados.length ? k.estancados.map((d) => `<tr><td><a href="/deals/${d.id}">${esc(d.empresa)}</a></td><td>${esc(d.vendedor_name)}</td><td><span class="chip" style="background:${colores[d.etapa] || '#8494A6'}">${esc(d.etapa)}</span></td><td>${fecha(d.updated_at)}</td></tr>`).join('') : '<tr><td colspan="4" class="muted">Ninguno.</td></tr>'}</tbody>
   </table></div>
 
   <h2>Por vendedor — este mes</h2>
   <div class="tablewrap"><table>
-    <thead><tr><th>Vendedor</th><th>Contactos</th><th>Toques</th><th>Reu. agend.</th><th>Reu. hechas</th><th>Deals activos</th><th>Ganados</th><th>Ingresos ganados</th></tr></thead>
-    <tbody>${k.porVendedor.map((v) => `<tr><td><strong>${esc(v.name)}</strong></td><td>${v.contactos}</td><td>${v.toques}</td><td>${v.agendadas}</td><td>${v.realizadas}</td><td>${v.activos}</td><td>${v.ganados}</td><td>${money(v.mrr_ganado)}</td></tr>`).join('')}</tbody>
+    <thead><tr><th>Vendedor</th>${campos.map((c) => `<th>${esc(c.label)}</th>`).join('')}<th>Deals activos</th><th>Ganados</th><th>Ingresos ganados</th></tr></thead>
+    <tbody>${k.porVendedor.map((v) => `<tr><td><strong>${esc(v.name)}</strong></td>${campos.map((c) => `<td>${v['c' + c.id] || 0}</td>`).join('')}<td>${v.activos}</td><td>${v.ganados}</td><td>${money(v.ingresos)}</td></tr>`).join('')}</tbody>
   </table></div>
   <p class="caption">Tasas a revisar a fin de mes: reuniones agendadas ÷ contactos (pitch/lista) · propuestas ÷ reuniones hechas (diagnóstico) · ganados ÷ propuestas (cierre).</p>`
   });
@@ -1370,19 +1372,18 @@ function barChart(points, isMoney = false) {
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${bars}</svg>`;
 }
 
-function metasDetallePage({ user, vendedor, series }) {
+function metasDetallePage({ user, vendedor, campos = [], series, info = { base: '', slug: 'cfd' } }) {
   const bloque = (titulo, sub, pts) => `
   <h2>${titulo} <span class="muted small" style="font-weight:400">· ${sub}</span></h2>
   <div class="charts">
-    <div class="card"><h4 style="margin:0 0 .4rem">Toques</h4>${barChart(pts.map((p) => ({ label: p.label, v: p.toques })))}</div>
-    <div class="card"><h4 style="margin:0 0 .4rem">Reuniones realizadas</h4>${barChart(pts.map((p) => ({ label: p.label, v: p.reuniones })))}</div>
-    <div class="card"><h4 style="margin:0 0 .4rem">Ingresos ganados</h4>${barChart(pts.map((p) => ({ label: p.label, v: p.mrr })), true)}</div>
+    ${campos.map((c) => `<div class="card"><h4 style="margin:0 0 .4rem">${esc(c.label)}</h4>${barChart(pts.map((p) => ({ label: p.label, v: p['c' + c.id] || 0 })))}</div>`).join('')}
+    <div class="card"><h4 style="margin:0 0 .4rem">Ingresos ganados</h4>${barChart(pts.map((p) => ({ label: p.label, v: p.ingresos || 0 })), true)}</div>
   </div>`;
   return layout({
-    title: `Métricas · ${vendedor.name}`, user, active: 'metas',
+    title: `Métricas · ${vendedor.name}`, user, active: 'metas', sistema: info.slug,
     body: `
   <div class="toolbar">
-    <a class="btn secondary small" href="/objetivos">← Objetivos</a>
+    <a class="btn secondary small" href="${info.base}/objetivos">← Objetivos</a>
   </div>
   <h1>Métricas de ${esc(vendedor.name)}</h1>
   ${bloque('Diario', 'últimos 14 días', series.diario)}
@@ -1439,10 +1440,10 @@ function reportesPage({ user, p, off, desde, hasta, periodos, r }) {
 
   <h2>Por vendedor</h2>
   <div class="tablewrap"><table>
-    <thead><tr><th>Vendedor</th><th>Contactos</th><th>Toques</th><th>Reu. agend.</th><th>Reu. hechas</th><th>Deals creados</th><th>Ganados</th><th>Perdidos</th><th>Ingresos ganados</th></tr></thead>
+    <thead><tr><th>Vendedor</th>${r.campos.map((c) => `<th>${esc(c.label)}</th>`).join('')}<th>Deals creados</th><th>Ganados</th><th>Perdidos</th><th>Ingresos ganados</th></tr></thead>
     <tbody>
-      ${r.porVendedor.map((v) => `<tr><td><strong>${esc(v.name)}</strong></td><td>${v.contactos}</td><td>${v.toques}</td><td>${v.agendadas}</td><td>${v.realizadas}</td><td>${v.creados}</td><td>${v.ganados}</td><td>${v.perdidos}</td><td>${money(v.mrr)}</td></tr>`).join('')}
-      <tr><td><strong>TOTAL</strong></td><td><strong>${r.tot.contactos}</strong></td><td><strong>${r.tot.toques}</strong></td><td><strong>${r.tot.agendadas}</strong></td><td><strong>${r.tot.realizadas}</strong></td><td><strong>${r.tot.creados}</strong></td><td><strong>${r.tot.ganados}</strong></td><td><strong>${r.tot.perdidos}</strong></td><td><strong>${money(r.tot.mrr)}</strong></td></tr>
+      ${r.porVendedor.map((v) => `<tr><td><strong>${esc(v.name)}</strong></td>${r.campos.map((c) => `<td>${v['c' + c.id] || 0}</td>`).join('')}<td>${v.creados}</td><td>${v.ganados}</td><td>${v.perdidos}</td><td>${money(v.mrr)}</td></tr>`).join('')}
+      <tr><td><strong>TOTAL</strong></td>${r.campos.map((c) => `<td><strong>${r.tot['c' + c.id] || 0}</strong></td>`).join('')}<td><strong>${r.tot.creados}</strong></td><td><strong>${r.tot.ganados}</strong></td><td><strong>${r.tot.perdidos}</strong></td><td><strong>${money(r.tot.mrr)}</strong></td></tr>
     </tbody>
   </table></div>
 
@@ -1747,7 +1748,7 @@ function reglasPage({ user, reglas, paneles }) {
 function reporteImprimirPage({ user, p, nombrePeriodo, desde, hasta, r }) {
   const filaV = (v, strong = false) => {
     const t = strong ? 'strong' : 'span';
-    return `<tr><td><${t}>${esc(v.name)}</${t}></td><td>${v.contactos}</td><td>${v.toques}</td><td>${v.agendadas}</td><td>${v.realizadas}</td><td>${v.creados}</td><td>${v.ganados}</td><td>${v.perdidos}</td><td>${money(v.mrr)}</td></tr>`;
+    return `<tr><td><${t}>${esc(v.name)}</${t}></td>${r.campos.map((c) => `<td>${v['c' + c.id] || 0}</td>`).join('')}<td>${v.creados}</td><td>${v.ganados}</td><td>${v.perdidos}</td><td>${money(v.mrr)}</td></tr>`;
   };
   return `<!doctype html>
 <html lang="es">
@@ -1795,7 +1796,7 @@ function reporteImprimirPage({ user, p, nombrePeriodo, desde, hasta, r }) {
 
 <h2>Por vendedor</h2>
 <table>
-  <thead><tr><th>Vendedor</th><th>Contactos</th><th>Toques</th><th>Reu. agend.</th><th>Reu. hechas</th><th>Deals creados</th><th>Ganados</th><th>Perdidos</th><th>Ingresos</th></tr></thead>
+  <thead><tr><th>Vendedor</th>${r.campos.map((c) => `<th>${esc(c.label)}</th>`).join('')}<th>Deals creados</th><th>Ganados</th><th>Perdidos</th><th>Ingresos</th></tr></thead>
   <tbody>
     ${r.porVendedor.map((v) => filaV(v)).join('')}
     ${filaV({ ...r.tot, name: 'TOTAL' }, true)}
@@ -1911,7 +1912,10 @@ function panelObjetivosPage({ user, campos, data, esAdmin, info }) {
   </div>` : ''}
   ${data.map(({ u, goals, stats }) => `
   <div class="card">
-    <h3 style="margin-top:0">${esc(u.name)}</h3>
+    <div class="deal-top">
+      <h3 style="margin:0">${esc(u.name)}</h3>
+      <a class="btn secondary small" href="${info.base}/metas/${u.id}">Ver gráficas</a>
+    </div>
     <div class="metas-grid">
       <div><h4 style="margin:.2rem 0 .4rem">Hoy</h4>${panelProgreso(metricas, goals.dia, stats.dia)}</div>
       <div><h4 style="margin:.2rem 0 .4rem">Esta semana</h4>${panelProgreso(metricas, goals.semana, stats.semana)}</div>

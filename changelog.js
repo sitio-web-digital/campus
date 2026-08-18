@@ -2,6 +2,16 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.12.0',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Comercial Cloud For Deploy recreado sobre la misma base que Góndolas/Estanterías: ahora tiene Config propia (etapas del pipeline y campos de la carga diaria moldeables, campañas incluidas). Las columnas y todas las leads quedaron exactamente igual.' },
+      { tipo: 'mejora', texto: 'La actividad diaria y los objetivos de CFD pasaron al sistema configurable (los datos históricos se migraron solos). Objetivos, ranking y las gráficas por vendedor ahora se arman con los campos que definas en Config.' },
+      { tipo: 'mejora', texto: 'El Dashboard rico de CFD (funnel, motivos de pérdida, curva de actividad, alertas) y los Reportes con CSV/PDF se adaptan solos a las etapas y campos configurados. Las gráficas "Ver gráficas" ahora existen en todos los paneles.' },
+      { tipo: 'mejora', texto: 'La ficha de deal de CFD conserva sus campos propios (tipo de venta y orígenes de software) y las comisiones siguen calculándose por tipo de venta, como siempre.' },
+    ],
+  },
+  {
     version: '2.11.2',
     fecha: '2026-08-17',
     cambios: [

@@ -238,8 +238,15 @@ if (!userCols.includes('permisos')) {
   db.pragma('foreign_keys = ON');
 }
 
-// Paneles comerciales configurables (además del CFD fijo). Agregar una empresa nueva = una línea acá.
+// Paneles comerciales configurables. Agregar una empresa nueva = una línea acá.
+// CFD (2.12.0) también es configurable: vive en las URLs raíz (/pipeline, /actividad…) y
+// mantiene sus etapas y campos históricos como seed; sus comisiones siguen por tipo de venta.
 const PANELES_COMERCIALES = [
+  {
+    slug: 'cfd', nombre: 'Cloud For Deploy',
+    etapasSeed: ['Lead', 'Contactado', 'Reunión agendada', 'Discovery hecha', 'Propuesta enviada', 'Negociación'],
+    camposSeed: ['Contactos nuevos', 'Toques (llamadas + mensajes + emails)', 'Reuniones agendadas', 'Reuniones realizadas'],
+  },
   { slug: 'gondolas', nombre: 'Góndolas' },
   { slug: 'estanterias', nombre: 'Estanterías Reforzadas' },
   { slug: 'sitioweb', nombre: 'SitioWeb Digital' },
@@ -285,18 +292,47 @@ if (db.prepare('SELECT COUNT(*) AS c FROM panel_etapas').get().c === 0 && db.pre
 for (const p of PANELES_COMERCIALES) {
   if (db.prepare('SELECT COUNT(*) AS c FROM panel_etapas WHERE panel = ?').get(p.slug).c === 0) {
     const ins = db.prepare('INSERT INTO panel_etapas (panel, nombre, orden) VALUES (?, ?, ?)');
-    ['Lead', 'Contactado', 'Visita realizada', 'Cotización enviada', 'Negociación'].forEach((n, i) => ins.run(p.slug, n, i + 1));
+    (p.etapasSeed || ['Lead', 'Contactado', 'Visita realizada', 'Cotización enviada', 'Negociación']).forEach((n, i) => ins.run(p.slug, n, i + 1));
   }
   if (db.prepare('SELECT COUNT(*) AS c FROM panel_campos WHERE panel = ?').get(p.slug).c === 0) {
     const ins = db.prepare('INSERT INTO panel_campos (panel, label, orden) VALUES (?, ?, ?)');
-    ['Llamadas', 'Visitas', 'Cotizaciones enviadas'].forEach((n, i) => ins.run(p.slug, n, i + 1));
+    (p.camposSeed || ['Llamadas', 'Visitas', 'Cotizaciones enviadas']).forEach((n, i) => ins.run(p.slug, n, i + 1));
   }
+  if (p.slug === 'cfd') continue; // CFD comisiona por tipo de venta, no por regla de rubro.
   // Regla de comisión por rubro: % plano cobrable al momento (editable en Cobranza → Reglas).
   if (!db.prepare('SELECT 1 FROM commission_rules WHERE tipo_venta = ?').get(p.slug)) {
     db.prepare('INSERT INTO commission_rules (tipo_venta, config) VALUES (?, ?)')
       .run(p.slug, JSON.stringify({ tipo: 'flat', pct: 5, nota: `Venta de ${p.nombre}: comisión única cobrable al momento.` }));
   }
 }
+
+// Migración 2.12.0: CFD pasa a panel configurable — su actividad y objetivos históricos
+// se copian a las tablas genéricas (una sola vez; la tabla vieja queda como respaldo).
+try {
+  const cfdCampos = db.prepare("SELECT id, label FROM panel_campos WHERE panel = 'cfd' ORDER BY orden").all();
+  const campoId = (patron) => { const c = cfdCampos.find((x) => patron.test(x.label)); return c ? 'c' + c.id : null; };
+  const kCon = campoId(/contacto/i), kToq = campoId(/toque/i), kAge = campoId(/agendada/i), kRea = campoId(/realizada/i);
+  if (kToq && db.prepare("SELECT COUNT(*) c FROM panel_activity WHERE panel = 'cfd'").get().c === 0) {
+    const insA = db.prepare("INSERT OR IGNORE INTO panel_activity (panel, user_id, fecha, valores, notas) VALUES ('cfd', ?, ?, ?, ?)");
+    for (const a of db.prepare('SELECT * FROM activity').all()) {
+      const v = {};
+      if (kCon) v[kCon] = a.contactos || 0;
+      v[kToq] = a.toques || 0;
+      if (kAge) v[kAge] = a.reuniones_agendadas || 0;
+      if (kRea) v[kRea] = a.reuniones_realizadas || 0;
+      insA.run(a.user_id, a.fecha, JSON.stringify(v), a.notas);
+    }
+  }
+  if (kToq && db.prepare("SELECT COUNT(*) c FROM panel_goals WHERE panel = 'cfd'").get().c === 0) {
+    const insG = db.prepare("INSERT OR IGNORE INTO panel_goals (panel, user_id, periodo, valores) VALUES ('cfd', ?, ?, ?)");
+    for (const g of db.prepare('SELECT * FROM goals').all()) {
+      const v = { ganados: g.ganados || 0, ingresos: g.mrr || 0 };
+      v[kToq] = g.toques || 0;
+      if (kRea) v[kRea] = g.reuniones || 0;
+      insG.run(g.user_id, g.periodo, JSON.stringify(v));
+    }
+  }
+} catch (e) { console.error('Migración CFD→panel:', e.message); }
 
 // Regla real de SitioWeb Digital (2.11.2): 80% del valor mensual durante 2 meses.
 // Solo pisa el default sembrado (5% plano) para no tocar una regla que el admin ya haya editado.

@@ -155,7 +155,9 @@ function coloresDePanel(panel) {
   return map;
 }
 
-const homeDePanel = (panel) => (PANEL_SLUGS.includes(panel) ? `/${panel}/pipeline` : '/pipeline');
+// CFD vive en las URLs raíz (/pipeline, /actividad…); los demás paneles en /<slug>/…
+const baseDePanel = (slug) => (slug === 'cfd' ? '' : `/${slug}`);
+const homeDePanel = (panel) => (PANEL_SLUGS.includes(panel) ? `${baseDePanel(panel)}/pipeline` : '/pipeline');
 
 function dealFromBody(body, user, panel = 'cfd', etapaActual = 'Lead', tipoActual = 'Proyecto único') {
   let userId = user.id;
@@ -214,16 +216,11 @@ function avisarDiasFaltantes(user) {
     const ventana = ventanaFechas().slice(1); // ayer, -2, -3
     const ddmm = (f) => `${+f.slice(8, 10)}/${+f.slice(5, 7)}`;
     const avisos = [];
-    if (permisos.includes('cfd')) {
-      const cargadas = db.prepare('SELECT fecha FROM activity WHERE user_id = ? AND fecha >= ?').all(user.id, ventana[2]).map((r) => r.fecha);
-      const faltan = ventana.filter((d) => !cargadas.includes(d));
-      if (faltan.length) avisos.push({ texto: `Te faltan cargar días de actividad en Comercial Cloud For Deploy: ${faltan.map(ddmm).join(', ')}`, url: `/actividad?fecha=${faltan[0]}` });
-    }
     for (const P of PANELES_COMERCIALES) {
       if (!permisos.includes(P.slug)) continue;
       const cargadas = db.prepare('SELECT fecha FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(P.slug, user.id, ventana[2]).map((r) => r.fecha);
       const faltan = ventana.filter((d) => !cargadas.includes(d));
-      if (faltan.length) avisos.push({ texto: `Te faltan cargar días de actividad en Comercial ${P.nombre}: ${faltan.map(ddmm).join(', ')}`, url: `/${P.slug}/actividad?fecha=${faltan[0]}` });
+      if (faltan.length) avisos.push({ texto: `Te faltan cargar días de actividad en Comercial ${P.nombre}: ${faltan.map(ddmm).join(', ')}`, url: `${baseDePanel(P.slug)}/actividad?fecha=${faltan[0]}` });
     }
     if (avisos.length) {
       db.prepare("DELETE FROM notifications WHERE user_id = ? AND leida = 0 AND texto LIKE 'Te faltan cargar días%'").run(user.id);
@@ -260,38 +257,10 @@ function filtrarPipeline(req, deals) {
   return { deals, q, fVendedor, fOrigen, fEtapa, origenes, vendedores, totalSinFiltro };
 }
 
-function pipelineData(req) {
-  const scope = scopeDefault(req);
-  const closed = req.query.cerrados === '1';
-  const params = [];
-  const where = [];
-  if (closed) {
-    where.push("d.etapa IN ('Ganado','Perdido')");
-  } else {
-    // Tablero activo: etapas abiertas + cerrados del mes actual (columnas Ganado/Perdido).
-    where.push("(d.etapa NOT IN ('Ganado','Perdido') OR d.fecha_cierre >= ?)");
-    params.push(inicioMes());
-  }
-  where.push("d.panel = 'cfd'");
-  if (scope === 'mios') { where.push('d.user_id = ?'); params.push(req.user.id); }
-  const deals = db.prepare(`
-    SELECT d.*, u.name AS vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
-    WHERE ${where.join(' AND ')}
-    ORDER BY d.fecha_proximo_paso IS NULL DESC, d.fecha_proximo_paso ASC, d.updated_at DESC
-  `).all(...params);
-  return { scope, closed, ...filtrarPipeline(req, deals) };
-}
-
-app.get('/pipeline', requireAuth, requireSistema('cfd'), (req, res) => {
-  res.send(V.pipelinePage({ user: req.user, ...pipelineData(req) }));
-});
-
-// Fondo de tablero + modal según el panel del deal.
+// Fondo de tablero + modal según el panel del deal (todos los paneles, CFD incluido, son configurables).
 function renderModalSobrePipeline(req, res, modal, panel) {
-  if (PANEL_SLUGS.includes(panel)) {
-    return res.send(V.pipelinePage({ user: req.user, ...panelPipelineData(req, panel), modal, ...panelOpts(panel) }));
-  }
-  res.send(V.pipelinePage({ user: req.user, ...pipelineData(req), modal }));
+  const slug = PANEL_SLUGS.includes(panel) ? panel : 'cfd';
+  res.send(V.pipelinePage({ user: req.user, ...panelPipelineData(req, slug), modal, ...panelOpts(slug) }));
 }
 
 app.get('/deals/new', requireAuth, (req, res) => {
@@ -455,38 +424,34 @@ function targetActividad(req, fuente) {
   return { esAdmin, target, fecha };
 }
 
-app.get('/actividad', requireAuth, requireSistema('cfd'), (req, res) => {
-  const { esAdmin, target, fecha } = targetActividad(req, req.query);
-  const today = db.prepare('SELECT * FROM activity WHERE user_id = ? AND fecha = ?').get(target.id, fecha);
-  const history = db.prepare('SELECT * FROM activity WHERE user_id = ? ORDER BY fecha DESC LIMIT 14').all(target.id);
-  const ventana = ventanaFechas();
-  const cargadas = db.prepare('SELECT fecha FROM activity WHERE user_id = ? AND fecha >= ?').all(target.id, ventana[3]).map((r) => r.fecha);
-  const vendedores = esAdmin ? db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all() : [];
-  res.send(V.actividadPage({ user: req.user, today, history, fecha, ventana, cargadas, esAdmin, target, vendedores, base: '' }));
-});
-
-app.post('/actividad', requireAuth, requireSistema('cfd'), (req, res) => {
-  const { esAdmin, target, fecha } = targetActividad(req, req.body);
-  db.prepare(`INSERT INTO activity (user_id, fecha, contactos, toques, reuniones_agendadas, reuniones_realizadas, notas)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(user_id, fecha) DO UPDATE SET contactos=excluded.contactos, toques=excluded.toques,
-      reuniones_agendadas=excluded.reuniones_agendadas, reuniones_realizadas=excluded.reuniones_realizadas, notas=excluded.notas`)
-    .run(target.id, fecha, cleanInt(req.body.contactos), cleanInt(req.body.toques),
-      cleanInt(req.body.reuniones_agendadas), cleanInt(req.body.reuniones_realizadas), clean(req.body.notas));
-  res.redirect(`/actividad?fecha=${fecha}${esAdmin && target.id !== req.user.id ? '&vendedor=' + target.id : ''}`);
-});
-
 /* ---------------- dashboard ---------------- */
 
+// Suma por día de un campo de actividad de un panel (para la curva del dashboard).
+function seriePorDia(slug, campoKey, desde) {
+  const sum = {};
+  for (const r of db.prepare('SELECT fecha, valores FROM panel_activity WHERE panel = ? AND fecha >= ?').all(slug, desde)) {
+    try { sum[r.fecha] = (sum[r.fecha] || 0) + (Number(JSON.parse(r.valores || '{}')[campoKey]) || 0); } catch {}
+  }
+  return Object.keys(sum).sort().map((f) => ({ label: f.slice(8, 10) + '/' + f.slice(5, 7), v: sum[f] }));
+}
+
+// Dashboard rico de CFD (funnel + motivos + actividad + alertas), ahora sobre etapas y campos configurables.
 app.get('/dashboard', requireAuth, requireAdmin, (req, res) => {
-  const mesInicio = new Date().toISOString().slice(0, 8) + '01';
+  const mesInicio = inicioMes();
+  const campos = camposPanel('cfd');
+  const etapas = etapasPanelCfg('cfd').map((e) => e.nombre);
+  const colores = coloresDePanel('cfd');
 
   const funnel = {};
   for (const row of db.prepare("SELECT etapa, COUNT(*) AS n FROM deals WHERE panel = 'cfd' AND etapa NOT IN ('Ganado','Perdido') GROUP BY etapa").all()) {
     funnel[row.etapa] = row.n;
   }
   const activos = Object.values(funnel).reduce((a, b) => a + b, 0);
-  const mrrJuego = db.prepare("SELECT COALESCE(SUM(mrr),0) AS s FROM deals WHERE panel = 'cfd' AND etapa IN ('Propuesta enviada','Negociación')").get().s;
+  // "En juego": las dos últimas etapas activas del pipeline (las más cercanas al cierre).
+  const etapasJuego = etapas.slice(-2);
+  const mrrJuego = etapasJuego.length
+    ? db.prepare(`SELECT COALESCE(SUM(mrr),0) AS s FROM deals WHERE panel = 'cfd' AND etapa IN (${etapasJuego.map(() => '?').join(',')})`).get(...etapasJuego).s
+    : 0;
   const mrrNuevoMes = db.prepare("SELECT COALESCE(SUM(mrr),0) AS s FROM deals WHERE panel = 'cfd' AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND tipo_venta != 'Proyecto único' AND fecha_cierre >= ?").get(mesInicio).s;
   const proyectosMes = db.prepare("SELECT COALESCE(SUM(mrr),0) AS s FROM deals WHERE panel = 'cfd' AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND tipo_venta = 'Proyecto único' AND fecha_cierre >= ?").get(mesInicio).s;
 
@@ -497,8 +462,9 @@ app.get('/dashboard', requireAuth, requireAdmin, (req, res) => {
 
   const motivos = db.prepare("SELECT COALESCE(motivo_perdida,'Sin motivo cargado') AS label, COUNT(*) AS n FROM deals WHERE panel = 'cfd' AND etapa = 'Perdido' GROUP BY label ORDER BY n DESC").all();
 
-  const actividad = db.prepare(`SELECT fecha, SUM(toques) AS v FROM activity WHERE fecha >= date('now','-13 days') GROUP BY fecha ORDER BY fecha`).all()
-    .map((r) => ({ label: r.fecha.slice(8, 10) + '/' + r.fecha.slice(5, 7), v: r.v }));
+  // Curva de actividad: el campo "Toques" si existe; si lo renombraron, el segundo campo (o el primero).
+  const campoCurva = campos.find((c) => /toque/i.test(c.label)) || campos[1] || campos[0];
+  const actividad = campoCurva ? seriePorDia('cfd', 'c' + campoCurva.id, new Date(Date.now() - 13 * 864e5).toISOString().slice(0, 10)) : [];
 
   const sinPaso = db.prepare(`SELECT d.id, d.empresa, d.etapa, d.updated_at, u.name AS vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
     WHERE d.panel = 'cfd' AND d.etapa NOT IN ('Ganado','Perdido') AND d.fecha_proximo_paso IS NULL ORDER BY d.updated_at ASC`).all();
@@ -506,19 +472,17 @@ app.get('/dashboard', requireAuth, requireAdmin, (req, res) => {
   const estancados = db.prepare(`SELECT d.id, d.empresa, d.etapa, d.updated_at, u.name AS vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
     WHERE d.panel = 'cfd' AND d.etapa NOT IN ('Ganado','Perdido') AND d.updated_at < datetime('now','-14 days') ORDER BY d.updated_at ASC`).all();
 
-  const porVendedor = db.prepare(`
-    SELECT u.id, u.name,
-      COALESCE((SELECT SUM(a.contactos) FROM activity a WHERE a.user_id = u.id AND a.fecha >= ?), 0) AS contactos,
-      COALESCE((SELECT SUM(a.toques) FROM activity a WHERE a.user_id = u.id AND a.fecha >= ?), 0) AS toques,
-      COALESCE((SELECT SUM(a.reuniones_agendadas) FROM activity a WHERE a.user_id = u.id AND a.fecha >= ?), 0) AS agendadas,
-      COALESCE((SELECT SUM(a.reuniones_realizadas) FROM activity a WHERE a.user_id = u.id AND a.fecha >= ?), 0) AS realizadas,
-      (SELECT COUNT(*) FROM deals d WHERE d.panel = 'cfd' AND d.user_id = u.id AND d.etapa NOT IN ('Ganado','Perdido')) AS activos,
-      (SELECT COUNT(*) FROM deals d WHERE d.panel = 'cfd' AND d.user_id = u.id AND d.etapa = 'Ganado' AND d.aprobacion = 'aprobado' AND d.fecha_cierre >= ?) AS ganados,
-      COALESCE((SELECT SUM(d.mrr) FROM deals d WHERE d.panel = 'cfd' AND d.user_id = u.id AND d.etapa = 'Ganado' AND d.aprobacion = 'aprobado' AND d.fecha_cierre >= ?), 0) AS mrr_ganado
-    FROM users u WHERE u.active = 1 ORDER BY u.name
-  `).all(mesInicio, mesInicio, mesInicio, mesInicio, mesInicio, mesInicio);
+  const porVendedor = db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all()
+    .map((u) => ({
+      name: u.name,
+      ...panelStats('cfd', u.id, mesInicio),
+      activos: db.prepare("SELECT COUNT(*) n FROM deals WHERE panel = 'cfd' AND user_id = ? AND etapa NOT IN ('Ganado','Perdido')").get(u.id).n,
+    }));
 
-  res.send(V.dashboardPage({ user: req.user, k: { funnel, activos, mrrJuego, mrrNuevoMes, proyectosMes, winRate, motivos, actividad, sinPaso, estancados, porVendedor, campanas: statsCampanas('cfd') } }));
+  res.send(V.dashboardPage({
+    user: req.user, campos, etapas, colores,
+    k: { funnel, activos, mrrJuego, mrrNuevoMes, proyectosMes, winRate, motivos, actividad, curvaLabel: campoCurva ? campoCurva.label : '', sinPaso, estancados, porVendedor, campanas: statsCampanas('cfd') },
+  }));
 });
 
 /* ---------------- equipo ---------------- */
@@ -544,10 +508,7 @@ function historialUsuario(userId, limite = 120) {
   for (const e of db.prepare('SELECT tipo, detalle, created_at FROM user_events WHERE user_id = ? ORDER BY created_at DESC LIMIT ?').all(userId, limite)) {
     eventos.push({ tipo: e.tipo, texto: e.detalle || e.tipo, cuando: e.created_at });
   }
-  for (const a of db.prepare('SELECT fecha FROM activity WHERE user_id = ? ORDER BY fecha DESC LIMIT 45').all(userId)) {
-    eventos.push({ tipo: 'actividad', texto: 'Cargó su actividad diaria en Comercial Cloud For Deploy', cuando: a.fecha + ' 23:59:59', soloFecha: true });
-  }
-  for (const a of db.prepare('SELECT panel, fecha FROM panel_activity WHERE user_id = ? ORDER BY fecha DESC LIMIT 45').all(userId)) {
+  for (const a of db.prepare('SELECT panel, fecha FROM panel_activity WHERE user_id = ? ORDER BY fecha DESC LIMIT 60').all(userId)) {
     const P = PANELES_COMERCIALES.find((p) => p.slug === a.panel);
     eventos.push({ tipo: 'actividad', texto: `Cargó su actividad diaria en Comercial ${P ? P.nombre : a.panel}`, cuando: a.fecha + ' 23:59:59', soloFecha: true });
   }
@@ -641,7 +602,8 @@ app.get('/campanas', requireAuth, requireAdmin, (req, res) => {
 });
 registrarRutasCampanas('/campanas', 'cfd', '/campanas');
 for (const P of PANELES_COMERCIALES) {
-  registrarRutasCampanas(`/${P.slug}/campanas`, P.slug, `/${P.slug}/config`);
+  if (P.slug === 'cfd') continue; // CFD ya quedó registrado arriba (pestaña Campañas del dashboard)
+  registrarRutasCampanas(`${baseDePanel(P.slug)}/campanas`, P.slug, `${baseDePanel(P.slug)}/config`);
 }
 
 // Estadísticas de campañas de un panel: leads, ganadas aprobadas e ingresos.
@@ -699,64 +661,23 @@ function inicioSemana() { // lunes de la semana actual
 }
 const inicioMes = () => hoyAR().slice(0, 8) + '01';
 
-function statsPeriodo(userId, desde) {
-  const a = db.prepare('SELECT COALESCE(SUM(toques),0) AS toques, COALESCE(SUM(reuniones_realizadas),0) AS reuniones FROM activity WHERE user_id = ? AND fecha >= ?').get(userId, desde);
-  const g = db.prepare("SELECT COUNT(*) AS ganados, COALESCE(SUM(mrr),0) AS mrr FROM deals WHERE panel = 'cfd' AND user_id = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND fecha_cierre >= ?").get(userId, desde);
-  return { toques: a.toques, reuniones: a.reuniones, ganados: g.ganados, mrr: g.mrr };
-}
-
-function getGoals(userId) {
-  const out = { dia: null, semana: null, mes: null };
-  for (const row of db.prepare('SELECT * FROM goals WHERE user_id = ?').all(userId)) out[row.periodo] = row;
-  return out;
-}
-
-app.get('/objetivos', requireAuth, requireSistema('cfd'), (req, res) => {
-  const usuarios = req.user.role === 'admin'
-    ? db.prepare("SELECT id, name FROM users WHERE active = 1 ORDER BY role = 'admin', name").all()
-    : [{ id: req.user.id, name: req.user.name }];
-  const desde = { dia: hoyAR(), semana: inicioSemana(), mes: inicioMes() };
-  const data = usuarios.map((u) => ({
-    u,
-    goals: getGoals(u.id),
-    stats: { dia: statsPeriodo(u.id, desde.dia), semana: statsPeriodo(u.id, desde.semana), mes: statsPeriodo(u.id, desde.mes) },
-  }));
-  res.send(V.objetivosPage({ user: req.user, data, esAdmin: req.user.role === 'admin' }));
-});
-
-app.post('/objetivos/:userId', requireAuth, requireAdmin, (req, res) => {
-  const target = db.prepare('SELECT id FROM users WHERE id = ?').get(req.params.userId);
-  if (target) {
-    const up = db.prepare(`INSERT INTO goals (user_id, periodo, toques, reuniones, ganados, mrr) VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT(user_id, periodo) DO UPDATE SET toques=excluded.toques, reuniones=excluded.reuniones, ganados=excluded.ganados, mrr=excluded.mrr`);
-    up.run(target.id, 'dia', cleanInt(req.body.d_toques), cleanInt(req.body.d_reuniones), cleanInt(req.body.d_ganados), cleanNum(req.body.d_mrr) || 0);
-    up.run(target.id, 'semana', cleanInt(req.body.s_toques), cleanInt(req.body.s_reuniones), cleanInt(req.body.s_ganados), cleanNum(req.body.s_mrr) || 0);
-    up.run(target.id, 'mes', cleanInt(req.body.m_toques), cleanInt(req.body.m_reuniones), cleanInt(req.body.m_ganados), cleanNum(req.body.m_mrr) || 0);
-  }
-  res.redirect('/objetivos');
-});
-
-// Objetivos generales: aplica los mismos valores a todos los vendedores activos.
-app.post('/objetivos-generales', requireAuth, requireAdmin, (req, res) => {
-  const up = db.prepare(`INSERT INTO goals (user_id, periodo, toques, reuniones, ganados, mrr) VALUES (?, ?, ?, ?, ?, ?)
-    ON CONFLICT(user_id, periodo) DO UPDATE SET toques=excluded.toques, reuniones=excluded.reuniones, ganados=excluded.ganados, mrr=excluded.mrr`);
-  for (const u of db.prepare("SELECT id FROM users WHERE role = 'vendedor' AND active = 1").all()) {
-    up.run(u.id, 'dia', cleanInt(req.body.d_toques), cleanInt(req.body.d_reuniones), cleanInt(req.body.d_ganados), cleanNum(req.body.d_mrr) || 0);
-    up.run(u.id, 'semana', cleanInt(req.body.s_toques), cleanInt(req.body.s_reuniones), cleanInt(req.body.s_ganados), cleanNum(req.body.s_mrr) || 0);
-    up.run(u.id, 'mes', cleanInt(req.body.m_toques), cleanInt(req.body.m_reuniones), cleanInt(req.body.m_ganados), cleanNum(req.body.m_mrr) || 0);
-  }
-  res.redirect('/objetivos');
-});
-
-// Series históricas de un vendedor (diario 14d, semanal 8 sem, mensual 6 meses).
-function buildSeries(act, won) {
+// Series históricas de un vendedor en un panel: por campo de actividad + ingresos aprobados.
+// Devuelve { diario, semanal, mensual } con un valor por campo (clave c<id>) más "ingresos".
+function panelSeries(slug, uid) {
+  const campos = camposPanel(slug);
+  const keys = [...campos.map((c) => 'c' + c.id), 'ingresos'];
+  const desde = new Date(Date.now() - 200 * 864e5).toISOString().slice(0, 10);
   const sum = {};
-  const add = (k, campo, v) => { (sum[k] = sum[k] || { toques: 0, reuniones: 0, mrr: 0 })[campo] += v || 0; };
-  for (const a of act) { add(a.fecha, 'toques', a.toques); add(a.fecha, 'reuniones', a.reuniones); }
-  for (const w of won) if (w.fecha) add(w.fecha, 'mrr', w.mrr);
-  const get = (k) => sum[k] || { toques: 0, reuniones: 0, mrr: 0 };
+  const cero = () => Object.fromEntries(keys.map((k) => [k, 0]));
+  const add = (fecha, k, v) => { (sum[fecha] = sum[fecha] || cero())[k] += Number(v) || 0; };
+  for (const r of db.prepare('SELECT fecha, valores FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(slug, uid, desde)) {
+    try { const v = JSON.parse(r.valores || '{}'); for (const c of campos) add(r.fecha, 'c' + c.id, v['c' + c.id]); } catch {}
+  }
+  for (const w of db.prepare("SELECT fecha_cierre f, mrr FROM deals WHERE panel = ? AND user_id = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND fecha_cierre >= ?").all(slug, uid, desde)) {
+    if (w.f) add(w.f, 'ingresos', w.mrr);
+  }
+  const get = (k) => sum[k] || cero();
   const hoy = hoyAR();
-
   const diario = [];
   for (let i = 13; i >= 0; i--) {
     const d = new Date(hoy + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - i);
@@ -766,11 +687,11 @@ function buildSeries(act, won) {
   const semanal = [];
   for (let i = 7; i >= 0; i--) {
     const s = new Date(inicioSemana() + 'T00:00:00Z'); s.setUTCDate(s.getUTCDate() - 7 * i);
-    const t = { toques: 0, reuniones: 0, mrr: 0 };
+    const t = cero();
     for (let j = 0; j < 7; j++) {
       const d = new Date(s); d.setUTCDate(d.getUTCDate() + j);
       const g = get(d.toISOString().slice(0, 10));
-      t.toques += g.toques; t.reuniones += g.reuniones; t.mrr += g.mrr;
+      for (const k of keys) t[k] += g[k];
     }
     const k = s.toISOString().slice(0, 10);
     semanal.push({ label: `${+k.slice(8, 10)}/${+k.slice(5, 7)}`, ...t });
@@ -780,23 +701,12 @@ function buildSeries(act, won) {
   for (let i = 5; i >= 0; i--) {
     const m = new Date(hoy.slice(0, 8) + '01T00:00:00Z'); m.setUTCMonth(m.getUTCMonth() - i);
     const clave = m.toISOString().slice(0, 7);
-    const t = { toques: 0, reuniones: 0, mrr: 0 };
-    for (const k of Object.keys(sum)) if (k.slice(0, 7) === clave) { const g = sum[k]; t.toques += g.toques; t.reuniones += g.reuniones; t.mrr += g.mrr; }
+    const t = cero();
+    for (const k of Object.keys(sum)) if (k.slice(0, 7) === clave) { for (const kk of keys) t[kk] += sum[k][kk]; }
     mensual.push({ label: MES_N[+clave.slice(5, 7) - 1], ...t });
   }
-  return { diario, semanal, mensual };
+  return { campos, series: { diario, semanal, mensual } };
 }
-
-app.get('/metas/:userId', requireAuth, requireSistema('cfd'), (req, res) => {
-  const uid = parseInt(req.params.userId, 10);
-  if (req.user.role !== 'admin' && uid !== req.user.id) return res.status(403).send('Solo podés ver tus propias gráficas.');
-  const vendedor = db.prepare('SELECT id, name FROM users WHERE id = ?').get(uid);
-  if (!vendedor) return res.redirect('/objetivos');
-  const desde = new Date(Date.now() - 200 * 864e5).toISOString().slice(0, 10);
-  const act = db.prepare('SELECT fecha, toques, reuniones_realizadas AS reuniones FROM activity WHERE user_id = ? AND fecha >= ?').all(uid, desde);
-  const won = db.prepare("SELECT fecha_cierre AS fecha, mrr FROM deals WHERE panel = 'cfd' AND user_id = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND fecha_cierre >= ?").all(uid, desde);
-  res.send(V.metasDetallePage({ user: req.user, vendedor, series: buildSeries(act, won) }));
-});
 
 /* ---------------- reportes (admin) ---------------- */
 
@@ -823,25 +733,33 @@ const periodoDeQuery = (q) => (q === 'mes' ? 'mes' : q === 'dia' ? 'dia' : 'sema
 const PERIODO_NOMBRE = { dia: 'diario', semana: 'semanal', mes: 'mensual' };
 
 function reporteData(desde, hasta) {
-  const usuarios = db.prepare('SELECT id, name FROM users WHERE active = 1 ORDER BY name').all();
+  const campos = camposPanel('cfd');
+  const keys = campos.map((c) => 'c' + c.id);
+  const usuarios = db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all();
   const porVendedor = usuarios.map((u) => {
-    const a = db.prepare('SELECT COALESCE(SUM(contactos),0) c, COALESCE(SUM(toques),0) t, COALESCE(SUM(reuniones_agendadas),0) ra, COALESCE(SUM(reuniones_realizadas),0) rr FROM activity WHERE user_id = ? AND fecha BETWEEN ? AND ?').get(u.id, desde, hasta);
+    const act = Object.fromEntries(keys.map((k) => [k, 0]));
+    for (const r of db.prepare('SELECT valores FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha BETWEEN ? AND ?').all('cfd', u.id, desde, hasta)) {
+      try { const v = JSON.parse(r.valores || '{}'); for (const k of keys) act[k] += Number(v[k]) || 0; } catch {}
+    }
     const creados = db.prepare("SELECT COUNT(*) n FROM deals WHERE panel = 'cfd' AND user_id = ? AND substr(created_at,1,10) BETWEEN ? AND ?").get(u.id, desde, hasta).n;
     const g = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(mrr),0) m FROM deals WHERE panel = 'cfd' AND user_id = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND fecha_cierre BETWEEN ? AND ?").get(u.id, desde, hasta);
     const perdidos = db.prepare("SELECT COUNT(*) n FROM deals WHERE panel = 'cfd' AND user_id = ? AND etapa = 'Perdido' AND fecha_cierre BETWEEN ? AND ?").get(u.id, desde, hasta).n;
-    return { name: u.name, contactos: a.c, toques: a.t, agendadas: a.ra, realizadas: a.rr, creados, ganados: g.n, perdidos, mrr: g.m };
+    return { name: u.name, ...act, creados, ganados: g.n, perdidos, mrr: g.m };
   });
   const tot = porVendedor.reduce((acc, v) => {
-    for (const k of ['contactos', 'toques', 'agendadas', 'realizadas', 'creados', 'ganados', 'perdidos', 'mrr']) acc[k] = (acc[k] || 0) + v[k];
+    for (const k of [...keys, 'creados', 'ganados', 'perdidos', 'mrr']) acc[k] = (acc[k] || 0) + v[k];
     return acc;
   }, {});
+  // "Toques del equipo" para la tarjeta del resumen: el campo Toques si existe, si no el primero.
+  const campoToques = campos.find((c) => /toque/i.test(c.label)) || campos[0];
+  tot.toques = campoToques ? (tot['c' + campoToques.id] || 0) : 0;
   const motivos = db.prepare("SELECT COALESCE(motivo_perdida,'Sin motivo') label, COUNT(*) n FROM deals WHERE panel = 'cfd' AND etapa = 'Perdido' AND fecha_cierre BETWEEN ? AND ? GROUP BY label ORDER BY n DESC").all(desde, hasta);
   const cerrados = db.prepare(`SELECT d.empresa, d.etapa, d.tipo_venta, d.mrr, d.fecha_cierre, d.motivo_perdida, u.name vendedor FROM deals d JOIN users u ON u.id = d.user_id
     WHERE d.panel = 'cfd' AND (d.etapa = 'Perdido' OR (d.etapa = 'Ganado' AND d.aprobacion = 'aprobado')) AND d.fecha_cierre BETWEEN ? AND ? ORDER BY d.fecha_cierre`).all(desde, hasta);
   const mrrNuevo = db.prepare("SELECT COALESCE(SUM(mrr),0) s FROM deals WHERE panel = 'cfd' AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND tipo_venta != 'Proyecto único' AND fecha_cierre BETWEEN ? AND ?").get(desde, hasta).s;
   const ingresosProyectos = db.prepare("SELECT COALESCE(SUM(mrr),0) s FROM deals WHERE panel = 'cfd' AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND tipo_venta = 'Proyecto único' AND fecha_cierre BETWEEN ? AND ?").get(desde, hasta).s;
   const winRate = tot.ganados + tot.perdidos > 0 ? Math.round((tot.ganados / (tot.ganados + tot.perdidos)) * 100) : null;
-  return { porVendedor, tot, motivos, cerrados, winRate, mrrNuevo, ingresosProyectos };
+  return { campos, porVendedor, tot, motivos, cerrados, winRate, mrrNuevo, ingresosProyectos };
 }
 
 app.get('/reportes', requireAuth, requireAdmin, (req, res) => {
@@ -866,31 +784,19 @@ app.get('/reportes.csv', requireAuth, requireAdmin, (req, res) => {
   const { desde, hasta } = rangoPeriodo(p, off);
   const r = reporteData(desde, hasta);
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const keys = r.campos.map((c) => 'c' + c.id);
   const lines = [];
   lines.push(`Reporte ${PERIODO_NOMBRE[p]};${desde} a ${hasta}`);
   lines.push('');
-  lines.push(['Vendedor', 'Contactos', 'Toques', 'Reuniones agendadas', 'Reuniones realizadas', 'Deals creados', 'Ganados', 'Perdidos', 'Ingresos ganados'].join(';'));
-  for (const v of r.porVendedor) lines.push([esc(v.name), v.contactos, v.toques, v.agendadas, v.realizadas, v.creados, v.ganados, v.perdidos, v.mrr].join(';'));
-  lines.push([esc('TOTAL'), r.tot.contactos, r.tot.toques, r.tot.agendadas, r.tot.realizadas, r.tot.creados, r.tot.ganados, r.tot.perdidos, r.tot.mrr].join(';'));
+  lines.push(['Vendedor', ...r.campos.map((c) => esc(c.label)), 'Deals creados', 'Ganados', 'Perdidos', 'Ingresos ganados'].join(';'));
+  for (const v of r.porVendedor) lines.push([esc(v.name), ...keys.map((k) => v[k] || 0), v.creados, v.ganados, v.perdidos, v.mrr].join(';'));
+  lines.push([esc('TOTAL'), ...keys.map((k) => r.tot[k] || 0), r.tot.creados, r.tot.ganados, r.tot.perdidos, r.tot.mrr].join(';'));
   lines.push('');
   lines.push(['Deal cerrado', 'Resultado', 'Tipo de venta', 'Valor', 'Fecha cierre', 'Motivo de pérdida', 'Vendedor'].join(';'));
   for (const d of r.cerrados) lines.push([esc(d.empresa), d.etapa, esc(d.tipo_venta), d.mrr ?? '', d.fecha_cierre, esc(d.motivo_perdida || ''), esc(d.vendedor)].join(';'));
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="reporte-${p}-${desde}.csv"`);
   res.send('﻿' + lines.join('\r\n'));
-});
-
-app.get('/ranking', requireAuth, requireSistema('cfd'), (req, res) => {
-  const periodo = req.query.p === 'mes' ? 'mes' : req.query.p === 'dia' ? 'dia' : 'semana';
-  const desde = periodo === 'mes' ? inicioMes() : periodo === 'dia' ? hoyAR() : inicioSemana();
-  const usuarios = db.prepare('SELECT id, name FROM users WHERE active = 1').all();
-  const rows = usuarios.map((u) => {
-    const s = statsPeriodo(u.id, desde);
-    const goal = getGoals(u.id)[periodo];
-    const cumpl = goal && goal.mrr > 0 ? Math.round((s.mrr / goal.mrr) * 100) : null;
-    return { name: u.name, ...s, cumpl };
-  }).sort((a, b) => b.mrr - a.mrr || b.ganados - a.ganados || b.reuniones - a.reuniones || b.toques - a.toques);
-  res.send(V.rankingPage({ user: req.user, periodo, rows }));
 });
 
 /* ---------------- paneles comerciales configurables (una empresa = un panel) ---------------- */
@@ -903,7 +809,7 @@ function panelOpts(slug) {
   return {
     etapasActivas: etapasPanelCfg(slug).map((e) => e.nombre),
     colores: coloresDePanel(slug),
-    base: '/' + slug,
+    base: baseDePanel(slug),
     nuevoHref: '/deals/new?panel=' + slug,
     sistema: slug,
   };
@@ -955,10 +861,10 @@ function guardarGoalsPanel(slug, userId, body) {
 
 for (const PANEL of PANELES_COMERCIALES) {
   const slug = PANEL.slug;
-  const base = '/' + slug;
+  const base = baseDePanel(slug); // CFD = '' → sus rutas quedan en la raíz (/pipeline, /actividad…)
   const info = { slug, base, nombre: PANEL.nombre };
 
-  app.get(base, requireAuth, requireSistema(slug), (req, res) => res.redirect(base + '/pipeline'));
+  if (base) app.get(base, requireAuth, requireSistema(slug), (req, res) => res.redirect(base + '/pipeline'));
 
   app.get(base + '/pipeline', requireAuth, requireSistema(slug), (req, res) => {
     res.send(V.pipelinePage({ user: req.user, ...panelPipelineData(req, slug), ...panelOpts(slug) }));
@@ -1022,7 +928,18 @@ for (const PANEL of PANELES_COMERCIALES) {
     res.send(V.panelRankingPage({ user: req.user, periodo, campos: camposPanel(slug), rows, info }));
   });
 
-  app.get(base + '/dashboard', requireAuth, requireAdmin, (req, res) => {
+  // Gráficas históricas del vendedor (diario/semanal/mensual por campo + ingresos).
+  app.get(base + '/metas/:userId', requireAuth, requireSistema(slug), (req, res) => {
+    const uid = parseInt(req.params.userId, 10);
+    if (req.user.role !== 'admin' && uid !== req.user.id) return res.status(403).send('Solo podés ver tus propias gráficas.');
+    const vendedor = db.prepare('SELECT id, name FROM users WHERE id = ?').get(uid);
+    if (!vendedor) return res.redirect(base + '/objetivos');
+    const { campos, series } = panelSeries(slug, uid);
+    res.send(V.metasDetallePage({ user: req.user, vendedor, campos, series, info }));
+  });
+
+  // CFD conserva su dashboard propio (funnel + motivos + curva de actividad + alertas), registrado arriba.
+  if (slug !== 'cfd') app.get(base + '/dashboard', requireAuth, requireAdmin, (req, res) => {
     const mesInicio = inicioMes();
     const colores = coloresDePanel(slug);
     const funnel = {};
@@ -1177,7 +1094,7 @@ app.get('/cobranza/:cid/invoice', requireAuth, requireSistema('cobranza'), (req,
 });
 
 app.get('/cobranza/reglas', requireAuth, requireAdmin, (req, res) => {
-  res.send(V.reglasPage({ user: req.user, reglas: C.getAllRules(), paneles: PANELES_COMERCIALES }));
+  res.send(V.reglasPage({ user: req.user, reglas: C.getAllRules(), paneles: PANELES_COMERCIALES.filter((p) => p.slug !== 'cfd') }));
 });
 
 app.post('/cobranza/reglas', requireAuth, requireAdmin, (req, res) => {
