@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.13.0',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Dashboard y Reportes unificados en una sola sección por panel: elegís el período (día/semana/mes, actual o anteriores) y ves todo junto — métricas, gráficas, campañas, tabla por vendedor, cierres y alertas — con Descargar CSV y Exportar PDF del mismo período.' },
+      { tipo: 'nuevo', texto: 'Gráficas nuevas: ingresos por vendedor y leads nuevas por provincia, junto al funnel, los motivos de pérdida (torta) y la curva de actividad diaria.' },
+      { tipo: 'mejora', texto: 'Las campañas del dashboard ahora son del período elegido (leads creadas y cierres del rango). El CSV y el PDF incluyen campañas y provincias. Las URLs viejas de /reportes redirigen solas.' },
+    ],
+  },
+  {
     version: '2.12.0',
     fecha: '2026-08-17',
     cambios: [

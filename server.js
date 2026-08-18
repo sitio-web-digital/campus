@@ -427,63 +427,15 @@ function targetActividad(req, fuente) {
 /* ---------------- dashboard ---------------- */
 
 // Suma por día de un campo de actividad de un panel (para la curva del dashboard).
-function seriePorDia(slug, campoKey, desde) {
+function seriePorDia(slug, campoKey, desde, hasta = '9999-12-31') {
   const sum = {};
-  for (const r of db.prepare('SELECT fecha, valores FROM panel_activity WHERE panel = ? AND fecha >= ?').all(slug, desde)) {
+  for (const r of db.prepare('SELECT fecha, valores FROM panel_activity WHERE panel = ? AND fecha BETWEEN ? AND ?').all(slug, desde, hasta)) {
     try { sum[r.fecha] = (sum[r.fecha] || 0) + (Number(JSON.parse(r.valores || '{}')[campoKey]) || 0); } catch {}
   }
   return Object.keys(sum).sort().map((f) => ({ label: f.slice(8, 10) + '/' + f.slice(5, 7), v: sum[f] }));
 }
 
-// Dashboard rico de CFD (funnel + motivos + actividad + alertas), ahora sobre etapas y campos configurables.
-app.get('/dashboard', requireAuth, requireAdmin, (req, res) => {
-  const mesInicio = inicioMes();
-  const campos = camposPanel('cfd');
-  const etapas = etapasPanelCfg('cfd').map((e) => e.nombre);
-  const colores = coloresDePanel('cfd');
-
-  const funnel = {};
-  for (const row of db.prepare("SELECT etapa, COUNT(*) AS n FROM deals WHERE panel = 'cfd' AND etapa NOT IN ('Ganado','Perdido') GROUP BY etapa").all()) {
-    funnel[row.etapa] = row.n;
-  }
-  const activos = Object.values(funnel).reduce((a, b) => a + b, 0);
-  // "En juego": las dos últimas etapas activas del pipeline (las más cercanas al cierre).
-  const etapasJuego = etapas.slice(-2);
-  const mrrJuego = etapasJuego.length
-    ? db.prepare(`SELECT COALESCE(SUM(mrr),0) AS s FROM deals WHERE panel = 'cfd' AND etapa IN (${etapasJuego.map(() => '?').join(',')})`).get(...etapasJuego).s
-    : 0;
-  const mrrNuevoMes = db.prepare("SELECT COALESCE(SUM(mrr),0) AS s FROM deals WHERE panel = 'cfd' AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND tipo_venta != 'Proyecto único' AND fecha_cierre >= ?").get(mesInicio).s;
-  const proyectosMes = db.prepare("SELECT COALESCE(SUM(mrr),0) AS s FROM deals WHERE panel = 'cfd' AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND tipo_venta = 'Proyecto único' AND fecha_cierre >= ?").get(mesInicio).s;
-
-  const cerrados90 = db.prepare("SELECT etapa, COUNT(*) AS n FROM deals WHERE panel = 'cfd' AND (etapa = 'Perdido' OR (etapa = 'Ganado' AND aprobacion = 'aprobado')) AND fecha_cierre >= date('now','-90 days') GROUP BY etapa").all();
-  const g = cerrados90.find((r) => r.etapa === 'Ganado')?.n || 0;
-  const p = cerrados90.find((r) => r.etapa === 'Perdido')?.n || 0;
-  const winRate = g + p > 0 ? Math.round((g / (g + p)) * 100) : null;
-
-  const motivos = db.prepare("SELECT COALESCE(motivo_perdida,'Sin motivo cargado') AS label, COUNT(*) AS n FROM deals WHERE panel = 'cfd' AND etapa = 'Perdido' GROUP BY label ORDER BY n DESC").all();
-
-  // Curva de actividad: el campo "Toques" si existe; si lo renombraron, el segundo campo (o el primero).
-  const campoCurva = campos.find((c) => /toque/i.test(c.label)) || campos[1] || campos[0];
-  const actividad = campoCurva ? seriePorDia('cfd', 'c' + campoCurva.id, new Date(Date.now() - 13 * 864e5).toISOString().slice(0, 10)) : [];
-
-  const sinPaso = db.prepare(`SELECT d.id, d.empresa, d.etapa, d.updated_at, u.name AS vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
-    WHERE d.panel = 'cfd' AND d.etapa NOT IN ('Ganado','Perdido') AND d.fecha_proximo_paso IS NULL ORDER BY d.updated_at ASC`).all();
-
-  const estancados = db.prepare(`SELECT d.id, d.empresa, d.etapa, d.updated_at, u.name AS vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
-    WHERE d.panel = 'cfd' AND d.etapa NOT IN ('Ganado','Perdido') AND d.updated_at < datetime('now','-14 days') ORDER BY d.updated_at ASC`).all();
-
-  const porVendedor = db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all()
-    .map((u) => ({
-      name: u.name,
-      ...panelStats('cfd', u.id, mesInicio),
-      activos: db.prepare("SELECT COUNT(*) n FROM deals WHERE panel = 'cfd' AND user_id = ? AND etapa NOT IN ('Ganado','Perdido')").get(u.id).n,
-    }));
-
-  res.send(V.dashboardPage({
-    user: req.user, campos, etapas, colores,
-    k: { funnel, activos, mrrJuego, mrrNuevoMes, proyectosMes, winRate, motivos, actividad, curvaLabel: campoCurva ? campoCurva.label : '', sinPaso, estancados, porVendedor, campanas: statsCampanas('cfd') },
-  }));
-});
+// El dashboard unificado por panel (métricas + gráficas + reportes) se registra en la fábrica de paneles.
 
 /* ---------------- equipo ---------------- */
 
@@ -606,15 +558,18 @@ for (const P of PANELES_COMERCIALES) {
   registrarRutasCampanas(`${baseDePanel(P.slug)}/campanas`, P.slug, `${baseDePanel(P.slug)}/config`);
 }
 
-// Estadísticas de campañas de un panel: leads, ganadas aprobadas e ingresos.
-function statsCampanas(panel) {
+// Estadísticas de campañas de un panel. Sin rango: histórico completo.
+// Con rango: leads creadas en el período + cierres (ganadas/perdidas/ingresos) del período.
+function statsCampanas(panel, desde = '0000-01-01', hasta = '9999-12-31') {
   return db.prepare(`SELECT COALESCE(c.nombre, 'Sin campaña') AS nombre,
-      COUNT(*) AS leads,
-      SUM(CASE WHEN d.etapa = 'Ganado' AND d.aprobacion = 'aprobado' THEN 1 ELSE 0 END) AS ganadas,
-      COALESCE(SUM(CASE WHEN d.etapa = 'Ganado' AND d.aprobacion = 'aprobado' THEN d.mrr END), 0) AS ingresos,
-      SUM(CASE WHEN d.etapa = 'Perdido' THEN 1 ELSE 0 END) AS perdidas
+      SUM(CASE WHEN substr(d.created_at,1,10) BETWEEN @desde AND @hasta THEN 1 ELSE 0 END) AS leads,
+      SUM(CASE WHEN d.etapa = 'Ganado' AND d.aprobacion = 'aprobado' AND d.fecha_cierre BETWEEN @desde AND @hasta THEN 1 ELSE 0 END) AS ganadas,
+      COALESCE(SUM(CASE WHEN d.etapa = 'Ganado' AND d.aprobacion = 'aprobado' AND d.fecha_cierre BETWEEN @desde AND @hasta THEN d.mrr END), 0) AS ingresos,
+      SUM(CASE WHEN d.etapa = 'Perdido' AND d.fecha_cierre BETWEEN @desde AND @hasta THEN 1 ELSE 0 END) AS perdidas
     FROM deals d LEFT JOIN campanas c ON c.id = d.campana_id
-    WHERE d.panel = ? GROUP BY d.campana_id ORDER BY ganadas DESC, ingresos DESC, leads DESC`).all(panel);
+    WHERE d.panel = @panel GROUP BY d.campana_id
+    HAVING leads > 0 OR ganadas > 0 OR perdidas > 0
+    ORDER BY ganadas DESC, ingresos DESC, leads DESC`).all({ panel, desde, hasta });
 }
 
 // Preferencias de notificaciones del admin (el paso a Ganado no se puede silenciar).
@@ -732,72 +687,91 @@ function rangoPeriodo(p, off) {
 const periodoDeQuery = (q) => (q === 'mes' ? 'mes' : q === 'dia' ? 'dia' : 'semana');
 const PERIODO_NOMBRE = { dia: 'diario', semana: 'semanal', mes: 'mensual' };
 
-function reporteData(desde, hasta) {
-  const campos = camposPanel('cfd');
+function reporteData(slug, desde, hasta) {
+  const campos = camposPanel(slug);
   const keys = campos.map((c) => 'c' + c.id);
   const usuarios = db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all();
   const porVendedor = usuarios.map((u) => {
     const act = Object.fromEntries(keys.map((k) => [k, 0]));
-    for (const r of db.prepare('SELECT valores FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha BETWEEN ? AND ?').all('cfd', u.id, desde, hasta)) {
+    for (const r of db.prepare('SELECT valores FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha BETWEEN ? AND ?').all(slug, u.id, desde, hasta)) {
       try { const v = JSON.parse(r.valores || '{}'); for (const k of keys) act[k] += Number(v[k]) || 0; } catch {}
     }
-    const creados = db.prepare("SELECT COUNT(*) n FROM deals WHERE panel = 'cfd' AND user_id = ? AND substr(created_at,1,10) BETWEEN ? AND ?").get(u.id, desde, hasta).n;
-    const g = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(mrr),0) m FROM deals WHERE panel = 'cfd' AND user_id = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND fecha_cierre BETWEEN ? AND ?").get(u.id, desde, hasta);
-    const perdidos = db.prepare("SELECT COUNT(*) n FROM deals WHERE panel = 'cfd' AND user_id = ? AND etapa = 'Perdido' AND fecha_cierre BETWEEN ? AND ?").get(u.id, desde, hasta).n;
-    return { name: u.name, ...act, creados, ganados: g.n, perdidos, mrr: g.m };
+    const creados = db.prepare('SELECT COUNT(*) n FROM deals WHERE panel = ? AND user_id = ? AND substr(created_at,1,10) BETWEEN ? AND ?').get(slug, u.id, desde, hasta).n;
+    const g = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(mrr),0) m FROM deals WHERE panel = ? AND user_id = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND fecha_cierre BETWEEN ? AND ?").get(slug, u.id, desde, hasta);
+    const perdidos = db.prepare("SELECT COUNT(*) n FROM deals WHERE panel = ? AND user_id = ? AND etapa = 'Perdido' AND fecha_cierre BETWEEN ? AND ?").get(slug, u.id, desde, hasta).n;
+    return { id: u.id, name: u.name, ...act, creados, ganados: g.n, perdidos, mrr: g.m };
   });
   const tot = porVendedor.reduce((acc, v) => {
     for (const k of [...keys, 'creados', 'ganados', 'perdidos', 'mrr']) acc[k] = (acc[k] || 0) + v[k];
     return acc;
   }, {});
-  // "Toques del equipo" para la tarjeta del resumen: el campo Toques si existe, si no el primero.
+  // "Actividad del equipo" para la tarjeta del resumen: el campo Toques si existe, si no el primero.
   const campoToques = campos.find((c) => /toque/i.test(c.label)) || campos[0];
   tot.toques = campoToques ? (tot['c' + campoToques.id] || 0) : 0;
-  const motivos = db.prepare("SELECT COALESCE(motivo_perdida,'Sin motivo') label, COUNT(*) n FROM deals WHERE panel = 'cfd' AND etapa = 'Perdido' AND fecha_cierre BETWEEN ? AND ? GROUP BY label ORDER BY n DESC").all(desde, hasta);
+  const motivos = db.prepare("SELECT COALESCE(motivo_perdida,'Sin motivo') label, COUNT(*) n FROM deals WHERE panel = ? AND etapa = 'Perdido' AND fecha_cierre BETWEEN ? AND ? GROUP BY label ORDER BY n DESC").all(slug, desde, hasta);
   const cerrados = db.prepare(`SELECT d.empresa, d.etapa, d.tipo_venta, d.mrr, d.fecha_cierre, d.motivo_perdida, u.name vendedor FROM deals d JOIN users u ON u.id = d.user_id
-    WHERE d.panel = 'cfd' AND (d.etapa = 'Perdido' OR (d.etapa = 'Ganado' AND d.aprobacion = 'aprobado')) AND d.fecha_cierre BETWEEN ? AND ? ORDER BY d.fecha_cierre`).all(desde, hasta);
-  const mrrNuevo = db.prepare("SELECT COALESCE(SUM(mrr),0) s FROM deals WHERE panel = 'cfd' AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND tipo_venta != 'Proyecto único' AND fecha_cierre BETWEEN ? AND ?").get(desde, hasta).s;
-  const ingresosProyectos = db.prepare("SELECT COALESCE(SUM(mrr),0) s FROM deals WHERE panel = 'cfd' AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND tipo_venta = 'Proyecto único' AND fecha_cierre BETWEEN ? AND ?").get(desde, hasta).s;
+    WHERE d.panel = ? AND (d.etapa = 'Perdido' OR (d.etapa = 'Ganado' AND d.aprobacion = 'aprobado')) AND d.fecha_cierre BETWEEN ? AND ? ORDER BY d.fecha_cierre`).all(slug, desde, hasta);
+  const mrrNuevo = db.prepare("SELECT COALESCE(SUM(mrr),0) s FROM deals WHERE panel = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND tipo_venta != 'Proyecto único' AND fecha_cierre BETWEEN ? AND ?").get(slug, desde, hasta).s;
+  const ingresosProyectos = db.prepare("SELECT COALESCE(SUM(mrr),0) s FROM deals WHERE panel = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND tipo_venta = 'Proyecto único' AND fecha_cierre BETWEEN ? AND ?").get(slug, desde, hasta).s;
   const winRate = tot.ganados + tot.perdidos > 0 ? Math.round((tot.ganados / (tot.ganados + tot.perdidos)) * 100) : null;
   return { campos, porVendedor, tot, motivos, cerrados, winRate, mrrNuevo, ingresosProyectos };
 }
 
-app.get('/reportes', requireAuth, requireAdmin, (req, res) => {
-  const p = periodoDeQuery(req.query.p);
-  const off = Math.min(30, Math.max(0, parseInt(req.query.off, 10) || 0));
+// Datos completos del dashboard unificado de un panel: snapshot del pipeline + métricas del período.
+function dashboardData(slug, p, off) {
   const { desde, hasta } = rangoPeriodo(p, off);
-  const periodos = Array.from({ length: p === 'dia' ? 14 : 8 }, (_, i) => { const r = rangoPeriodo(p, i); return { off: i, label: p === 'dia' ? r.desde : `${r.desde} a ${r.hasta}` }; });
-  res.send(V.reportesPage({ user: req.user, p, off, desde, hasta, periodos, r: reporteData(desde, hasta) }));
-});
+  const r = reporteData(slug, desde, hasta);
+  const etapas = etapasPanelCfg(slug).map((e) => e.nombre);
+  const colores = coloresDePanel(slug);
+  const funnel = {};
+  for (const row of db.prepare("SELECT etapa, COUNT(*) n FROM deals WHERE panel = ? AND etapa NOT IN ('Ganado','Perdido') GROUP BY etapa").all(slug)) funnel[row.etapa] = row.n;
+  const activos = Object.values(funnel).reduce((a, b) => a + b, 0);
+  // "En juego": las dos últimas etapas activas (las más cercanas al cierre), foto de hoy.
+  const etapasJuego = etapas.slice(-2);
+  const enJuego = etapasJuego.length
+    ? db.prepare(`SELECT COALESCE(SUM(mrr),0) s FROM deals WHERE panel = ? AND etapa IN (${etapasJuego.map(() => '?').join(',')})`).get(slug, ...etapasJuego).s
+    : 0;
+  // Curva diaria del campo principal; si el período es un solo día, muestra los últimos 14 para dar contexto.
+  const campoCurva = r.campos.find((c) => /toque/i.test(c.label)) || r.campos[0];
+  const curvaDesde = p === 'dia' ? new Date(new Date(hasta + 'T00:00:00Z').getTime() - 13 * 864e5).toISOString().slice(0, 10) : desde;
+  const curva = campoCurva ? seriePorDia(slug, 'c' + campoCurva.id, curvaDesde, hasta) : [];
+  const sinPaso = db.prepare(`SELECT d.id, d.empresa, d.etapa, d.updated_at, u.name vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
+    WHERE d.panel = ? AND d.etapa NOT IN ('Ganado','Perdido') AND d.fecha_proximo_paso IS NULL ORDER BY d.updated_at ASC`).all(slug);
+  const estancados = db.prepare(`SELECT d.id, d.empresa, d.etapa, d.updated_at, u.name vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
+    WHERE d.panel = ? AND d.etapa NOT IN ('Ganado','Perdido') AND d.updated_at < datetime('now','-14 days') ORDER BY d.updated_at ASC`).all(slug);
+  const provincias = db.prepare(`SELECT COALESCE(NULLIF(provincia,''),'Sin provincia') label, COUNT(*) n FROM deals
+    WHERE panel = ? AND substr(created_at,1,10) BETWEEN ? AND ? GROUP BY label ORDER BY n DESC LIMIT 12`).all(slug, desde, hasta);
+  const campanas = statsCampanas(slug, desde, hasta);
+  return { desde, hasta, r, etapas, colores, funnel, activos, enJuego, curva, curvaLabel: campoCurva ? campoCurva.label : '', sinPaso, estancados, provincias, campanas, esCfd: slug === 'cfd' };
+}
 
-// Vista imprimible del reporte: el navegador la exporta a PDF (Ctrl+P → Guardar como PDF).
-app.get('/reportes/imprimir', requireAuth, requireAdmin, (req, res) => {
-  const p = periodoDeQuery(req.query.p);
-  const off = Math.min(30, Math.max(0, parseInt(req.query.off, 10) || 0));
-  const { desde, hasta } = rangoPeriodo(p, off);
-  res.send(V.reporteImprimirPage({ user: req.user, p, nombrePeriodo: PERIODO_NOMBRE[p], desde, hasta, r: reporteData(desde, hasta) }));
-});
-
-app.get('/reportes.csv', requireAuth, requireAdmin, (req, res) => {
-  const p = periodoDeQuery(req.query.p);
-  const off = Math.min(30, Math.max(0, parseInt(req.query.off, 10) || 0));
-  const { desde, hasta } = rangoPeriodo(p, off);
-  const r = reporteData(desde, hasta);
+// CSV del dashboard: por vendedor + cierres + campañas + provincias del período.
+function csvDashboard(d, p, info) {
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const keys = r.campos.map((c) => 'c' + c.id);
-  const lines = [];
-  lines.push(`Reporte ${PERIODO_NOMBRE[p]};${desde} a ${hasta}`);
-  lines.push('');
-  lines.push(['Vendedor', ...r.campos.map((c) => esc(c.label)), 'Deals creados', 'Ganados', 'Perdidos', 'Ingresos ganados'].join(';'));
-  for (const v of r.porVendedor) lines.push([esc(v.name), ...keys.map((k) => v[k] || 0), v.creados, v.ganados, v.perdidos, v.mrr].join(';'));
-  lines.push([esc('TOTAL'), ...keys.map((k) => r.tot[k] || 0), r.tot.creados, r.tot.ganados, r.tot.perdidos, r.tot.mrr].join(';'));
-  lines.push('');
-  lines.push(['Deal cerrado', 'Resultado', 'Tipo de venta', 'Valor', 'Fecha cierre', 'Motivo de pérdida', 'Vendedor'].join(';'));
-  for (const d of r.cerrados) lines.push([esc(d.empresa), d.etapa, esc(d.tipo_venta), d.mrr ?? '', d.fecha_cierre, esc(d.motivo_perdida || ''), esc(d.vendedor)].join(';'));
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="reporte-${p}-${desde}.csv"`);
-  res.send('﻿' + lines.join('\r\n'));
-});
+  const keys = d.r.campos.map((c) => 'c' + c.id);
+  const L = [];
+  L.push(`Reporte ${PERIODO_NOMBRE[p]} · ${info.nombre};${d.desde} a ${d.hasta}`);
+  L.push('');
+  L.push(['Vendedor', ...d.r.campos.map((c) => esc(c.label)), 'Leads creadas', 'Ganados', 'Perdidos', 'Ingresos ganados'].join(';'));
+  for (const v of d.r.porVendedor) L.push([esc(v.name), ...keys.map((k) => v[k] || 0), v.creados, v.ganados, v.perdidos, v.mrr].join(';'));
+  L.push([esc('TOTAL'), ...keys.map((k) => d.r.tot[k] || 0), d.r.tot.creados, d.r.tot.ganados, d.r.tot.perdidos, d.r.tot.mrr].join(';'));
+  L.push('');
+  L.push(['Deal cerrado', 'Resultado', 'Valor', 'Fecha cierre', 'Motivo de pérdida', 'Vendedor'].join(';'));
+  for (const c of d.r.cerrados) L.push([esc(c.empresa), c.etapa, c.mrr ?? '', c.fecha_cierre, esc(c.motivo_perdida || ''), esc(c.vendedor)].join(';'));
+  L.push('');
+  L.push(['Campaña', 'Leads del período', 'Ganadas', 'Perdidas', 'Ingresos'].join(';'));
+  for (const c of d.campanas) L.push([esc(c.nombre), c.leads, c.ganadas, c.perdidas, c.ingresos].join(';'));
+  L.push('');
+  L.push(['Provincia (leads creadas)', 'Leads'].join(';'));
+  for (const pr of d.provincias) L.push([esc(pr.label), pr.n].join(';'));
+  return L.join('\r\n');
+}
+
+// Las URLs viejas de Reportes redirigen al dashboard unificado.
+const qsPeriodo = (req) => `?p=${periodoDeQuery(req.query.p)}&off=${Math.max(0, parseInt(req.query.off, 10) || 0)}`;
+app.get('/reportes', requireAuth, requireAdmin, (req, res) => res.redirect('/dashboard' + qsPeriodo(req)));
+app.get('/reportes/imprimir', requireAuth, requireAdmin, (req, res) => res.redirect('/dashboard/imprimir' + qsPeriodo(req)));
+app.get('/reportes.csv', requireAuth, requireAdmin, (req, res) => res.redirect('/dashboard.csv' + qsPeriodo(req)));
 
 /* ---------------- paneles comerciales configurables (una empresa = un panel) ---------------- */
 
@@ -938,26 +912,28 @@ for (const PANEL of PANELES_COMERCIALES) {
     res.send(V.metasDetallePage({ user: req.user, vendedor, campos, series, info }));
   });
 
-  // CFD conserva su dashboard propio (funnel + motivos + curva de actividad + alertas), registrado arriba.
-  if (slug !== 'cfd') app.get(base + '/dashboard', requireAuth, requireAdmin, (req, res) => {
-    const mesInicio = inicioMes();
-    const colores = coloresDePanel(slug);
-    const funnel = {};
-    for (const r of db.prepare("SELECT etapa, COUNT(*) n FROM deals WHERE panel = ? AND etapa NOT IN ('Ganado','Perdido') GROUP BY etapa").all(slug)) funnel[r.etapa] = r.n;
-    const activos = Object.values(funnel).reduce((a, b) => a + b, 0);
-    const g = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(mrr),0) m FROM deals WHERE panel = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND fecha_cierre >= ?").get(slug, mesInicio);
-    const c90 = db.prepare("SELECT etapa, COUNT(*) n FROM deals WHERE panel = ? AND (etapa = 'Perdido' OR (etapa = 'Ganado' AND aprobacion = 'aprobado')) AND fecha_cierre >= date('now','-90 days') GROUP BY etapa").all(slug);
-    const gg = c90.find((r) => r.etapa === 'Ganado')?.n || 0, pp = c90.find((r) => r.etapa === 'Perdido')?.n || 0;
-    const winRate = gg + pp > 0 ? Math.round((gg / (gg + pp)) * 100) : null;
-    const sinPaso = db.prepare(`SELECT d.id, d.empresa, d.etapa, d.updated_at, u.name vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
-      WHERE d.panel = ? AND d.etapa NOT IN ('Ganado','Perdido') AND d.fecha_proximo_paso IS NULL ORDER BY d.updated_at ASC`).all(slug);
-    const porVendedor = db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all()
-      .map((u) => ({ name: u.name, ...panelStats(slug, u.id, mesInicio) }));
-    res.send(V.panelDashboardPage({
-      user: req.user,
-      k: { funnel, activos, ingresosMes: g.m, ganadosMes: g.n, winRate, sinPaso, porVendedor, campanas: statsCampanas(slug) },
-      campos: camposPanel(slug), colores, etapas: etapasPanelCfg(slug).map((e) => e.nombre), info,
-    }));
+  // Dashboard unificado (métricas + gráficas + reportes del período elegido) con exportación CSV y PDF.
+  const datosDash = (req) => {
+    const p = periodoDeQuery(req.query.p);
+    const off = Math.min(30, Math.max(0, parseInt(req.query.off, 10) || 0));
+    const periodos = Array.from({ length: p === 'dia' ? 14 : 8 }, (_, i) => { const rr = rangoPeriodo(p, i); return { off: i, label: p === 'dia' ? rr.desde : `${rr.desde} a ${rr.hasta}` }; });
+    return { p, off, periodos, ...dashboardData(slug, p, off) };
+  };
+
+  app.get(base + '/dashboard', requireAuth, requireAdmin, (req, res) => {
+    res.send(V.dashboardUnificadoPage({ user: req.user, info, ...datosDash(req) }));
+  });
+
+  app.get(base + '/dashboard/imprimir', requireAuth, requireAdmin, (req, res) => {
+    const d = datosDash(req);
+    res.send(V.reporteImprimirPage({ user: req.user, info, p: d.p, nombrePeriodo: PERIODO_NOMBRE[d.p], desde: d.desde, hasta: d.hasta, r: d.r, campanas: d.campanas }));
+  });
+
+  app.get(base + '/dashboard.csv', requireAuth, requireAdmin, (req, res) => {
+    const d = datosDash(req);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="reporte-${slug}-${d.p}-${d.desde}.csv"`);
+    res.send('﻿' + csvDashboard(d, d.p, info));
   });
 
   /* --- configuración del panel (solo admin) --- */

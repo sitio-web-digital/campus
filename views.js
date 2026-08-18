@@ -1399,48 +1399,96 @@ function dashHeader(active) {
   <div class="toolbar">
     <div class="seg">
       <a href="/dashboard" class="${active === 'dashboard' ? 'on' : ''}">Dashboard</a>
-      <a href="/reportes" class="${active === 'reportes' ? 'on' : ''}">Reportes</a>
       <a href="/campanas" class="${active === 'campanas' ? 'on' : ''}">Campañas</a>
     </div>
   </div>`;
 }
 
-function reportesPage({ user, p, off, desde, hasta, periodos, r }) {
+// Dashboard unificado por panel: métricas del período + gráficas + tablas + exportación (une Dashboard y Reportes).
+function dashboardUnificadoPage({ user, info, p, off, periodos, desde, hasta, r, etapas, colores, funnel, activos, enJuego, curva, curvaLabel, sinPaso, estancados, provincias, campanas, esCfd }) {
+  const dashUrl = `${info.base}/dashboard`;
+  const barRows = (items, fmt = (v) => v, color = '#1D6FB8') => {
+    const max = Math.max(1, ...items.map((i) => i.n));
+    return items.length ? items.map((i) => `<div class="prog-row"><span class="pl" title="${esc(i.label)}">${esc(i.label)}</span><div class="prog"><i style="width:${Math.max(2, Math.round((i.n / max) * 100))}%;background:${color}"></i></div><span class="pv"><strong>${fmt(i.n)}</strong></span></div>`).join('') : '<p class="muted small" style="margin:0">Sin datos en este período.</p>';
+  };
+  const ingresosVendedor = r.porVendedor.filter((v) => v.mrr > 0).sort((a, b) => b.mrr - a.mrr).map((v) => ({ label: v.name.split(' ')[0], n: v.mrr }));
+  const alertas = (titulo, rows, vacio) => `
+  <h2>${titulo}</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Empresa</th><th>Vendedor</th><th>Etapa</th><th>Última actualización</th></tr></thead>
+    <tbody>${rows.length ? rows.map((d) => `<tr><td><a href="/deals/${d.id}">${esc(d.empresa)}</a></td><td>${esc(d.vendedor_name)}</td><td><span class="chip" style="background:${colores[d.etapa] || '#8494A6'}">${esc(d.etapa)}</span></td><td>${fecha(d.updated_at)}</td></tr>`).join('') : `<tr><td colspan="4" class="muted">${vacio}</td></tr>`}</tbody>
+  </table></div>`;
   return layout({
-    title: 'Reportes', user, active: 'dashboard',
+    title: `Dashboard · ${info.nombre}`, user, active: 'dashboard', sistema: info.slug,
     body: `
-  <h1>Reportes</h1>
-  ${dashHeader('reportes')}
+  <h1>Dashboard ${esc(info.nombre)}</h1>
+  ${esCfd ? dashHeader('dashboard') : ''}
   <div class="toolbar">
     <div class="seg">
-      <a href="/reportes?p=dia" class="${p === 'dia' ? 'on' : ''}">Diario</a>
-      <a href="/reportes?p=semana" class="${p === 'semana' ? 'on' : ''}">Semanal</a>
-      <a href="/reportes?p=mes" class="${p === 'mes' ? 'on' : ''}">Mensual</a>
+      <a href="${dashUrl}?p=dia" class="${p === 'dia' ? 'on' : ''}">Diario</a>
+      <a href="${dashUrl}?p=semana" class="${p === 'semana' ? 'on' : ''}">Semanal</a>
+      <a href="${dashUrl}?p=mes" class="${p === 'mes' ? 'on' : ''}">Mensual</a>
     </div>
-    <form method="get" action="/reportes" style="display:inline">
+    <form method="get" action="${dashUrl}" style="display:inline">
       <input type="hidden" name="p" value="${p}">
       <select name="off" onchange="this.form.submit()" style="width:auto">
         ${periodos.map((per) => `<option value="${per.off}" ${per.off === off ? 'selected' : ''}>${per.off === 0 ? (p === 'mes' ? 'Mes actual' : p === 'dia' ? 'Hoy' : 'Semana actual') : per.label}</option>`).join('')}
       </select>
     </form>
     <div class="sp"></div>
-    <a class="btn secondary" href="/reportes.csv?p=${p}&off=${off}">Descargar CSV</a>
-    <a class="btn" href="/reportes/imprimir?p=${p}&off=${off}" target="_blank" rel="noopener">Exportar PDF</a>
+    <a class="btn secondary small" href="${dashUrl}.csv?p=${p}&off=${off}">Descargar CSV</a>
+    <a class="btn small" href="${dashUrl}/imprimir?p=${p}&off=${off}" target="_blank" rel="noopener">Exportar PDF</a>
   </div>
-  <p class="small muted">Período: <strong>${fecha(desde)} a ${fecha(hasta)}</strong></p>
+  <p class="small muted">Período: <strong>${fecha(desde)}${desde !== hasta ? ' a ' + fecha(hasta) : ''}</strong> · Las tarjetas y tablas son del período; el funnel y las alertas son la foto de hoy.</p>
 
   <div class="tiles">
-    <div class="tile"><div class="v">${money(r.tot.mrr)}</div><div class="l">Ingresos ganados (total)</div></div>
+    <div class="tile"><div class="v">${money(r.tot.mrr)}</div><div class="l">Ingresos ganados</div></div>
+    ${esCfd ? `
     <div class="tile"><div class="v">${money(r.ingresosProyectos)}</div><div class="l">Por proyectos únicos</div></div>
-    <div class="tile"><div class="v">${money(r.mrrNuevo)}</div><div class="l">MRR nuevo (suscripciones)</div></div>
+    <div class="tile"><div class="v">${money(r.mrrNuevo)}</div><div class="l">MRR nuevo (suscripciones)</div></div>` : ''}
     <div class="tile"><div class="v">${r.tot.ganados} / ${r.tot.perdidos}</div><div class="l">Ganados / perdidos</div></div>
     <div class="tile"><div class="v">${r.winRate == null ? '—' : r.winRate + '%'}</div><div class="l">Win rate del período</div></div>
-    <div class="tile"><div class="v">${r.tot.toques}</div><div class="l">Toques del equipo</div></div>
+    <div class="tile"><div class="v">${r.tot.creados}</div><div class="l">Leads nuevas</div></div>
+    <div class="tile"><div class="v">${r.tot.toques}</div><div class="l">${esc(curvaLabel || 'Actividad')} del equipo</div></div>
+    <div class="tile"><div class="v">${activos}</div><div class="l">Deals activos (hoy)</div></div>
+    <div class="tile"><div class="v">${money(enJuego)}</div><div class="l">En juego (últimas etapas, hoy)</div></div>
   </div>
 
-  <h2>Por vendedor</h2>
+  <div class="charts">
+    <div class="card">
+      <h2 style="margin-top:0">Funnel: deals activos por etapa</h2>
+      ${funnelBars(funnel, etapas, colores)}
+      <p class="caption">Donde se acumulan deals está el cuello de botella del proceso de venta.</p>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0">Por qué perdemos (período)</h2>
+      ${donut(r.motivos)}
+      <p class="caption">Si un motivo domina, es una decisión de pricing/producto/segmento — no un problema del vendedor.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:.75rem">
+    <h2 style="margin-top:0">${esc(curvaLabel || 'Actividad')} por día</h2>
+    ${lineChart(curva)}
+    <p class="caption">El indicador adelantado: la actividad de hoy son las ventas de dentro de 1-2 meses.</p>
+  </div>
+
+  <div class="charts" style="margin-top:.75rem">
+    <div class="card">
+      <h2 style="margin-top:0">Ingresos por vendedor (período)</h2>
+      ${barRows(ingresosVendedor, money, '#3E9B57')}
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0">Leads nuevas por provincia (período)</h2>
+      ${barRows(provincias.map((x) => ({ label: x.label, n: x.n })))}
+    </div>
+  </div>
+
+  ${tablaCampanas(campanas)}
+
+  <h2>Por vendedor — actividad y resultados del período</h2>
   <div class="tablewrap"><table>
-    <thead><tr><th>Vendedor</th>${r.campos.map((c) => `<th>${esc(c.label)}</th>`).join('')}<th>Deals creados</th><th>Ganados</th><th>Perdidos</th><th>Ingresos ganados</th></tr></thead>
+    <thead><tr><th>Vendedor</th>${r.campos.map((c) => `<th>${esc(c.label)}</th>`).join('')}<th>Leads creadas</th><th>Ganados</th><th>Perdidos</th><th>Ingresos</th></tr></thead>
     <tbody>
       ${r.porVendedor.map((v) => `<tr><td><strong>${esc(v.name)}</strong></td>${r.campos.map((c) => `<td>${v['c' + c.id] || 0}</td>`).join('')}<td>${v.creados}</td><td>${v.ganados}</td><td>${v.perdidos}</td><td>${money(v.mrr)}</td></tr>`).join('')}
       <tr><td><strong>TOTAL</strong></td>${r.campos.map((c) => `<td><strong>${r.tot['c' + c.id] || 0}</strong></td>`).join('')}<td><strong>${r.tot.creados}</strong></td><td><strong>${r.tot.ganados}</strong></td><td><strong>${r.tot.perdidos}</strong></td><td><strong>${money(r.tot.mrr)}</strong></td></tr>
@@ -1449,14 +1497,12 @@ function reportesPage({ user, p, off, desde, hasta, periodos, r }) {
 
   <h2>Deals cerrados en el período</h2>
   <div class="tablewrap"><table>
-    <thead><tr><th>Empresa</th><th>Resultado</th><th>Tipo</th><th>Valor</th><th>Fecha</th><th>Motivo</th><th>Vendedor</th></tr></thead>
-    <tbody>${r.cerrados.length ? r.cerrados.map((d) => `<tr><td><strong>${esc(d.empresa)}</strong></td><td><span class="chip" style="background:${ETAPA_COLOR[d.etapa]}">${d.etapa}</span></td><td class="small">${d.tipo_venta === 'Suscripción mensual' ? 'Suscripción' : 'Proyecto'}</td><td>${money(d.mrr)}${d.tipo_venta === 'Suscripción mensual' ? '<span class="muted small">/mes</span>' : ''}</td><td>${fecha(d.fecha_cierre)}</td><td>${esc(d.motivo_perdida || '—')}</td><td>${esc(d.vendedor)}</td></tr>`).join('') : '<tr><td colspan="7" class="muted">Sin cierres en este período.</td></tr>'}</tbody>
+    <thead><tr><th>Empresa</th><th>Resultado</th>${esCfd ? '<th>Tipo</th>' : ''}<th>Valor</th><th>Fecha</th><th>Motivo</th><th>Vendedor</th></tr></thead>
+    <tbody>${r.cerrados.length ? r.cerrados.map((d) => `<tr><td><strong>${esc(d.empresa)}</strong></td><td><span class="chip" style="background:${ETAPA_COLOR[d.etapa]}">${d.etapa}</span></td>${esCfd ? `<td class="small">${d.tipo_venta === 'Suscripción mensual' ? 'Suscripción' : 'Proyecto'}</td>` : ''}<td>${money(d.mrr)}${esCfd && d.tipo_venta === 'Suscripción mensual' ? '<span class="muted small">/mes</span>' : ''}</td><td>${fecha(d.fecha_cierre)}</td><td>${esc(d.motivo_perdida || '—')}</td><td>${esc(d.vendedor)}</td></tr>`).join('') : `<tr><td colspan="${esCfd ? 7 : 6}" class="muted">Sin cierres en este período.</td></tr>`}</tbody>
   </table></div>
 
-  <h2>Motivos de pérdida del período</h2>
-  <div class="card">
-    ${r.motivos.length ? r.motivos.map((m) => `<div class="prog-row"><span class="pl">${esc(m.label)}</span><div class="prog"><i style="width:${Math.round((m.n / Math.max(1, r.tot.perdidos)) * 100)}%;background:#C05450"></i></div><span class="pv">${m.n}</span></div>`).join('') : '<p class="muted small" style="margin:0">Sin deals perdidos en este período.</p>'}
-  </div>`
+  ${alertas('Deals sin próximo paso definido (hoy)', sinPaso, 'Ninguno — todo el pipeline tiene próximo paso.')}
+  ${alertas('Deals estancados: sin cambios hace +14 días (hoy)', estancados, 'Ninguno.')}`
   });
 }
 
@@ -1745,7 +1791,8 @@ function reglasPage({ user, reglas, paneles }) {
 }
 
 // Vista imprimible del reporte: el navegador la exporta a PDF (se abre el diálogo de impresión solo).
-function reporteImprimirPage({ user, p, nombrePeriodo, desde, hasta, r }) {
+function reporteImprimirPage({ user, p, nombrePeriodo, desde, hasta, r, info = { slug: 'cfd', nombre: 'Cloud For Deploy' }, campanas = [] }) {
+  const esCfd = info.slug === 'cfd';
   const filaV = (v, strong = false) => {
     const t = strong ? 'strong' : 'span';
     return `<tr><td><${t}>${esc(v.name)}</${t}></td>${r.campos.map((c) => `<td>${v['c' + c.id] || 0}</td>`).join('')}<td>${v.creados}</td><td>${v.ganados}</td><td>${v.perdidos}</td><td>${money(v.mrr)}</td></tr>`;
@@ -1780,18 +1827,20 @@ function reporteImprimirPage({ user, p, nombrePeriodo, desde, hasta, r }) {
 <div class="cab">
   <div>
     <h1>Reporte comercial ${esc(nombrePeriodo)}</h1>
-    <div class="sub">Período: ${fecha(desde)}${desde !== hasta ? ' a ' + fecha(hasta) : ''} · Comercial Cloud For Deploy</div>
+    <div class="sub">Período: ${fecha(desde)}${desde !== hasta ? ' a ' + fecha(hasta) : ''} · Comercial ${esc(info.nombre)}</div>
   </div>
   <img src="/logo.png" alt="Cloud For Deploy">
 </div>
 
 <div class="tiles">
   <div class="tile"><div class="v">${money(r.tot.mrr)}</div><div class="l">Ingresos ganados</div></div>
+  ${esCfd ? `
   <div class="tile"><div class="v">${money(r.ingresosProyectos)}</div><div class="l">Por proyectos</div></div>
-  <div class="tile"><div class="v">${money(r.mrrNuevo)}</div><div class="l">MRR nuevo</div></div>
+  <div class="tile"><div class="v">${money(r.mrrNuevo)}</div><div class="l">MRR nuevo</div></div>` : ''}
   <div class="tile"><div class="v">${r.tot.ganados} / ${r.tot.perdidos}</div><div class="l">Ganados / perdidos</div></div>
   <div class="tile"><div class="v">${r.winRate == null ? '—' : r.winRate + '%'}</div><div class="l">Win rate</div></div>
-  <div class="tile"><div class="v">${r.tot.toques}</div><div class="l">Toques</div></div>
+  <div class="tile"><div class="v">${r.tot.creados}</div><div class="l">Leads nuevas</div></div>
+  <div class="tile"><div class="v">${r.tot.toques}</div><div class="l">Actividad</div></div>
 </div>
 
 <h2>Por vendedor</h2>
@@ -1805,8 +1854,14 @@ function reporteImprimirPage({ user, p, nombrePeriodo, desde, hasta, r }) {
 
 <h2>Deals cerrados en el período</h2>
 <table>
-  <thead><tr><th>Empresa</th><th>Resultado</th><th>Tipo</th><th>Valor</th><th>Fecha</th><th>Motivo</th><th>Vendedor</th></tr></thead>
-  <tbody>${r.cerrados.length ? r.cerrados.map((d) => `<tr><td>${esc(d.empresa)}</td><td>${d.etapa}</td><td>${d.tipo_venta === 'Suscripción mensual' ? 'Suscripción' : esc(d.tipo_venta)}</td><td>${money(d.mrr)}</td><td>${fecha(d.fecha_cierre)}</td><td>${esc(d.motivo_perdida || '—')}</td><td>${esc(d.vendedor)}</td></tr>`).join('') : '<tr><td colspan="7">Sin cierres en este período.</td></tr>'}</tbody>
+  <thead><tr><th>Empresa</th><th>Resultado</th>${esCfd ? '<th>Tipo</th>' : ''}<th>Valor</th><th>Fecha</th><th>Motivo</th><th>Vendedor</th></tr></thead>
+  <tbody>${r.cerrados.length ? r.cerrados.map((d) => `<tr><td>${esc(d.empresa)}</td><td>${d.etapa}</td>${esCfd ? `<td>${d.tipo_venta === 'Suscripción mensual' ? 'Suscripción' : esc(d.tipo_venta)}</td>` : ''}<td>${money(d.mrr)}</td><td>${fecha(d.fecha_cierre)}</td><td>${esc(d.motivo_perdida || '—')}</td><td>${esc(d.vendedor)}</td></tr>`).join('') : `<tr><td colspan="${esCfd ? 7 : 6}">Sin cierres en este período.</td></tr>`}</tbody>
+</table>
+
+<h2>Campañas del período</h2>
+<table>
+  <thead><tr><th>Campaña</th><th>Leads</th><th>Ganadas</th><th>Perdidas</th><th>Ingresos</th></tr></thead>
+  <tbody>${campanas.length ? campanas.map((c) => `<tr><td>${esc(c.nombre)}</td><td>${c.leads}</td><td>${c.ganadas}</td><td>${c.perdidas}</td><td>${money(c.ingresos)}</td></tr>`).join('') : '<tr><td colspan="5">Sin movimientos de campañas en el período.</td></tr>'}</tbody>
 </table>
 
 <h2>Motivos de pérdida</h2>
@@ -2234,8 +2289,8 @@ function changelogPage({ user, versiones }) {
 }
 
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, actividadPage, dashboardPage, adminPage, adminUserPage, perfilPage, docsPage, changelogPage,
-  notificacionesPage, objetivosPage, rankingPage, metasDetallePage, reportesPage, hubPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminUserPage, perfilPage, docsPage, changelogPage,
+  notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
-  panelActividadPage, panelObjetivosPage, panelRankingPage, panelDashboardPage, panelConfigPage, reporteImprimirPage, campanasPage,
+  panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage, campanasPage,
 };
