@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.15.0',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Rediseño visual completo del Campus: nueva hoja de estilos en todas las pantallas — barra superior grafito, acento verde petróleo, tipografía IBM Plex, tarjetas y tablas renovadas. Misma estructura y funcionamiento de siempre.' },
+      { tipo: 'mejora', texto: 'Las tipografías del rediseño se sirven desde el propio servidor (sin depender de internet).' },
+    ],
+  },
+  {
     version: '2.14.1',
     fecha: '2026-08-17',
     cambios: [

@@ -1193,6 +1193,14 @@ app.get('/notificaciones', requireAuth, (req, res) => {
 const CHANGELOG = require('./changelog');
 const MANUAL_PDF = path.join(__dirname, 'public', 'manual.pdf');
 
+// Tipografías del rediseño (IBM Plex, servidas localmente).
+app.get('/fonts/:archivo', (req, res) => {
+  const archivo = String(req.params.archivo);
+  if (!/^[\w.-]+\.woff2$/.test(archivo)) return res.status(404).end();
+  res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+  res.sendFile(path.join(__dirname, 'public', 'fonts', archivo), (err) => { if (err && !res.headersSent) res.status(404).end(); });
+});
+
 // Logo (sin auth: se usa en la pantalla de login).
 app.get('/logo.png', (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=86400');
