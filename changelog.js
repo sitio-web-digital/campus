@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.17.0',
+    fecha: '2026-08-18',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Estadísticas de aprendizaje en el Campus (solo admin): quién vio cada video y documento, hasta qué minuto llegó en los videos subidos (con barra de progreso), ranking del equipo por horas de video y última actividad de cada uno.' },
+      { tipo: 'mejora', texto: 'Los videos de YouTube/Vimeo muestran la miniatura con botón de play y cargan el reproductor al tocar (la página vuela y la reproducción queda registrada). El formulario de subida ahora está detrás del botón "+ Subir contenido".' },
+      { tipo: 'fix', texto: 'Se arregló la tarjeta del campus que mostraba un rectángulo negro con "Video" debajo de la miniatura (conflicto de clases entre la etiqueta y el reproductor).' },
+    ],
+  },
+  {
     version: '2.16.1',
     fecha: '2026-08-18',
     cambios: [

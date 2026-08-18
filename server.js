@@ -1221,19 +1221,71 @@ const uploadCampus = multer({
 });
 const empresaCampus = (e) => (CAMPUS_EMPRESAS.some(([s]) => s === e) ? e : 'general');
 
+// Registra que un usuario vio un contenido (una fila por usuario+contenido; cuenta las veces).
+function registrarVistaCampus(itemId, userId) {
+  db.prepare(`INSERT INTO campus_vistas (item_id, user_id, veces) VALUES (?, ?, 1)
+    ON CONFLICT(item_id, user_id) DO UPDATE SET veces = veces + 1, ultima_vista = datetime('now')`).run(itemId, userId);
+}
+
 app.get('/campus', requireAuth, (req, res) => res.redirect('/campus/general'));
 
 // El archivo se sirve con soporte de rangos (los videos se pueden adelantar/atrasar).
+// Abrir un documento cuenta como vista (los navegadores piden el video por rangos: solo cuenta el primer pedido).
 app.get('/campus/archivo/:id', requireAuth, (req, res) => {
-  const it = db.prepare('SELECT archivo, archivo_nombre FROM campus_items WHERE id = ?').get(req.params.id);
+  const it = db.prepare('SELECT id, archivo, archivo_nombre FROM campus_items WHERE id = ?').get(req.params.id);
   if (!it || !it.archivo || !/^[\w.-]+$/.test(it.archivo)) return res.status(404).end();
+  if (!req.headers.range) registrarVistaCampus(it.id, req.user.id);
   res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(it.archivo_nombre || it.archivo)}"`);
   res.sendFile(path.join(CAMPUS_DIR, it.archivo), (err) => { if (err && !res.headersSent) res.status(404).end(); });
 });
 
+// Beacon de vista (play de un video embebido, click en un enlace externo).
+app.post('/campus/vista/:id', requireAuth, (req, res) => {
+  if (db.prepare('SELECT 1 FROM campus_items WHERE id = ?').get(req.params.id)) registrarVistaCampus(req.params.id, req.user.id);
+  res.json({ ok: true });
+});
+
+// Progreso de un video subido: guarda hasta dónde llegó (el máximo histórico) y la duración.
+app.post('/campus/progreso/:id', requireAuth, (req, res) => {
+  const seg = Math.max(0, parseFloat(req.body.segundos) || 0);
+  const dur = Math.max(0, parseFloat(req.body.duracion) || 0) || null;
+  if (db.prepare('SELECT 1 FROM campus_items WHERE id = ?').get(req.params.id)) {
+    db.prepare(`INSERT INTO campus_vistas (item_id, user_id, veces, segundos, duracion) VALUES (?, ?, 1, ?, ?)
+      ON CONFLICT(item_id, user_id) DO UPDATE SET segundos = MAX(segundos, excluded.segundos),
+        duracion = COALESCE(excluded.duracion, duracion), ultima_vista = datetime('now')`).run(req.params.id, req.user.id, seg, dur);
+  }
+  res.json({ ok: true });
+});
+
+// Estadísticas de aprendizaje (solo admin): quién vio qué, hasta dónde, y horas por persona.
+app.get('/campus/estadisticas', requireAuth, requireAdmin, (req, res) => {
+  const esVideo = (i) => !!(i.url || /\.(mp4|webm|mov)$/i.test(i.archivo || ''));
+  const items = db.prepare('SELECT i.*, u.name AS autor FROM campus_items i JOIN users u ON u.id = i.created_by ORDER BY i.id DESC').all();
+  const vistas = db.prepare(`SELECT v.*, u.name, u.avatar, u.role, u.active FROM campus_vistas v JOIN users u ON u.id = v.user_id`).all();
+  const porItem = items.map((i) => ({
+    ...i, esVideo: esVideo(i),
+    vistos: vistas.filter((v) => v.item_id === i.id).sort((a, b) => b.segundos - a.segundos || a.name.localeCompare(b.name)),
+  }));
+  const usuarios = db.prepare("SELECT id, name, avatar, role FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all()
+    .map((u) => {
+      const mias = vistas.filter((v) => v.user_id === u.id);
+      return {
+        ...u,
+        contenidos: mias.length,
+        segundos: mias.reduce((a, v) => a + (v.segundos || 0), 0),
+        ultima: mias.reduce((a, v) => (v.ultima_vista > a ? v.ultima_vista : a), ''),
+      };
+    })
+    .sort((a, b) => b.segundos - a.segundos || b.contenidos - a.contenidos);
+  const totalVendedores = usuarios.filter((u) => u.role === 'vendedor').length;
+  res.send(V.campusStatsPage({ user: req.user, empresas: CAMPUS_EMPRESAS, porItem, usuarios, totalVendedores }));
+});
+
 app.get('/campus/:empresa', requireAuth, (req, res) => {
   const empresa = empresaCampus(req.params.empresa);
-  const items = db.prepare('SELECT i.*, u.name AS autor FROM campus_items i JOIN users u ON u.id = i.created_by WHERE i.empresa = ? ORDER BY i.id DESC').all(empresa);
+  const items = db.prepare(`SELECT i.*, u.name AS autor,
+      (SELECT COUNT(*) FROM campus_vistas v WHERE v.item_id = i.id) AS vistos
+    FROM campus_items i JOIN users u ON u.id = i.created_by WHERE i.empresa = ? ORDER BY i.id DESC`).all(empresa);
   res.send(V.campusPage({ user: req.user, empresa, empresas: CAMPUS_EMPRESAS, items }));
 });
 

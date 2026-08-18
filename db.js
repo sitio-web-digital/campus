@@ -293,6 +293,18 @@ db.exec(`CREATE TABLE IF NOT EXISTS campus_items (
   created_by INTEGER NOT NULL REFERENCES users(id),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );`);
+
+// Migración 2.17.0: tracking de vistas del campus (quién vio qué y, en videos subidos, hasta dónde).
+db.exec(`CREATE TABLE IF NOT EXISTS campus_vistas (
+  item_id INTEGER NOT NULL REFERENCES campus_items(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  veces INTEGER NOT NULL DEFAULT 0,
+  segundos REAL NOT NULL DEFAULT 0,
+  duracion REAL,
+  primera_vista TEXT NOT NULL DEFAULT (datetime('now')),
+  ultima_vista TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (item_id, user_id)
+);`);
 const notiCols = db.prepare('PRAGMA table_info(notifications)').all().map((c) => c.name);
 if (!notiCols.includes('lote')) {
   db.exec('ALTER TABLE notifications ADD COLUMN lote TEXT');

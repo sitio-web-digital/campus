@@ -956,15 +956,22 @@ html.dark .theme-btn .ic-luna { display:none; }
 /* ---------- campus de formación ---------- */
 .campus-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:.9rem; }
 .curso-card { padding:0; overflow:hidden; display:flex; flex-direction:column; margin-bottom:0; }
-.curso-video { width:100%; aspect-ratio:16/9; border:none; display:block; background:#000; }
-.curso-body { padding:.8rem .95rem .9rem; display:flex; flex-direction:column; flex:1; }
-.curso-chip { align-self:flex-start; }
-.curso-video + .curso-body { border-top:1px solid var(--line); }
-.chip.curso-video, .curso-chip.curso-video { background:#8E3B38; }
-.curso-chip.curso-documento { background:var(--accent); }
-.curso-chip.curso-enlace { background:#5B6773; }
+.curso-media { width:100%; aspect-ratio:16/9; border:none; display:block; background:#000; }
+.curso-fac { position:relative; width:100%; aspect-ratio:16/9; border:none; display:block; background:#10151B center/cover no-repeat; cursor:pointer; padding:0; }
+.curso-fac:hover .curso-play { transform:scale(1.08); background:rgba(14,110,102,.95); }
+.curso-play { position:absolute; inset:0; margin:auto; width:3.4rem; height:3.4rem; border-radius:50%; background:rgba(10,20,35,.72); transition:transform .15s, background .15s; }
+.curso-play::after { content:""; position:absolute; left:55%; top:50%; transform:translate(-50%,-50%); border-style:solid; border-width:.62rem 0 .62rem 1.05rem; border-color:transparent transparent transparent #fff; }
+.curso-body { padding:.75rem .95rem .9rem; display:flex; flex-direction:column; flex:1; }
+.curso-head { display:flex; justify-content:space-between; align-items:center; gap:.6rem; }
+.curso-tag { align-self:flex-start; }
+.chip.tag-video { background:#8E3B38; }
+.chip.tag-documento { background:var(--accent); }
+.chip.tag-enlace { background:#5B6773; }
+.curso-media + .curso-body, .curso-fac + .curso-body { border-top:1px solid var(--line); }
 .curso-meta { margin-top:auto; padding-top:.4rem; }
 .curso-acciones { display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.55rem; }
+.curso-form { display:none; }
+.curso-form.abierto { display:block; }
 
 /* ---------- notificaciones con actor (foto + nombre + hora) ---------- */
 /* El popup abre hacia la derecha de la campanita (anclado a la izquierda de la barra) para no salirse de pantalla. */
@@ -2570,14 +2577,8 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
 
 /* --------- campus de formación --------- */
 
-// Videos de YouTube/Vimeo se embeben; otros links quedan como botón.
-function videoEmbed(url) {
-  const yt = (url || '').match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/);
-  if (yt) return `<iframe class="curso-video" src="https://www.youtube.com/embed/${yt[1]}" title="Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
-  const vm = (url || '').match(/vimeo\.com\/(\d+)/);
-  if (vm) return `<iframe class="curso-video" src="https://player.vimeo.com/video/${vm[1]}" frameborder="0" allowfullscreen loading="lazy"></iframe>`;
-  return null;
-}
+const idYouTube = (url) => ((url || '').match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/) || [])[1] || null;
+const idVimeo = (url) => ((url || '').match(/vimeo\.com\/(\d+)/) || [])[1] || null;
 
 function campusPage({ user, empresa, empresas, items }) {
   const esAdmin = user.role === 'admin';
@@ -2585,43 +2586,54 @@ function campusPage({ user, empresa, empresas, items }) {
   const card = (it) => {
     let media = '';
     let tipo = 'Documento';
-    if (it.url) {
-      const emb = videoEmbed(it.url);
-      tipo = emb ? 'Video' : 'Enlace';
-      media = emb || '';
+    const yt = idYouTube(it.url), vm = idVimeo(it.url);
+    if (yt || vm) {
+      tipo = 'Video';
+      const src = yt ? `https://www.youtube.com/embed/${yt}` : `https://player.vimeo.com/video/${vm}`;
+      // Facade: miniatura con play; el iframe real se carga al tocar (y ahí se registra la vista).
+      media = `<button type="button" class="curso-fac" data-id="${it.id}" data-src="${src}"${yt ? ` style="background-image:url('https://i.ytimg.com/vi/${yt}/hqdefault.jpg')"` : ''} aria-label="Reproducir video"><span class="curso-play"></span></button>`;
+    } else if (it.url) {
+      tipo = 'Enlace';
     } else if (esVideoArchivo(it.archivo)) {
       tipo = 'Video';
-      media = `<video class="curso-video" controls preload="metadata" src="/campus/archivo/${it.id}"></video>`;
+      media = `<video class="curso-media" controls preload="metadata" data-id="${it.id}" src="/campus/archivo/${it.id}"></video>`;
     }
     return `
     <div class="curso-card card">
       ${media}
       <div class="curso-body">
-        <span class="chip curso-chip curso-${tipo.toLowerCase()}">${tipo}</span>
-        <h3 style="margin:.35rem 0 .2rem">${esc(it.titulo)}</h3>
+        <div class="curso-head">
+          <span class="chip curso-tag tag-${tipo.toLowerCase()}">${tipo}</span>
+          ${esAdmin ? `<a class="small muted" href="/campus/estadisticas#item-${it.id}" title="Ver estadísticas">${it.vistos || 0} vista${it.vistos === 1 ? '' : 's'}</a>` : ''}
+        </div>
+        <h3 style="margin:.3rem 0 .2rem">${esc(it.titulo)}</h3>
         ${it.descripcion ? `<p class="small muted" style="margin:0 0 .5rem">${esc(it.descripcion)}</p>` : ''}
         <div class="curso-meta small muted">${esc(it.autor)} · ${fechaHora(it.created_at)}</div>
         <div class="curso-acciones">
-          ${it.url && !videoEmbed(it.url) ? `<a class="btn secondary small" href="${esc(it.url)}" target="_blank" rel="noopener">Abrir enlace</a>` : ''}
+          ${it.url && !yt && !vm ? `<a class="btn secondary small" href="${esc(it.url)}" target="_blank" rel="noopener" data-track="${it.id}">Abrir enlace</a>` : ''}
           ${it.archivo && !esVideoArchivo(it.archivo) ? `<a class="btn secondary small" href="/campus/archivo/${it.id}" target="_blank" rel="noopener">Abrir ${esc((it.archivo_nombre || 'documento').slice(0, 28))}</a>` : ''}
           ${esAdmin ? `<form method="post" action="/campus/items/${it.id}/borrar" onsubmit="return confirm('¿Eliminar «${esc(it.titulo)}» del campus?')" style="display:inline"><button class="btn danger small">Eliminar</button></form>` : ''}
         </div>
       </div>
     </div>`;
   };
+  const nombreEmpresa = (empresas.find(([sl]) => sl === empresa) || [])[1] || '';
   return layout({
     title: 'Campus de formación', user, active: 'campus', sistema: 'campus',
     body: `
   <h1>Campus de formación</h1>
-  <p class="small muted">Elegí la empresa y mirá la documentación y los videos de capacitación${esAdmin ? ' — como admin, subí contenido nuevo abajo' : ''}.</p>
+  <p class="small muted">Elegí la empresa y mirá la documentación y los videos de capacitación.</p>
   <div class="toolbar">
     <div class="seg">
       ${empresas.map(([slug, nombre]) => `<a href="/campus/${slug}" class="${slug === empresa ? 'on' : ''}">${esc(nombre)}</a>`).join('')}
+      ${esAdmin ? `<a href="/campus/estadisticas">Estadísticas</a>` : ''}
     </div>
+    <div class="sp"></div>
+    ${esAdmin ? `<button type="button" class="btn small" onclick="document.getElementById('subirCampus').classList.toggle('abierto')">+ Subir contenido</button>` : ''}
   </div>
   ${esAdmin ? `
-  <div class="card card--accent">
-    <h3 style="margin-top:0">Subir contenido a ${esc((empresas.find(([s]) => s === empresa) || [])[1] || '')}</h3>
+  <div id="subirCampus" class="card card--accent curso-form">
+    <h3 style="margin-top:0">Subir contenido a ${esc(nombreEmpresa)}</h3>
     <form method="post" action="/campus/items" enctype="multipart/form-data">
       <input type="hidden" name="empresa" value="${esc(empresa)}">
       <div class="grid2">
@@ -2632,10 +2644,109 @@ function campusPage({ user, empresa, empresas, items }) {
       </div>
       <div style="margin-top:.9rem"><button class="btn">Publicar en el campus</button></div>
     </form>
-    <p class="caption">Con link de YouTube/Vimeo el video queda embebido. Los archivos se guardan en el servidor (hasta 512 MB) y los videos subidos se reproducen acá mismo.</p>
+    <p class="caption">Con link de YouTube/Vimeo el video queda embebido. Los archivos se guardan en el servidor (hasta 512 MB). Solo los administradores pueden publicar.</p>
   </div>` : ''}
   ${items.length ? `<div class="campus-grid">${items.map(card).join('')}</div>`
-    : `<div class="card"><p class="muted" style="margin:0">Todavía no hay contenido de ${esc((empresas.find(([s]) => s === empresa) || [])[1] || '')}. ${esAdmin ? 'Publicá el primero con el formulario de arriba.' : 'Administración va a ir subiendo documentación y videos acá.'}</p></div>`}`
+    : `<div class="card"><p class="muted" style="margin:0">Todavía no hay contenido de ${esc(nombreEmpresa)}. ${esAdmin ? 'Publicá el primero con "+ Subir contenido".' : 'Administración va a ir subiendo documentación y videos acá.'}</p></div>`}
+  <script>
+  (function () {
+    function beacon(id) { fetch('/campus/vista/' + id, { method: 'POST' }).catch(function () {}); }
+    // Facades: al tocar, se registra la vista y se carga el reproductor real.
+    document.querySelectorAll('.curso-fac').forEach(function (f) {
+      f.addEventListener('click', function () {
+        beacon(f.dataset.id);
+        var ifr = document.createElement('iframe');
+        ifr.className = 'curso-media';
+        ifr.src = f.dataset.src + (f.dataset.src.indexOf('?') >= 0 ? '&' : '?') + 'autoplay=1';
+        ifr.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+        ifr.setAttribute('allowfullscreen', '');
+        ifr.setAttribute('frameborder', '0');
+        f.replaceWith(ifr);
+      });
+    });
+    // Videos subidos: vista al reproducir + progreso cada 10 segundos (y al pausar/terminar).
+    document.querySelectorAll('video.curso-media').forEach(function (v) {
+      var id = v.dataset.id, ultimo = 0, visto = false;
+      function progreso() {
+        if (!id) return;
+        fetch('/campus/progreso/' + id, {
+          method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'segundos=' + Math.floor(v.currentTime || 0) + '&duracion=' + Math.floor(v.duration || 0),
+        }).catch(function () {});
+      }
+      v.addEventListener('play', function () { if (!visto) { visto = true; beacon(id); } });
+      v.addEventListener('timeupdate', function () { if (v.currentTime - ultimo >= 10) { ultimo = v.currentTime; progreso(); } });
+      v.addEventListener('pause', progreso);
+      v.addEventListener('ended', progreso);
+    });
+    // Enlaces externos: se registra el click.
+    document.querySelectorAll('[data-track]').forEach(function (a) {
+      a.addEventListener('click', function () { beacon(a.dataset.track); });
+    });
+  })();
+  </script>`
+  });
+}
+
+// Estadísticas de aprendizaje del campus (solo admin).
+function campusStatsPage({ user, empresas, porItem, usuarios, totalVendedores }) {
+  const horas = (seg) => {
+    if (!seg) return '—';
+    const h = Math.floor(seg / 3600), m = Math.round((seg % 3600) / 60);
+    return h ? `${h} h ${m} m` : `${m} min`;
+  };
+  const nombreEmp = (slug) => (empresas.find(([sl]) => sl === slug) || [])[1] || slug;
+  const pctVideo = (v) => (v.duracion > 0 ? Math.min(100, Math.round((v.segundos / v.duracion) * 100)) : null);
+  return layout({
+    title: 'Estadísticas · Campus', user, active: 'campus', sistema: 'campus',
+    body: `
+  <div class="toolbar"><a class="btn secondary small" href="/campus">← Campus</a></div>
+  <h1>Estadísticas de aprendizaje</h1>
+  <p class="small muted">Quién está mirando el material del campus, hasta dónde llegó en cada video subido y cuántas horas acumula cada uno. Los videos de YouTube/Vimeo registran la reproducción (no el minuto exacto).</p>
+
+  <div class="tiles">
+    <div class="tile"><div class="v">${porItem.length}</div><div class="l">Contenidos publicados</div></div>
+    <div class="tile"><div class="v">${porItem.reduce((a, i) => a + i.vistos.length, 0)}</div><div class="l">Vistas totales (persona × contenido)</div></div>
+    <div class="tile"><div class="v">${horas(usuarios.reduce((a, u) => a + u.segundos, 0))}</div><div class="l">Horas de video del equipo</div></div>
+    <div class="tile"><div class="v">${usuarios.filter((u) => u.contenidos > 0).length} / ${usuarios.length}</div><div class="l">Personas que vieron algo</div></div>
+  </div>
+
+  <h2>Ranking del equipo</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Persona</th><th>Contenidos vistos</th><th>Horas de video</th><th>Última actividad</th></tr></thead>
+    <tbody>${usuarios.map((u, i) => `
+      <tr>
+        <td><div class="ucel">${avatar(u)}<div><strong>${esc(u.name)}</strong>${i === 0 && u.segundos > 0 ? ' <span class="chip" style="background:#C08A2E">Top</span>' : ''}</div></div></td>
+        <td>${u.contenidos}</td>
+        <td>${horas(u.segundos)}</td>
+        <td class="small">${u.ultima ? fechaHora(u.ultima) : '<span class="muted">Nunca entró al material</span>'}</td>
+      </tr>`).join('')}</tbody>
+  </table></div>
+
+  <h2>Por contenido</h2>
+  ${porItem.length ? porItem.map((it) => `
+  <div class="card" id="item-${it.id}">
+    <div class="deal-top">
+      <div>
+        <span class="chip curso-tag tag-${it.esVideo ? 'video' : 'documento'}">${it.esVideo ? 'Video' : 'Documento'}</span>
+        <strong style="margin-left:.4rem">${esc(it.titulo)}</strong>
+        <span class="muted small"> · ${esc(nombreEmp(it.empresa))}</span>
+      </div>
+      <span class="small muted">${it.vistos.length} de ${totalVendedores} vendedores lo vieron</span>
+    </div>
+    ${it.vistos.length ? `
+    <div class="hist" style="margin-top:.5rem">
+      ${it.vistos.map((v) => {
+        const pct = it.esVideo ? pctVideo(v) : null;
+        return `<div class="hist-item">
+          <span style="display:inline-flex;align-items:center;gap:.45rem;min-width:10rem">${avatar({ id: v.user_id, name: v.name, avatar: v.avatar })}${esc(v.name)}</span>
+          ${pct != null ? `<span style="flex:1;display:flex;align-items:center;gap:.5rem"><span class="prog" style="flex:1"><i class="${pct >= 90 ? 'full' : ''}" style="width:${pct}%"></i></span><span class="small" style="min-width:6.5rem">${pct}% · ${horas(v.segundos)}</span></span>`
+            : `<span class="small muted" style="flex:1">${v.veces} apertura${v.veces === 1 ? '' : 's'}</span>`}
+          <span class="cuando">${fechaHora(v.ultima_vista)}</span>
+        </div>`;
+      }).join('')}
+    </div>` : '<p class="muted small" style="margin:.5rem 0 0">Nadie lo vio todavía.</p>'}
+  </div>`).join('') : '<div class="card"><p class="muted" style="margin:0">Sin contenidos publicados todavía.</p></div>'}`
   });
 }
 
@@ -2809,7 +2920,7 @@ function changelogPage({ user, versiones }) {
 
 module.exports = {
   loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage,
-  notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage,
+  notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,
 };
