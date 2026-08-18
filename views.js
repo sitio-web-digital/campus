@@ -807,8 +807,8 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
       </div>
       ${panel !== 'cfd' ? `
       <div>
-        <label>Valor de la venta ($)</label>
-        <input name="mrr" type="number" step="any" min="0" inputmode="decimal" value="${d.mrr ?? ''}" placeholder="Total de la venta">
+        <label>${panel === 'sitioweb' ? 'Valor mensual de la suscripción ($)' : 'Valor de la venta ($)'}</label>
+        <input name="mrr" type="number" step="any" min="0" inputmode="decimal" value="${d.mrr ?? ''}" placeholder="${panel === 'sitioweb' ? 'Lo que paga el cliente por mes' : 'Total de la venta'}">
       </div>` : `
       <div>
         <label>Tipo de venta</label>
@@ -1724,14 +1724,20 @@ function reglasPage({ user, reglas, paneles }) {
     ${fila('s', 'Suscripción mensual')}
     ${fila('i', 'Infraestructura')}
     ${fila('m', 'Mantenimiento')}
-    ${(paneles || []).map((P) => `
+    ${(paneles || []).map((P) => {
+      const r = reglas[P.slug] || {};
+      const esFases = r.tipo === 'fases' && Array.isArray(r.fases) && r.fases.length;
+      const pct = esFases ? r.fases[0].pct : (r.pct ?? 5);
+      const meses = esFases ? r.fases.reduce((a, f) => a + (f.meses || 0), 0) : '';
+      return `
     <div class="card">
-      <h3 style="margin-top:0">Rubro ${esc(P.nombre)} — % por venta</h3>
-      <p class="small muted">Las ventas del panel Comercial ${esc(P.nombre)} usan esta regla (no la de tipo de venta): comisión única con fecha del día del cierre, <strong>cobrable al momento</strong>.</p>
+      <h3 style="margin-top:0">Rubro ${esc(P.nombre)}</h3>
+      <p class="small muted">Las ventas del panel Comercial ${esc(P.nombre)} usan esta regla. Con <strong>meses vacío</strong> es una comisión única del % sobre el valor de la venta, cobrable al momento. Con <strong>meses cargados</strong>, el vendedor cobra ese % del <strong>valor mensual</strong> durante esa cantidad de meses (una cuota por mes desde el cierre) — ej: SitioWeb 80% × 2 meses.</p>
       <div class="grid2">
-        <div><label>Comisión (% del valor de la venta)</label><input name="flat_${P.slug}" type="number" min="0" step="any" value="${reglas[P.slug] ? reglas[P.slug].pct : 5}"></div>
+        <div><label>Comisión (%)</label><input name="flat_${P.slug}" type="number" min="0" step="any" value="${pct}"></div>
+        <div><label>Meses (vacío = pago único al cierre)</label><input name="meses_${P.slug}" type="number" min="0" value="${meses}"></div>
       </div>
-    </div>`).join('')}
+    </div>`; }).join('')}
     <button class="btn">Guardar reglas</button>
   </form>`
   });

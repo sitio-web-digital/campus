@@ -298,6 +298,18 @@ for (const p of PANELES_COMERCIALES) {
   }
 }
 
+// Regla real de SitioWeb Digital (2.11.2): 80% del valor mensual durante 2 meses.
+// Solo pisa el default sembrado (5% plano) para no tocar una regla que el admin ya haya editado.
+try {
+  const sw = db.prepare("SELECT config FROM commission_rules WHERE tipo_venta = 'sitioweb'").get();
+  if (sw && JSON.parse(sw.config).tipo === 'flat' && JSON.parse(sw.config).pct === 5) {
+    db.prepare("UPDATE commission_rules SET config = ? WHERE tipo_venta = 'sitioweb'").run(JSON.stringify({
+      tipo: 'fases', fases: [{ meses: 2, pct: 80 }],
+      nota: 'Venta de SitioWeb Digital: 80% del valor mensual durante los primeros 2 meses. Si el cliente cancela, se cancelan las cuotas restantes.',
+    }));
+  }
+} catch {}
+
 // Migración 2.6.0: los objetivos suman el período diario (rebuild por el CHECK de periodo).
 const goalsSql = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'goals'").get()?.sql || '';
 if (goalsSql && !goalsSql.includes("'dia'")) {

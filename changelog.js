@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.11.2',
+    fecha: '2026-08-17',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Comisión real de SitioWeb Digital: 80% del valor mensual durante los primeros 2 meses (una cuota por mes desde el cierre). La ficha de la lead ahora pide el "valor mensual de la suscripción".' },
+      { tipo: 'mejora', texto: 'Las reglas por rubro en Cobranza → Reglas ahora aceptan % + meses: vacío es pago único al cierre (Góndolas, Estanterías); con meses, el % se cobra sobre el valor mensual esa cantidad de meses.' },
+    ],
+  },
+  {
     version: '2.11.1',
     fecha: '2026-08-17',
     cambios: [

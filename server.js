@@ -1204,10 +1204,13 @@ app.post('/cobranza/reglas', requireAuth, requireAdmin, (req, res) => {
       C.saveRules(tipo, { tipo: 'fases', fases, ...(nota ? { nota } : {}) });
     }
   }
-  // Rubros con % plano cobrable al momento (uno por panel comercial configurable).
+  // Rubros por panel: % por venta, opcionalmente repartido en N meses (ej: SitioWeb 80% x 2 meses).
   for (const P of PANELES_COMERCIALES) {
     const pct = cleanNum(req.body[`flat_${P.slug}`]);
-    if (pct != null) C.saveRules(P.slug, { tipo: 'flat', pct, nota: `Venta de ${P.nombre}: comisión única cobrable al momento.` });
+    if (pct == null) continue;
+    const meses = cleanInt(req.body[`meses_${P.slug}`]);
+    if (meses > 1) C.saveRules(P.slug, { tipo: 'fases', fases: [{ meses, pct }], nota: `Venta de ${P.nombre}: ${pct}% del valor mensual durante ${meses} meses. Si el cliente cancela, se cancelan las cuotas restantes.` });
+    else C.saveRules(P.slug, { tipo: 'flat', pct, nota: `Venta de ${P.nombre}: comisión única cobrable al momento.` });
   }
   res.redirect('/cobranza/reglas');
 });
