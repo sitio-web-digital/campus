@@ -973,6 +973,21 @@ html.dark .theme-btn .ic-luna { display:none; }
 .curso-acciones { display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.55rem; }
 .curso-form { display:none; }
 .curso-form.abierto { display:block; }
+.curso-doc { position:relative; width:100%; aspect-ratio:16/6.5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.45rem; text-decoration:none; color:#fff; }
+.curso-doc:hover { text-decoration:none; color:#fff; filter:brightness(1.07); }
+.curso-doc svg { width:2.4rem; height:2.4rem; opacity:.92; }
+.curso-ext { font-size:.62rem; font-weight:800; letter-spacing:.14em; background:rgba(255,255,255,.18); padding:.2rem .6rem; border-radius:999px; }
+.ext-pdf { background:linear-gradient(140deg, #A8433E, #7E2F2B); }
+.ext-doc { background:linear-gradient(140deg, #2E5F9E, #1F4676); }
+.ext-xls { background:linear-gradient(140deg, #2F7D4F, #1F5A38); }
+.ext-ppt { background:linear-gradient(140deg, #C06A2C, #94501F); }
+.ext-otro { background:linear-gradient(140deg, #5B6773, #3E4854); }
+.doc-link { background:linear-gradient(140deg, #0E6E66, #0A4E48); }
+.curso-doc + .curso-body { border-top:1px solid var(--line); }
+.curso-imglink { display:block; }
+.curso-img { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; background:#10151B; }
+.curso-imglink + .curso-body { border-top:1px solid var(--line); }
+.curso-file { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:0 0 .35rem; font-size:.72rem; color:var(--faint); }
 
 /* ---------- notificaciones con actor (foto + nombre + hora) ---------- */
 /* El popup abre hacia la derecha de la campanita (anclado a la izquierda de la barra) para no salirse de pantalla. */
@@ -2584,10 +2599,15 @@ const idVimeo = (url) => ((url || '').match(/vimeo\.com\/(\d+)/) || [])[1] || nu
 function campusPage({ user, empresa, empresas, items }) {
   const esAdmin = user.role === 'admin';
   const esVideoArchivo = (a) => /\.(mp4|webm|mov)$/i.test(a || '');
+  const ICONO_DOC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h8L19.5 8v12A1.5 1.5 0 0 1 18 21.5H6A1.5 1.5 0 0 1 4.5 20V4A1.5 1.5 0 0 1 6 2.5z"/><path d="M14 2.5V8h5.5"/><path d="M8 13h8M8 16.5h5.5"/></svg>`;
+  const ICONO_LINK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a5 5 0 0 0 7.1 0l2.9-2.9a5 5 0 0 0-7.1-7.1l-1.6 1.6"/><path d="M14 10a5 5 0 0 0-7.1 0l-2.9 2.9a5 5 0 0 0 7.1 7.1l1.6-1.6"/></svg>`;
+  const EXT_INFO = { pdf: ['PDF', 'ext-pdf'], doc: ['WORD', 'ext-doc'], docx: ['WORD', 'ext-doc'], xls: ['EXCEL', 'ext-xls'], xlsx: ['EXCEL', 'ext-xls'], ppt: ['PPT', 'ext-ppt'], pptx: ['PPT', 'ext-ppt'] };
   const card = (it) => {
     let media = '';
     let tipo = 'Documento';
     const yt = idYouTube(it.url), vm = idVimeo(it.url);
+    const ext = ((it.archivo || '').split('.').pop() || '').toLowerCase();
+    const esImagen = ['png', 'jpg', 'jpeg'].includes(ext);
     if (yt || vm) {
       tipo = 'Video';
       const src = yt ? `https://www.youtube.com/embed/${yt}` : `https://player.vimeo.com/video/${vm}`;
@@ -2595,9 +2615,15 @@ function campusPage({ user, empresa, empresas, items }) {
       media = `<button type="button" class="curso-fac" data-id="${it.id}" data-src="${src}"${yt ? ` style="background-image:url('https://i.ytimg.com/vi/${yt}/hqdefault.jpg')"` : ''} aria-label="Reproducir video"><span class="curso-play"></span></button>`;
     } else if (it.url) {
       tipo = 'Enlace';
+      media = `<a class="curso-doc doc-link" href="${esc(it.url)}" target="_blank" rel="noopener" data-track="${it.id}">${ICONO_LINK}<span class="curso-ext">ENLACE EXTERNO</span></a>`;
     } else if (esVideoArchivo(it.archivo)) {
       tipo = 'Video';
       media = `<video class="curso-media" controls preload="metadata" data-id="${it.id}" src="/campus/archivo/${it.id}"></video>`;
+    } else if (esImagen) {
+      media = `<a class="curso-imglink" href="/campus/archivo/${it.id}" target="_blank" rel="noopener"><img class="curso-img" src="/campus/archivo/${it.id}?thumb=1" alt="" loading="lazy"></a>`;
+    } else if (it.archivo) {
+      const [extLabel, extClase] = EXT_INFO[ext] || [ext.toUpperCase() || 'ARCHIVO', 'ext-otro'];
+      media = `<a class="curso-doc ${extClase}" href="/campus/archivo/${it.id}" target="_blank" rel="noopener">${ICONO_DOC}<span class="curso-ext">${extLabel}</span></a>`;
     }
     return `
     <div class="curso-card card">
@@ -2609,10 +2635,12 @@ function campusPage({ user, empresa, empresas, items }) {
         </div>
         <h3 style="margin:.3rem 0 .2rem">${esc(it.titulo)}</h3>
         ${it.descripcion ? `<p class="small muted" style="margin:0 0 .5rem">${esc(it.descripcion)}</p>` : ''}
+        ${it.archivo && !esVideoArchivo(it.archivo) ? `<div class="curso-file" title="${esc(it.archivo_nombre || '')}">${esc(it.archivo_nombre || '')}</div>` : ''}
         <div class="curso-meta small muted">${esc(it.autor)} · ${fechaHora(it.created_at)}</div>
         <div class="curso-acciones">
           ${it.url && !yt && !vm ? `<a class="btn secondary small" href="${esc(it.url)}" target="_blank" rel="noopener" data-track="${it.id}">Abrir enlace</a>` : ''}
-          ${it.archivo && !esVideoArchivo(it.archivo) ? `<a class="btn secondary small" href="/campus/archivo/${it.id}" target="_blank" rel="noopener">Abrir ${esc((it.archivo_nombre || 'documento').slice(0, 28))}</a>` : ''}
+          ${it.archivo && !esVideoArchivo(it.archivo) && !esImagen ? `<a class="btn secondary small" href="/campus/archivo/${it.id}" target="_blank" rel="noopener">Abrir documento</a>` : ''}
+          ${esImagen ? `<a class="btn secondary small" href="/campus/archivo/${it.id}" target="_blank" rel="noopener">Ver imagen</a>` : ''}
           ${esAdmin ? `<form method="post" action="/campus/items/${it.id}/borrar" onsubmit="return confirm('¿Eliminar «${esc(it.titulo)}» del campus?')" style="display:inline"><button class="btn danger small">Eliminar</button></form>` : ''}
         </div>
       </div>

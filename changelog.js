@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.17.2',
+    fecha: '2026-08-18',
+    cambios: [
+      { tipo: 'mejora', texto: 'Los documentos del campus ahora tienen miniatura propia: portada de color según el tipo (PDF rojo, Word azul, Excel verde, PPT naranja, enlaces en verde petróleo) con su ícono, las imágenes muestran su vista previa, el botón quedó limpio ("Abrir documento") y el nombre del archivo va aparte, recortado con puntos suspensivos.' },
+    ],
+  },
+  {
     version: '2.17.1',
     fecha: '2026-08-18',
     cambios: [

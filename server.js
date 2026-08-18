@@ -1234,7 +1234,7 @@ app.get('/campus', requireAuth, (req, res) => res.redirect('/campus/general'));
 app.get('/campus/archivo/:id', requireAuth, (req, res) => {
   const it = db.prepare('SELECT id, archivo, archivo_nombre FROM campus_items WHERE id = ?').get(req.params.id);
   if (!it || !it.archivo || !/^[\w.-]+$/.test(it.archivo)) return res.status(404).end();
-  if (!req.headers.range) registrarVistaCampus(it.id, req.user.id);
+  if (!req.headers.range && !req.query.thumb) registrarVistaCampus(it.id, req.user.id);
   res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(it.archivo_nombre || it.archivo)}"`);
   res.sendFile(path.join(CAMPUS_DIR, it.archivo), (err) => { if (err && !res.headersSent) res.status(404).end(); });
 });
