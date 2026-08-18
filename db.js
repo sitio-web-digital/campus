@@ -294,6 +294,15 @@ db.exec(`CREATE TABLE IF NOT EXISTS campus_items (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );`);
 
+// Migración 2.17.1: validación de video completo — tiempo realmente reproducido y marca de completado.
+try {
+  const vCols = db.prepare('PRAGMA table_info(campus_vistas)').all().map((c) => c.name);
+  if (vCols.length && !vCols.includes('reproducido')) {
+    db.exec('ALTER TABLE campus_vistas ADD COLUMN reproducido REAL NOT NULL DEFAULT 0');
+    db.exec('ALTER TABLE campus_vistas ADD COLUMN completado_at TEXT');
+  }
+} catch {}
+
 // Migración 2.17.0: tracking de vistas del campus (quién vio qué y, en videos subidos, hasta dónde).
 db.exec(`CREATE TABLE IF NOT EXISTS campus_vistas (
   item_id INTEGER NOT NULL REFERENCES campus_items(id) ON DELETE CASCADE,
@@ -301,6 +310,8 @@ db.exec(`CREATE TABLE IF NOT EXISTS campus_vistas (
   veces INTEGER NOT NULL DEFAULT 0,
   segundos REAL NOT NULL DEFAULT 0,
   duracion REAL,
+  reproducido REAL NOT NULL DEFAULT 0,
+  completado_at TEXT,
   primera_vista TEXT NOT NULL DEFAULT (datetime('now')),
   ultima_vista TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (item_id, user_id)

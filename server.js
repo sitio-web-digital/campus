@@ -1245,14 +1245,22 @@ app.post('/campus/vista/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// Progreso de un video subido: guarda hasta dónde llegó (el máximo histórico) y la duración.
+// Progreso de un video subido: hasta dónde llegó (máximo histórico) + segundos realmente
+// reproducidos (el cliente manda el delta de reproducción real, no cuenta los saltos de barra).
+// "Completado" = reprodujo de verdad al menos el 80% del video (saltar la barra no suma).
 app.post('/campus/progreso/:id', requireAuth, (req, res) => {
   const seg = Math.max(0, parseFloat(req.body.segundos) || 0);
   const dur = Math.max(0, parseFloat(req.body.duracion) || 0) || null;
+  const rep = Math.max(0, Math.min(30, parseFloat(req.body.rep) || 0)); // delta acotado (se manda cada ~10s)
   if (db.prepare('SELECT 1 FROM campus_items WHERE id = ?').get(req.params.id)) {
-    db.prepare(`INSERT INTO campus_vistas (item_id, user_id, veces, segundos, duracion) VALUES (?, ?, 1, ?, ?)
+    db.prepare(`INSERT INTO campus_vistas (item_id, user_id, veces, segundos, duracion, reproducido) VALUES (?, ?, 1, ?, ?, ?)
       ON CONFLICT(item_id, user_id) DO UPDATE SET segundos = MAX(segundos, excluded.segundos),
-        duracion = COALESCE(excluded.duracion, duracion), ultima_vista = datetime('now')`).run(req.params.id, req.user.id, seg, dur);
+        duracion = COALESCE(excluded.duracion, duracion), reproducido = reproducido + excluded.reproducido,
+        ultima_vista = datetime('now')`).run(req.params.id, req.user.id, seg, dur, rep);
+    const v = db.prepare('SELECT * FROM campus_vistas WHERE item_id = ? AND user_id = ?').get(req.params.id, req.user.id);
+    if (!v.completado_at && v.duracion > 0 && v.reproducido >= v.duracion * 0.8) {
+      db.prepare("UPDATE campus_vistas SET completado_at = datetime('now') WHERE item_id = ? AND user_id = ?").run(req.params.id, req.user.id);
+    }
   }
   res.json({ ok: true });
 });
@@ -1272,7 +1280,8 @@ app.get('/campus/estadisticas', requireAuth, requireAdmin, (req, res) => {
       return {
         ...u,
         contenidos: mias.length,
-        segundos: mias.reduce((a, v) => a + (v.segundos || 0), 0),
+        completados: mias.filter((v) => v.completado_at).length,
+        segundos: mias.reduce((a, v) => a + (v.reproducido || v.segundos || 0), 0),
         ultima: mias.reduce((a, v) => (v.ultima_vista > a ? v.ultima_vista : a), ''),
       };
     })

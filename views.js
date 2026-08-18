@@ -114,6 +114,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
   } else if (sistema === 'campus') {
     links = `
         <a href="/campus" class="${active === 'campus' ? 'on' : ''}">${ICONS.docs}<span>Contenido</span></a>
+        ${user && user.role === 'admin' ? `<a href="/campus/estadisticas" class="${active === 'stats' ? 'on' : ''}">${ICONS.dashboard}<span>Estadísticas</span></a>` : ''}
         <a href="/documentacion" class="${active === 'docs' ? 'on' : ''}">${ICONS.metas}<span>Sistema</span></a>`;
   } else if (sistema === 'admin') {
     links = `
@@ -2626,7 +2627,6 @@ function campusPage({ user, empresa, empresas, items }) {
   <div class="toolbar">
     <div class="seg">
       ${empresas.map(([slug, nombre]) => `<a href="/campus/${slug}" class="${slug === empresa ? 'on' : ''}">${esc(nombre)}</a>`).join('')}
-      ${esAdmin ? `<a href="/campus/estadisticas">Estadísticas</a>` : ''}
     </div>
     <div class="sp"></div>
     ${esAdmin ? `<button type="button" class="btn small" onclick="document.getElementById('subirCampus').classList.toggle('abierto')">+ Subir contenido</button>` : ''}
@@ -2666,16 +2666,23 @@ function campusPage({ user, empresa, empresas, items }) {
     });
     // Videos subidos: vista al reproducir + progreso cada 10 segundos (y al pausar/terminar).
     document.querySelectorAll('video.curso-media').forEach(function (v) {
-      var id = v.dataset.id, ultimo = 0, visto = false;
+      var id = v.dataset.id, ultimo = 0, visto = false, prevT = 0, acc = 0;
       function progreso() {
         if (!id) return;
+        var rep = acc; acc = 0;
         fetch('/campus/progreso/' + id, {
           method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: 'segundos=' + Math.floor(v.currentTime || 0) + '&duracion=' + Math.floor(v.duration || 0),
+          body: 'segundos=' + Math.floor(v.currentTime || 0) + '&duracion=' + Math.floor(v.duration || 0) + '&rep=' + rep.toFixed(1),
         }).catch(function () {});
       }
-      v.addEventListener('play', function () { if (!visto) { visto = true; beacon(id); } });
-      v.addEventListener('timeupdate', function () { if (v.currentTime - ultimo >= 10) { ultimo = v.currentTime; progreso(); } });
+      v.addEventListener('play', function () { if (!visto) { visto = true; beacon(id); } prevT = v.currentTime; });
+      v.addEventListener('seeking', function () { prevT = v.currentTime; });
+      v.addEventListener('timeupdate', function () {
+        var d = v.currentTime - prevT;
+        if (d > 0 && d < 2) acc += d; // solo reproducción real: los saltos de barra no suman
+        prevT = v.currentTime;
+        if (v.currentTime - ultimo >= 10) { ultimo = v.currentTime; progreso(); }
+      });
       v.addEventListener('pause', progreso);
       v.addEventListener('ended', progreso);
     });
@@ -2698,7 +2705,7 @@ function campusStatsPage({ user, empresas, porItem, usuarios, totalVendedores })
   const nombreEmp = (slug) => (empresas.find(([sl]) => sl === slug) || [])[1] || slug;
   const pctVideo = (v) => (v.duracion > 0 ? Math.min(100, Math.round((v.segundos / v.duracion) * 100)) : null);
   return layout({
-    title: 'Estadísticas · Campus', user, active: 'campus', sistema: 'campus',
+    title: 'Estadísticas · Campus', user, active: 'stats', sistema: 'campus',
     body: `
   <div class="toolbar"><a class="btn secondary small" href="/campus">← Campus</a></div>
   <h1>Estadísticas de aprendizaje</h1>
@@ -2708,16 +2715,18 @@ function campusStatsPage({ user, empresas, porItem, usuarios, totalVendedores })
     <div class="tile"><div class="v">${porItem.length}</div><div class="l">Contenidos publicados</div></div>
     <div class="tile"><div class="v">${porItem.reduce((a, i) => a + i.vistos.length, 0)}</div><div class="l">Vistas totales (persona × contenido)</div></div>
     <div class="tile"><div class="v">${horas(usuarios.reduce((a, u) => a + u.segundos, 0))}</div><div class="l">Horas de video del equipo</div></div>
+    <div class="tile"><div class="v">${usuarios.reduce((a, u) => a + (u.completados || 0), 0)}</div><div class="l">Videos completados (al 80%)</div></div>
     <div class="tile"><div class="v">${usuarios.filter((u) => u.contenidos > 0).length} / ${usuarios.length}</div><div class="l">Personas que vieron algo</div></div>
   </div>
 
   <h2>Ranking del equipo</h2>
   <div class="tablewrap"><table>
-    <thead><tr><th>Persona</th><th>Contenidos vistos</th><th>Horas de video</th><th>Última actividad</th></tr></thead>
+    <thead><tr><th>Persona</th><th>Contenidos vistos</th><th>Videos completados</th><th>Horas de video</th><th>Última actividad</th></tr></thead>
     <tbody>${usuarios.map((u, i) => `
       <tr>
         <td><div class="ucel">${avatar(u)}<div><strong>${esc(u.name)}</strong>${i === 0 && u.segundos > 0 ? ' <span class="chip" style="background:#C08A2E">Top</span>' : ''}</div></div></td>
         <td>${u.contenidos}</td>
+        <td>${u.completados || 0}</td>
         <td>${horas(u.segundos)}</td>
         <td class="small">${u.ultima ? fechaHora(u.ultima) : '<span class="muted">Nunca entró al material</span>'}</td>
       </tr>`).join('')}</tbody>
@@ -2738,9 +2747,13 @@ function campusStatsPage({ user, empresas, porItem, usuarios, totalVendedores })
     <div class="hist" style="margin-top:.5rem">
       ${it.vistos.map((v) => {
         const pct = it.esVideo ? pctVideo(v) : null;
+        const salto = !v.completado_at && v.duracion > 0 && v.segundos >= v.duracion * 0.95 && v.reproducido < v.duracion * 0.8;
+        const estado = v.completado_at
+          ? `<span class="chip" style="background:#2F7D4F" title="Reprodujo al menos el 80% real del video (${fechaHora(v.completado_at)})">Completado</span>`
+          : salto ? `<span class="chip" style="background:#A8791F" title="Llegó al final pero reproduciendo menos del 80%: adelantó la barra">Saltó al final</span>` : '';
         return `<div class="hist-item">
           <span style="display:inline-flex;align-items:center;gap:.45rem;min-width:10rem">${avatar({ id: v.user_id, name: v.name, avatar: v.avatar })}${esc(v.name)}</span>
-          ${pct != null ? `<span style="flex:1;display:flex;align-items:center;gap:.5rem"><span class="prog" style="flex:1"><i class="${pct >= 90 ? 'full' : ''}" style="width:${pct}%"></i></span><span class="small" style="min-width:6.5rem">${pct}% · ${horas(v.segundos)}</span></span>`
+          ${pct != null ? `<span style="flex:1;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap"><span class="prog" style="flex:1;min-width:5rem"><i class="${v.completado_at ? 'full' : ''}" style="width:${pct}%"></i></span><span class="small" style="white-space:nowrap">${pct}% · vio ${horas(v.reproducido || 0)} reales</span>${estado}</span>`
             : `<span class="small muted" style="flex:1">${v.veces} apertura${v.veces === 1 ? '' : 's'}</span>`}
           <span class="cuando">${fechaHora(v.ultima_vista)}</span>
         </div>`;

@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.17.1',
+    fecha: '2026-08-18',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Validación de video completo: un video subido cuenta como "Completado" cuando el vendedor reprodujo de verdad al menos el 80% (adelantar la barra no suma). En Estadísticas aparece el chip verde "Completado", la columna "Videos completados" en el ranking, los minutos reales vistos por persona, y el chip "Saltó al final" si llegó al final sin mirarlo.' },
+      { tipo: 'mejora', texto: 'Estadísticas ahora es una opción propia de la barra del Campus, junto a Contenido y Sistema — visible solo para administradores.' },
+    ],
+  },
+  {
     version: '2.17.0',
     fecha: '2026-08-18',
     cambios: [
