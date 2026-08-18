@@ -3,7 +3,7 @@ const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
-const { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, SISTEMAS, PANELES_COMERCIALES } = require('./db');
+const { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, SISTEMAS, PANELES_COMERCIALES, CAMPUS_EMPRESAS } = require('./db');
 const PANEL_SLUGS = PANELES_COMERCIALES.map((p) => p.slug);
 const V = require('./views');
 const C = require('./comisiones');
@@ -1198,6 +1198,58 @@ app.get('/notificaciones', requireAuth, (req, res) => {
   res.send(V.notificacionesPage({ user: req.user, notis }));
   // Se marcan como leídas después de mostrarlas: las no leídas se ven resaltadas una vez.
   db.prepare("UPDATE notifications SET leida = 1, leida_at = datetime('now') WHERE user_id = ? AND leida = 0").run(req.user.id);
+});
+
+/* ---------------- campus de formación (docs y videos por empresa) ---------------- */
+
+const CAMPUS_DIR = path.join(__dirname, 'data', 'campus');
+if (!fs.existsSync(CAMPUS_DIR)) fs.mkdirSync(CAMPUS_DIR, { recursive: true });
+const uploadCampus = multer({
+  storage: multer.diskStorage({
+    destination: CAMPUS_DIR,
+    filename: (req, file, cb) => cb(null, `c-${Date.now()}${path.extname(file.originalname).toLowerCase()}`),
+  }),
+  limits: { fileSize: 512 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => cb(null, ['.mp4', '.webm', '.mov', '.pdf', '.png', '.jpg', '.jpeg', '.pptx', '.docx', '.xlsx'].includes(path.extname(file.originalname).toLowerCase())),
+});
+const empresaCampus = (e) => (CAMPUS_EMPRESAS.some(([s]) => s === e) ? e : 'general');
+
+app.get('/campus', requireAuth, (req, res) => res.redirect('/campus/general'));
+
+// El archivo se sirve con soporte de rangos (los videos se pueden adelantar/atrasar).
+app.get('/campus/archivo/:id', requireAuth, (req, res) => {
+  const it = db.prepare('SELECT archivo, archivo_nombre FROM campus_items WHERE id = ?').get(req.params.id);
+  if (!it || !it.archivo || !/^[\w.-]+$/.test(it.archivo)) return res.status(404).end();
+  res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(it.archivo_nombre || it.archivo)}"`);
+  res.sendFile(path.join(CAMPUS_DIR, it.archivo), (err) => { if (err && !res.headersSent) res.status(404).end(); });
+});
+
+app.get('/campus/:empresa', requireAuth, (req, res) => {
+  const empresa = empresaCampus(req.params.empresa);
+  const items = db.prepare('SELECT i.*, u.name AS autor FROM campus_items i JOIN users u ON u.id = i.created_by WHERE i.empresa = ? ORDER BY i.id DESC').all(empresa);
+  res.send(V.campusPage({ user: req.user, empresa, empresas: CAMPUS_EMPRESAS, items }));
+});
+
+app.post('/campus/items', requireAuth, requireAdmin, uploadCampus.single('archivo'), (req, res) => {
+  const empresa = empresaCampus(req.body.empresa);
+  const titulo = clean(req.body.titulo);
+  const url = clean(req.body.url);
+  if (titulo && (url || req.file)) {
+    db.prepare('INSERT INTO campus_items (empresa, titulo, descripcion, url, archivo, archivo_nombre, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(empresa, titulo, clean(req.body.descripcion), url || null, req.file ? req.file.filename : null, req.file ? req.file.originalname : null, req.user.id);
+  } else if (req.file) {
+    try { fs.unlinkSync(path.join(CAMPUS_DIR, req.file.filename)); } catch {}
+  }
+  res.redirect(`/campus/${empresa}`);
+});
+
+app.post('/campus/items/:id/borrar', requireAuth, requireAdmin, (req, res) => {
+  const it = db.prepare('SELECT * FROM campus_items WHERE id = ?').get(req.params.id);
+  if (it) {
+    db.prepare('DELETE FROM campus_items WHERE id = ?').run(it.id);
+    if (it.archivo) { try { fs.unlinkSync(path.join(CAMPUS_DIR, it.archivo)); } catch {} }
+  }
+  res.redirect(`/campus/${it ? it.empresa : 'general'}`);
 });
 
 /* ---------------- documentación y changelog ---------------- */

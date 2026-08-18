@@ -280,6 +280,19 @@ if (!userCols2.includes('last_version_vista')) {
 if (!userCols2.includes('avatar')) {
   db.exec('ALTER TABLE users ADD COLUMN avatar TEXT');
 }
+
+// Migración 2.16.0: Campus de formación (documentación y videos por empresa, estilo Udemy).
+db.exec(`CREATE TABLE IF NOT EXISTS campus_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  empresa TEXT NOT NULL,
+  titulo TEXT NOT NULL,
+  descripcion TEXT,
+  url TEXT,
+  archivo TEXT,
+  archivo_nombre TEXT,
+  created_by INTEGER NOT NULL REFERENCES users(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);`);
 const notiCols = db.prepare('PRAGMA table_info(notifications)').all().map((c) => c.name);
 if (!notiCols.includes('lote')) {
   db.exec('ALTER TABLE notifications ADD COLUMN lote TEXT');
@@ -461,4 +474,7 @@ function getSessionSecret() {
   return secret;
 }
 
-module.exports = { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, SISTEMAS, PANELES_COMERCIALES };
+// Secciones del Campus de formación: una por empresa + General.
+const CAMPUS_EMPRESAS = [['general', 'General'], ...PANELES_COMERCIALES.map((p) => [p.slug, p.nombre])];
+
+module.exports = { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, SISTEMAS, PANELES_COMERCIALES, CAMPUS_EMPRESAS };

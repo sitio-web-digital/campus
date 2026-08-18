@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.16.0',
+    fecha: '2026-08-18',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Campus de formación: panel nuevo estilo Udemy — elegís la empresa (General, CFD, Góndolas, Estanterías, SitioWeb) y ves los videos y documentos de capacitación. Los administradores publican links de YouTube/Vimeo (quedan embebidos) o suben archivos (video, PDF, imagen, Office hasta 512 MB).' },
+      { tipo: 'mejora', texto: 'La sección Docs salió de la navegación del panel comercial: ahora vive en el Campus de formación, pestaña "Sistema" (junto al Changelog y el manual). "Panel de Cursos — Próximamente" pasó a ser el Campus real en el menú y el inicio.' },
+    ],
+  },
+  {
     version: '2.15.2',
     fecha: '2026-08-17',
     cambios: [

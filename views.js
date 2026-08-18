@@ -39,7 +39,7 @@ const ICONS = {
 };
 const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F3459'/%3E%3Ctext x='16' y='21' font-size='12' font-family='Helvetica,Arial' font-weight='bold' fill='white' text-anchor='middle'%3EC4D%3C/text%3E%3C/svg%3E";
 
-const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', hub: 'Campus C4D' };
+const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', hub: 'Campus C4D' };
 const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permisos || []).includes(s));
 
 // Ícono hoja para PuntoCO2 (plataforma de huella de carbono).
@@ -59,7 +59,7 @@ function sysSwitch(sistema, user) {
       ${tieneSistema(user, 'cobranza') ? `<a href="/cobranza">Panel de Cobranza</a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
       <span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>
-      <span class="soon"><span>Panel de Cursos</span><span class="soon-chip">Próximamente</span></span>
+      <a href="/campus">Campus de formación</a>
       <div class="sys-sep"></div>
       <a class="sys-ext sys-est" href="https://estanteriasreforzadas.com/" target="_blank" rel="noopener">
         <span class="se-ic"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/></svg></span>
@@ -111,6 +111,10 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         ${user && user.role === 'admin' ? `<a href="/cobranza/reglas" class="${active === 'reglas' ? 'on' : ''}">${ICONS.docs}<span>Reglas</span></a>` : ''}`;
   } else if (sistema === 'hub') {
     links = '';
+  } else if (sistema === 'campus') {
+    links = `
+        <a href="/campus" class="${active === 'campus' ? 'on' : ''}">${ICONS.docs}<span>Contenido</span></a>
+        <a href="/documentacion" class="${active === 'docs' ? 'on' : ''}">${ICONS.metas}<span>Sistema</span></a>`;
   } else if (sistema === 'admin') {
     links = `
         <a href="/admin" class="${active === 'admin' ? 'on' : ''}">${ICONS.equipo}<span>Usuarios</span></a>
@@ -131,8 +135,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
         ${user && user.role === 'admin' ? `<a href="/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
         <a href="/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>
-        <a href="/admin" class="${active === 'equipo' ? 'on' : ''}">${ICONS.equipo}<span>Equipo</span></a>` : ''}
-        <a href="/documentacion" class="${active === 'docs' ? 'on' : ''}">${ICONS.docs}<span>Docs</span></a>`;
+        <a href="/admin" class="${active === 'equipo' ? 'on' : ''}">${ICONS.equipo}<span>Equipo</span></a>` : ''}`;
   }
   const nav = user ? `
   <nav class="nav">
@@ -944,6 +947,19 @@ html.dark .theme-btn .ic-luna { display:none; }
 .ucel > div { min-width:0; }
 .avatar-xl { width:4.2rem; height:4.2rem; font-size:1.3rem; }
 .perfil-foto { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
+
+/* ---------- campus de formación ---------- */
+.campus-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:.9rem; }
+.curso-card { padding:0; overflow:hidden; display:flex; flex-direction:column; margin-bottom:0; }
+.curso-video { width:100%; aspect-ratio:16/9; border:none; display:block; background:#000; }
+.curso-body { padding:.8rem .95rem .9rem; display:flex; flex-direction:column; flex:1; }
+.curso-chip { align-self:flex-start; }
+.curso-video + .curso-body { border-top:1px solid var(--line); }
+.chip.curso-video, .curso-chip.curso-video { background:#8E3B38; }
+.curso-chip.curso-documento { background:var(--accent); }
+.curso-chip.curso-enlace { background:#5B6773; }
+.curso-meta { margin-top:auto; padding-top:.4rem; }
+.curso-acciones { display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.55rem; }
 `;
 
 /* ---------------- páginas ---------------- */
@@ -2013,12 +2029,11 @@ function hubPage({ user }) {
         <h3>Panel de Developers</h3>
         <p>Proyectos, entregas y documentación técnica del equipo de desarrollo.</p>
       </div>
-      <div class="hub-card hub-soon">
-        <span class="soon-chip hc-soon">Próximamente</span>
+      <a class="hub-card" href="/campus">
         <span class="hc-ic">${IC('<path d="M10 4L2.5 7.5 10 11l7.5-3.5L10 4z"/><path d="M5 9v4c0 1.2 2.2 2.5 5 2.5s5-1.3 5-2.5V9"/>')}</span>
-        <h3>Panel de Cursos</h3>
-        <p>Capacitaciones y formación comercial del equipo.</p>
-      </div>
+        <h3>Campus de formación</h3>
+        <p>Documentación y videos de capacitación por empresa, subidos por administración.</p>
+      </a>
       <a class="hub-card hub-pco2" href="https://puntoco2.com/home" target="_blank" rel="noopener">
         <span class="hc-ic">${ICON_PCO2}</span>
         <h3>PuntoCO2</h3>
@@ -2521,6 +2536,77 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
   });
 }
 
+/* --------- campus de formación --------- */
+
+// Videos de YouTube/Vimeo se embeben; otros links quedan como botón.
+function videoEmbed(url) {
+  const yt = (url || '').match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/);
+  if (yt) return `<iframe class="curso-video" src="https://www.youtube.com/embed/${yt[1]}" title="Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+  const vm = (url || '').match(/vimeo\.com\/(\d+)/);
+  if (vm) return `<iframe class="curso-video" src="https://player.vimeo.com/video/${vm[1]}" frameborder="0" allowfullscreen loading="lazy"></iframe>`;
+  return null;
+}
+
+function campusPage({ user, empresa, empresas, items }) {
+  const esAdmin = user.role === 'admin';
+  const esVideoArchivo = (a) => /\.(mp4|webm|mov)$/i.test(a || '');
+  const card = (it) => {
+    let media = '';
+    let tipo = 'Documento';
+    if (it.url) {
+      const emb = videoEmbed(it.url);
+      tipo = emb ? 'Video' : 'Enlace';
+      media = emb || '';
+    } else if (esVideoArchivo(it.archivo)) {
+      tipo = 'Video';
+      media = `<video class="curso-video" controls preload="metadata" src="/campus/archivo/${it.id}"></video>`;
+    }
+    return `
+    <div class="curso-card card">
+      ${media}
+      <div class="curso-body">
+        <span class="chip curso-chip curso-${tipo.toLowerCase()}">${tipo}</span>
+        <h3 style="margin:.35rem 0 .2rem">${esc(it.titulo)}</h3>
+        ${it.descripcion ? `<p class="small muted" style="margin:0 0 .5rem">${esc(it.descripcion)}</p>` : ''}
+        <div class="curso-meta small muted">${esc(it.autor)} · ${fechaHora(it.created_at)}</div>
+        <div class="curso-acciones">
+          ${it.url && !videoEmbed(it.url) ? `<a class="btn secondary small" href="${esc(it.url)}" target="_blank" rel="noopener">Abrir enlace</a>` : ''}
+          ${it.archivo && !esVideoArchivo(it.archivo) ? `<a class="btn secondary small" href="/campus/archivo/${it.id}" target="_blank" rel="noopener">Abrir ${esc((it.archivo_nombre || 'documento').slice(0, 28))}</a>` : ''}
+          ${esAdmin ? `<form method="post" action="/campus/items/${it.id}/borrar" onsubmit="return confirm('¿Eliminar «${esc(it.titulo)}» del campus?')" style="display:inline"><button class="btn danger small">Eliminar</button></form>` : ''}
+        </div>
+      </div>
+    </div>`;
+  };
+  return layout({
+    title: 'Campus de formación', user, active: 'campus', sistema: 'campus',
+    body: `
+  <h1>Campus de formación</h1>
+  <p class="small muted">Elegí la empresa y mirá la documentación y los videos de capacitación${esAdmin ? ' — como admin, subí contenido nuevo abajo' : ''}.</p>
+  <div class="toolbar">
+    <div class="seg">
+      ${empresas.map(([slug, nombre]) => `<a href="/campus/${slug}" class="${slug === empresa ? 'on' : ''}">${esc(nombre)}</a>`).join('')}
+    </div>
+  </div>
+  ${esAdmin ? `
+  <div class="card card--accent">
+    <h3 style="margin-top:0">Subir contenido a ${esc((empresas.find(([s]) => s === empresa) || [])[1] || '')}</h3>
+    <form method="post" action="/campus/items" enctype="multipart/form-data">
+      <input type="hidden" name="empresa" value="${esc(empresa)}">
+      <div class="grid2">
+        <div><label>Título *</label><input name="titulo" required maxlength="120" placeholder="Ej: Cómo cotizar una góndola paso a paso"></div>
+        <div><label>Descripción</label><input name="descripcion" maxlength="300" placeholder="Opcional: de qué trata y para quién es"></div>
+        <div><label>Link de video (YouTube o Vimeo)</label><input name="url" type="url" placeholder="https://www.youtube.com/watch?v=…"></div>
+        <div><label>O subí un archivo (video, PDF, imagen, Office)</label><input type="file" name="archivo" accept=".mp4,.webm,.mov,.pdf,.png,.jpg,.jpeg,.pptx,.docx,.xlsx"></div>
+      </div>
+      <div style="margin-top:.9rem"><button class="btn">Publicar en el campus</button></div>
+    </form>
+    <p class="caption">Con link de YouTube/Vimeo el video queda embebido. Los archivos se guardan en el servidor (hasta 512 MB) y los videos subidos se reproducen acá mismo.</p>
+  </div>` : ''}
+  ${items.length ? `<div class="campus-grid">${items.map(card).join('')}</div>`
+    : `<div class="card"><p class="muted" style="margin:0">Todavía no hay contenido de ${esc((empresas.find(([s]) => s === empresa) || [])[1] || '')}. ${esAdmin ? 'Publicá el primero con el formulario de arriba.' : 'Administración va a ir subiendo documentación y videos acá.'}</p></div>`}`
+  });
+}
+
 /* --------- documentación y changelog --------- */
 
 function docsHeader(active) {
@@ -2537,7 +2623,7 @@ function docsPage({ user, manualDisponible }) {
   const esAdmin = user.role === 'admin';
   const etapaFila = (etapa, cuando) => `<tr><td><span class="chip" style="background:${ETAPA_COLOR[etapa]}">${esc(etapa)}</span></td><td>${cuando}</td></tr>`;
   return layout({
-    title: 'Documentación', user, active: 'docs',
+    title: 'Documentación', user, active: 'docs', sistema: 'campus',
     body: `
   <h1>Documentación del sistema</h1>
   ${docsHeader('documentacion')}
@@ -2671,7 +2757,7 @@ function docsPage({ user, manualDisponible }) {
 function changelogPage({ user, versiones }) {
   const TIPO = { nuevo: ['Nuevo', '#3E9B57'], mejora: ['Mejora', '#1D6FB8'], fix: ['Fix', '#C08A2E'] };
   return layout({
-    title: 'Changelog', user, active: 'docs',
+    title: 'Changelog', user, active: 'docs', sistema: 'campus',
     body: `
   <h1>Changelog</h1>
   ${docsHeader('changelog')}
@@ -2691,7 +2777,7 @@ function changelogPage({ user, versiones }) {
 
 module.exports = {
   loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage,
-  notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage,
+  notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,
 };
