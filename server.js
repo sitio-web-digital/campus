@@ -98,19 +98,19 @@ function logDealEvent(dealId, userId, tipo, detalle) {
 // tipo: 'deal_nuevo' | 'cambio_etapa' (silenciables por preferencia) · 'ganado' (siempre) · otro (siempre).
 function notifyAdmins(actorId, texto, url, tipo = 'otro') {
   const admins = db.prepare("SELECT id, notif_prefs FROM users WHERE role = 'admin' AND active = 1 AND id != ?").all(actorId);
-  const ins = db.prepare('INSERT INTO notifications (user_id, texto, url) VALUES (?, ?, ?)');
+  const ins = db.prepare('INSERT INTO notifications (user_id, texto, url, actor_id) VALUES (?, ?, ?, ?)');
   for (const a of admins) {
     if (tipo === 'deal_nuevo' || tipo === 'cambio_etapa') {
       let p = {}; try { p = JSON.parse(a.notif_prefs || '{}'); } catch {}
       if (p[tipo] === false) continue;
     }
-    ins.run(a.id, texto, url);
+    ins.run(a.id, texto, url, actorId);
   }
 }
 
-// Notifica a un usuario puntual (ej: al vendedor cuando le aprueban una venta).
-function notifyUser(userId, texto, url, lote = null) {
-  db.prepare('INSERT INTO notifications (user_id, texto, url, lote) VALUES (?, ?, ?, ?)').run(userId, texto, url, lote);
+// Notifica a un usuario puntual. actorId = quién generó la acción (null = el sistema).
+function notifyUser(userId, texto, url, lote = null, actorId = null) {
+  db.prepare('INSERT INTO notifications (user_id, texto, url, lote, actor_id) VALUES (?, ?, ?, ?, ?)').run(userId, texto, url, lote, actorId);
 }
 
 const CAMPOS_DEAL = {
@@ -305,7 +305,7 @@ app.post('/deals', requireAuth, (req, res) => {
     VALUES (@empresa, @user_id, @panel, @etapa, @tipo_venta, @mrr, @decisor, @origen, @proximo_paso, @fecha_proximo_paso, @fecha_primera_reunion, @fecha_cierre, @motivo_perdida, @campana_id, @pais, @provincia, @ciudad, @notas, @aprobacion)`).run(dInsert);
   logDealEvent(r.lastInsertRowid, req.user.id, 'creado', `Deal creado en etapa ${d.etapa}`);
   if (d.nota) logDealEvent(r.lastInsertRowid, req.user.id, 'edicion', `Nota: ${d.nota}`);
-  notifyAdmins(req.user.id, `Deal nuevo: «${d.empresa}» (${d.etapa}) — ${req.user.name}${d.aprobacion === 'pendiente' ? ' — requiere aprobación' : ''}`, `/deals/${r.lastInsertRowid}`, d.etapa === 'Ganado' ? 'ganado' : 'deal_nuevo');
+  notifyAdmins(req.user.id, `Creó el deal «${d.empresa}» en ${d.etapa}${d.aprobacion === 'pendiente' ? ' — requiere tu aprobación' : ''}`, `/deals/${r.lastInsertRowid}`, d.etapa === 'Ganado' ? 'ganado' : 'deal_nuevo');
   if (d.aprobacion === 'aprobado') C.generarComisiones({ ...d, id: r.lastInsertRowid, fecha_cierre: d.fecha_cierre || new Date().toISOString().slice(0, 10) });
   res.redirect(home);
 });
@@ -352,7 +352,7 @@ app.post('/deals/:id', requireAuth, (req, res) => {
   if (cambioEtapa) {
     const det = [`${deal.etapa} → ${d.etapa}`, ...otros].join(' · ');
     logDealEvent(deal.id, req.user.id, 'etapa', det);
-    notifyAdmins(req.user.id, `«${d.empresa}»: ${deal.etapa} → ${d.etapa} — ${req.user.name}${d.aprobacion === 'pendiente' ? ' — requiere aprobación' : ''}`, `/deals/${deal.id}`, d.etapa === 'Ganado' ? 'ganado' : 'cambio_etapa');
+    notifyAdmins(req.user.id, `Movió «${d.empresa}» de ${deal.etapa} a ${d.etapa}${d.aprobacion === 'pendiente' ? ' — requiere tu aprobación' : ''}`, `/deals/${deal.id}`, d.etapa === 'Ganado' ? 'ganado' : 'cambio_etapa');
     if (d.etapa === 'Ganado' && d.aprobacion === 'aprobado') C.generarComisiones({ ...d, id: deal.id });
     if (deal.etapa === 'Ganado' && d.etapa !== 'Ganado') C.cancelarPendientes(deal.id);
   } else if (otros.length) {
@@ -362,7 +362,7 @@ app.post('/deals/:id', requireAuth, (req, res) => {
   // Si la lead la modificó otra persona (típicamente el admin), el vendedor dueño se entera.
   if (req.user.id !== d.user_id && (cambioEtapa || otros.length || d.nota)) {
     const resumen = cambioEtapa ? `${deal.etapa} → ${d.etapa}` : (otros.length ? otros.slice(0, 2).join(' · ') : 'nueva nota');
-    notifyUser(d.user_id, `Tu lead «${d.empresa}» fue modificada por ${req.user.name}: ${resumen}`, `/deals/${deal.id}`);
+    notifyUser(d.user_id, `Modificó tu lead «${d.empresa}»: ${resumen}`, `/deals/${deal.id}`, null, req.user.id);
   }
   res.redirect(home);
 });
@@ -383,9 +383,9 @@ app.post('/deals/:id/etapa', requireAuth, (req, res) => {
   const aprobacion = etapa === 'Ganado' ? 'pendiente' : null;
   db.prepare("UPDATE deals SET etapa = ?, fecha_cierre = ?, aprobacion = ?, updated_at = datetime('now') WHERE id = ?").run(etapa, fechaCierre, aprobacion, deal.id);
   logDealEvent(deal.id, req.user.id, 'etapa', `${deal.etapa} → ${etapa}`);
-  notifyAdmins(req.user.id, `«${deal.empresa}»: ${deal.etapa} → ${etapa} — ${req.user.name}${aprobacion === 'pendiente' ? ' — requiere aprobación' : ''}`, `/deals/${deal.id}`, etapa === 'Ganado' ? 'ganado' : 'cambio_etapa');
+  notifyAdmins(req.user.id, `Movió «${deal.empresa}» de ${deal.etapa} a ${etapa}${aprobacion === 'pendiente' ? ' — requiere tu aprobación' : ''}`, `/deals/${deal.id}`, etapa === 'Ganado' ? 'ganado' : 'cambio_etapa');
   if (req.user.id !== deal.user_id) {
-    notifyUser(deal.user_id, `Tu lead «${deal.empresa}» fue movida por ${req.user.name}: ${deal.etapa} → ${etapa}`, `/deals/${deal.id}`);
+    notifyUser(deal.user_id, `Movió tu lead «${deal.empresa}» de ${deal.etapa} a ${etapa}`, `/deals/${deal.id}`, null, req.user.id);
   }
   if (deal.etapa === 'Ganado' && etapa !== 'Ganado') C.cancelarPendientes(deal.id);
   res.redirect(home);
@@ -401,7 +401,7 @@ app.post('/deals/:id/aprobar', requireAuth, requireAdmin, (req, res) => {
     logDealEvent(deal.id, req.user.id, 'etapa', 'Venta aprobada — impacta en métricas y cobranza');
     C.generarComisiones({ ...deal, aprobacion: 'aprobado' });
     if (deal.user_id !== req.user.id) {
-      notifyUser(deal.user_id, `¡Venta aprobada! «${deal.empresa}» (${money2(deal.mrr)}) — tu comisión ya está en Cobranza`, `/cobranza/vendedor/${deal.user_id}`);
+      notifyUser(deal.user_id, `Aprobó tu venta «${deal.empresa}» (${money2(deal.mrr)}) — tu comisión ya está en Cobranza`, `/cobranza/vendedor/${deal.user_id}`, null, req.user.id);
     }
   }
   res.redirect(`/deals/${req.params.id}`);
@@ -645,9 +645,9 @@ app.post('/admin/notificar', requireAuth, requireAdmin, (req, res) => {
     if (destino.startsWith('u:')) usuarios = db.prepare('SELECT id FROM users WHERE id = ? AND active = 1').all(parseInt(destino.slice(2), 10));
     else if (['vendedor', 'developer', 'admin'].includes(destino)) usuarios = db.prepare('SELECT id FROM users WHERE role = ? AND active = 1').all(destino);
     else usuarios = db.prepare('SELECT id FROM users WHERE active = 1').all();
-    const msg = `Aviso de ${req.user.name}: ${texto}`;
+    const msg = `Aviso: ${texto}`;
     const lote = 'aviso-' + Date.now();
-    for (const u of usuarios) if (u.id !== req.user.id) notifyUser(u.id, msg, '/notificaciones', lote);
+    for (const u of usuarios) if (u.id !== req.user.id) notifyUser(u.id, msg, '/notificaciones', lote, req.user.id);
   }
   res.redirect('/admin/comunicacion');
 });
@@ -1180,8 +1180,15 @@ function fechaHoraAR(s) {
 
 // Lista para el panel flotante de la campanita: devuelve las últimas y las marca vistas.
 app.get('/notificaciones/lista', requireAuth, (req, res) => {
-  const items = db.prepare('SELECT texto, url, leida, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 15').all(req.user.id)
-    .map((n) => ({ texto: n.texto, url: n.url || '/notificaciones', leida: !!n.leida, fecha: fechaHoraAR(n.created_at) }));
+  const items = db.prepare(`SELECT n.texto, n.url, n.leida, n.created_at, n.actor_id, u.name AS actor_nombre, u.avatar AS actor_avatar
+      FROM notifications n LEFT JOIN users u ON u.id = n.actor_id
+      WHERE n.user_id = ? ORDER BY n.created_at DESC, n.id DESC LIMIT 15`).all(req.user.id)
+    .map((n) => ({
+      texto: n.texto, url: n.url || '/notificaciones', leida: !!n.leida, fecha: fechaHoraAR(n.created_at),
+      actor: n.actor_id ? n.actor_nombre : 'Campus C4D',
+      avatar: n.actor_id && n.actor_avatar ? `/avatars/${n.actor_id}?v=${encodeURIComponent(n.actor_avatar)}` : null,
+      iniciales: n.actor_id ? (n.actor_nombre || '?').trim().split(/\s+/).map((x) => x[0]).slice(0, 2).join('').toUpperCase() : 'C4D',
+    }));
   res.json({ items });
   db.prepare("UPDATE notifications SET leida = 1, leida_at = datetime('now') WHERE user_id = ? AND leida = 0").run(req.user.id);
 });
@@ -1194,7 +1201,7 @@ app.get('/notificaciones/estado', requireAuth, (req, res) => {
 });
 
 app.get('/notificaciones', requireAuth, (req, res) => {
-  const notis = db.prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 100').all(req.user.id);
+  const notis = db.prepare(`SELECT n.*, u.name AS actor_nombre, u.avatar AS actor_avatar FROM notifications n LEFT JOIN users u ON u.id = n.actor_id WHERE n.user_id = ? ORDER BY n.created_at DESC, n.id DESC LIMIT 100`).all(req.user.id);
   res.send(V.notificacionesPage({ user: req.user, notis }));
   // Se marcan como leídas después de mostrarlas: las no leídas se ven resaltadas una vez.
   db.prepare("UPDATE notifications SET leida = 1, leida_at = datetime('now') WHERE user_id = ? AND leida = 0").run(req.user.id);

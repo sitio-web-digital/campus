@@ -298,6 +298,10 @@ if (!notiCols.includes('lote')) {
   db.exec('ALTER TABLE notifications ADD COLUMN lote TEXT');
   db.exec('ALTER TABLE notifications ADD COLUMN leida_at TEXT');
 }
+// Migración 2.16.1: quién generó la notificación (para mostrar nombre y foto).
+if (!notiCols.includes('actor_id')) {
+  db.exec('ALTER TABLE notifications ADD COLUMN actor_id INTEGER REFERENCES users(id)');
+}
 db.exec(`CREATE TABLE IF NOT EXISTS banners (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   titulo TEXT NOT NULL,

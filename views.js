@@ -263,7 +263,12 @@ ${user ? `
         pintarBadge(0); last = 0;
         var html = d.items.length
           ? d.items.map(function (n) {
-              return '<a class="np-item' + (n.leida ? '' : ' unread') + '" href="' + escHtml(n.url) + '">' + escHtml(n.texto) + '<span>' + escHtml(n.fecha) + '</span></a>';
+              var av = n.avatar
+                ? '<img class="np-av" src="' + escHtml(n.avatar) + '" alt="">'
+                : '<span class="np-av np-av-ini">' + escHtml(n.iniciales) + '</span>';
+              return '<a class="np-item' + (n.leida ? '' : ' unread') + '" href="' + escHtml(n.url) + '">' + av +
+                '<span class="np-c"><span class="np-head"><strong>' + escHtml(n.actor) + '</strong><time>' + escHtml(n.fecha) + '</time></span>' +
+                '<span class="np-txt">' + escHtml(n.texto) + '</span></span></a>';
             }).join('')
           : '<div class="np-empty">Sin notificaciones todavía.</div>';
         pop.innerHTML = html + '<a class="np-all" href="/notificaciones">Ver historial completo</a>';
@@ -960,6 +965,21 @@ html.dark .theme-btn .ic-luna { display:none; }
 .curso-chip.curso-enlace { background:#5B6773; }
 .curso-meta { margin-top:auto; padding-top:.4rem; }
 .curso-acciones { display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.55rem; }
+
+/* ---------- notificaciones con actor (foto + nombre + hora) ---------- */
+.np-item { display:flex; gap:.6rem; align-items:flex-start; }
+.np-av { width:2rem; height:2rem; border-radius:50%; object-fit:cover; flex-shrink:0; margin-top:.1rem; display:inline-block; }
+.np-av-ini { display:inline-flex; align-items:center; justify-content:center; background:var(--accent-soft); color:var(--accent-ink); font-size:.58rem; font-weight:700; letter-spacing:.02em; }
+.np-c { display:flex; flex-direction:column; gap:.14rem; min-width:0; flex:1; font-size:inherit; color:inherit; margin:0; }
+.np-head { display:flex; justify-content:space-between; align-items:baseline; gap:.6rem; font-size:.76rem; color:inherit; margin:0; }
+.np-head strong { font-size:.76rem; }
+.np-head time { font-size:.64rem; color:var(--faint); white-space:nowrap; font-weight:500; }
+.np-txt { display:block; font-size:.82rem; line-height:1.45; color:inherit; margin:0; }
+.noti-row { display:flex; gap:.7rem; align-items:flex-start; }
+.noti-row .avatar { width:2.2rem; height:2.2rem; margin-top:.1rem; }
+.noti-c { flex:1; min-width:0; }
+.noti-head { display:flex; justify-content:space-between; align-items:baseline; gap:.7rem; margin-bottom:.15rem; }
+.noti-head strong { font-size:.82rem; }
 `;
 
 /* ---------------- páginas ---------------- */
@@ -1631,8 +1651,13 @@ function notificacionesPage({ user, notis }) {
   <p class="small muted">${user.role === 'admin' ? 'Deals nuevos y cambios de etapa de tu equipo.' : 'Avisos del administrador, como la aprobación de tus ventas.'} Las resaltadas son las que no habías visto.</p>
   ${notis.length ? notis.map((n) => `
   <a class="card noti ${n.leida ? '' : 'unread'}" href="${esc(n.url || '/pipeline')}">
-    <div class="t">${esc(n.texto)}</div>
-    <div class="f">${fechaHora(n.created_at)}</div>
+    <div class="noti-row">
+      ${n.actor_id ? avatar({ id: n.actor_id, name: n.actor_nombre, avatar: n.actor_avatar }) : '<span class="avatar avatar-ini">C4D</span>'}
+      <div class="noti-c">
+        <div class="noti-head"><strong>${esc(n.actor_id ? n.actor_nombre : 'Campus C4D')}</strong><span class="f">${fechaHora(n.created_at)}</span></div>
+        <div class="t">${esc(n.texto)}</div>
+      </div>
+    </div>
   </a>`).join('') : `<div class="card"><p class="muted" style="margin:0">Todavía no hay notificaciones. ${user.role === 'admin' ? 'Cuando un vendedor cree un deal o lo mueva de etapa, lo vas a ver acá.' : 'Cuando el administrador apruebe una de tus ventas, lo vas a ver acá.'}</p></div>`}`
   });
 }

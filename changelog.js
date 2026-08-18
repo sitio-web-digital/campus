@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.16.1',
+    fecha: '2026-08-18',
+    cambios: [
+      { tipo: 'mejora', texto: 'Notificaciones más profesionales: cada una muestra la foto y el nombre de quien la generó (o "Campus C4D" si es del sistema), con la hora a la derecha y el mensaje abajo — en la campanita y en la página de notificaciones.' },
+      { tipo: 'mejora', texto: 'Los textos de las notificaciones se reescribieron en formato claro ("Movió tu lead…", "Aprobó tu venta…", "Creó el deal…"): el nombre ya no se repite dentro del mensaje.' },
+    ],
+  },
+  {
     version: '2.16.0',
     fecha: '2026-08-18',
     cambios: [
