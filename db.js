@@ -208,6 +208,10 @@ if (!campCols.includes('panel')) {
   db.pragma('foreign_keys = ON');
 }
 
+// Migración 2.20.0: teléfono de la lead.
+if (!dealCols.includes('telefono')) {
+  db.exec('ALTER TABLE deals ADD COLUMN telefono TEXT');
+}
 // Migración 2.8.0: campaña de origen y ubicación de la lead.
 if (!dealCols.includes('campana_id')) {
   db.exec('ALTER TABLE deals ADD COLUMN campana_id INTEGER REFERENCES campanas(id)');

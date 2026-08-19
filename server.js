@@ -114,7 +114,7 @@ function notifyUser(userId, texto, url, lote = null, actorId = null) {
 }
 
 const CAMPOS_DEAL = {
-  empresa: 'Empresa', tipo_venta: 'Tipo de venta', mrr: 'Valor', decisor: 'Decisor', origen: 'Origen',
+  empresa: 'Empresa', tipo_venta: 'Tipo de venta', mrr: 'Valor', telefono: 'Teléfono', decisor: 'Decisor', origen: 'Origen',
   campana_id: 'Campaña', pais: 'País', provincia: 'Provincia', ciudad: 'Ciudad',
   proximo_paso: 'Próximo paso', fecha_proximo_paso: 'Fecha próximo paso',
   fecha_primera_reunion: 'Fecha primera reunión', fecha_cierre: 'Fecha de cierre',
@@ -189,6 +189,7 @@ function dealFromBody(body, user, panel = 'cfd', etapaActual = 'Lead', tipoActua
     etapa: cleanEnum(body.etapa, etapasDePanel(panel)) || etapaActual,
     tipo_venta: cleanEnum(body.tipo_venta, TIPOS_VENTA) || tipoActual,
     mrr: cleanNum(body.mrr),
+    telefono: clean(body.telefono),
     decisor: clean(body.decisor),
     // CFD valida contra sus orígenes de venta de software; los paneles aceptan cualquier origen
     // (el selector ofrece los suyos, y las leads importadas traen valores propios que no deben perderse).
@@ -267,7 +268,7 @@ function filtrarPipeline(req, deals) {
   const vendedores = [...new Map(deals.map((d) => [d.user_id, d.vendedor_name]))].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   const totalSinFiltro = deals.length;
   const ql = q.toLowerCase();
-  if (ql) deals = deals.filter((d) => [d.empresa, d.decisor, d.ciudad, d.provincia, d.origen, d.vendedor_name].some((v) => v && v.toLowerCase().includes(ql)));
+  if (ql) deals = deals.filter((d) => [d.empresa, d.decisor, d.telefono, d.ciudad, d.provincia, d.origen, d.vendedor_name].some((v) => v && v.toLowerCase().includes(ql)));
   if (fVendedor) deals = deals.filter((d) => d.user_id === fVendedor);
   if (fOrigen) deals = deals.filter((d) => d.origen === fOrigen);
   if (fEtapa) deals = deals.filter((d) => d.etapa === fEtapa);
@@ -319,7 +320,7 @@ app.get('/deals/:id', requireAuth, (req, res) => {
     WHERE e.deal_id = ? ORDER BY e.created_at DESC, e.id DESC`).all(deal.id);
   const ultimaEd = eventos[0] ? { nombre: eventos[0].user_name, fecha: eventos[0].created_at } : null;
   const modal = V.dealFormModal({
-    user: req.user, deal, vendedores, isAdmin: req.user.role === 'admin', eventos, ultimaEd, errAprob: req.query.err === 'valor',
+    user: req.user, deal, vendedores, isAdmin: req.user.role === 'admin', eventos, ultimaEd, errAprob: req.query.err === 'valor', errMigrar: req.query.err === 'migrar-ganado',
     panel: deal.panel, etapas: etapasDePanel(deal.panel), backHref: homeDePanel(deal.panel),
     campanas: db.prepare('SELECT id, nombre FROM campanas WHERE panel = ? AND (activa = 1 OR id = ?) ORDER BY nombre').all(deal.panel, deal.campana_id || 0),
   });
@@ -408,6 +409,29 @@ app.post('/deals/:id/aprobar', requireAuth, requireAdmin, (req, res) => {
 });
 
 const money2 = (n) => '$' + Number(n || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 });
+
+const nombrePanel = (slug) => (PANELES_COMERCIALES.find((p) => p.slug === slug) || { nombre: slug }).nombre;
+
+// Migra una lead a otro panel comercial. Solo admin. Los datos comunes viajan; lo específico
+// del panel se ajusta o se quita (queda registrado en el historial). Ganado aprobado no se migra:
+// sus comisiones pertenecen a las reglas del panel de origen.
+app.post('/deals/:id/migrar', requireAuth, requireAdmin, (req, res) => {
+  const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(req.params.id);
+  const destino = req.body.destino;
+  if (!deal || !PANEL_SLUGS.includes(destino) || destino === deal.panel) return res.redirect(`/deals/${req.params.id}`);
+  if (deal.etapa === 'Ganado' && deal.aprobacion === 'aprobado') return res.redirect(`/deals/${deal.id}?err=migrar-ganado`);
+  const etapasDest = etapasDePanel(destino);
+  const etapaNueva = etapasDest.includes(deal.etapa) ? deal.etapa : etapasDest[0];
+  const ajustes = [];
+  if (deal.campana_id) ajustes.push('se quitó la campaña (son propias de cada panel)');
+  if (etapaNueva !== deal.etapa) ajustes.push(`etapa ${deal.etapa} → ${etapaNueva} (no existía en el destino)`);
+  db.prepare("UPDATE deals SET panel = ?, etapa = ?, campana_id = NULL, updated_at = datetime('now') WHERE id = ?").run(destino, etapaNueva, deal.id);
+  logDealEvent(deal.id, req.user.id, 'edicion', `Migrada de Comercial ${nombrePanel(deal.panel)} a Comercial ${nombrePanel(destino)}${ajustes.length ? ' — ' + ajustes.join('; ') : ''}`);
+  if (deal.user_id !== req.user.id) {
+    notifyUser(deal.user_id, `Migró tu lead «${deal.empresa}» a Comercial ${nombrePanel(destino)}`, `/deals/${deal.id}`, null, req.user.id);
+  }
+  res.redirect(`/deals/${deal.id}`);
+});
 
 app.post('/deals/:id/delete', requireAuth, requireAdmin, (req, res) => {
   db.prepare('DELETE FROM deals WHERE id = ?').run(req.params.id);

@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.20.0',
+    fecha: '2026-08-19',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Las leads ahora tienen campo de teléfono, en todos los paneles. También entra en la búsqueda del pipeline y los cambios quedan en el historial.' },
+      { tipo: 'nuevo', texto: 'Migración de leads entre paneles comerciales (solo admin, desde la ficha): viajan los datos comunes (empresa, vendedor, teléfono, contacto, valor, ubicación, historial completo) y un cartel advierte qué se pierde — la campaña, y la etapa si no existe igual en el destino pasa a la primera. El vendedor recibe notificación y todo queda en el historial. Ganado aprobado no se migra.' },
+    ],
+  },
+  {
     version: '2.19.0',
     fecha: '2026-08-18',
     cambios: [

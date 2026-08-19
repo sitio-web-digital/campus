@@ -1,4 +1,4 @@
-const { ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA } = require('./db');
+const { ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, PANELES_COMERCIALES } = require('./db');
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = (n) => n == null ? '—' : '$' + Number(n).toLocaleString('es-AR', { maximumFractionDigits: 0 });
@@ -1173,7 +1173,7 @@ const PROVINCIAS_AR = ['Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', '
 // Orígenes de lead para los paneles comerciales configurables (los de CFD son de venta de software).
 const ORIGENES_PANEL = ['MarketPlace', 'Ads', 'WhatsApp', 'Instagram', 'Referido', 'Cliente anterior', 'Propio', 'Otro'];
 
-function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
+function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, errMigrar, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
   const d = deal || {};
   const isNew = !deal;
   const opt = (list, sel) => list.map((o) => `<option value="${esc(o)}" ${o === sel ? 'selected' : ''}>${esc(o)}</option>`).join('');
@@ -1185,6 +1185,7 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
   <div class="modal-h"><h2>${isNew ? 'Nuevo deal' : esc(d.empresa)}</h2><a class="modal-x" href="${backHref}" aria-label="Cerrar">&times;</a></div>
   ${!isNew && ultimaEd ? `<p class="small muted" style="margin:-.3rem 0 .7rem">Última edición: <strong>${esc(ultimaEd.nombre)}</strong> · ${fechaHora(ultimaEd.fecha)}</p>` : ''}
   ${errAprob ? `<div class="flash bad">No se pudo aprobar: falta cargar el <strong>valor del deal</strong>, que es la base para calcular la comisión del vendedor. Completalo, guardá y volvé a aprobar.</div>` : ''}
+  ${errMigrar ? `<div class="flash bad">Una venta <strong>Ganada y aprobada</strong> no se puede migrar: sus comisiones se generaron con las reglas de este panel. Si corresponde migrarla igual, primero reabrila (movela de etapa).</div>` : ''}
   ${!isNew && d.etapa === 'Ganado' && d.aprobacion !== 'aprobado' ? (isAdmin ? `
   <div class="aprob-box">
     ${d.mrr > 0 ? `
@@ -1206,6 +1207,10 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
       <div>
         <label>Etapa</label>
         <select name="etapa">${opt(etapas, d.etapa || etapas[0])}</select>
+      </div>
+      <div>
+        <label>Teléfono</label>
+        <input name="telefono" value="${esc(d.telefono)}" inputmode="tel" placeholder="Ej: 54 9 381 555-0000">
       </div>
       ${panel !== 'cfd' ? `
       <div>
@@ -1278,6 +1283,27 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
       <a class="btn secondary" href="${backHref}">Cancelar</a>
     </div>
   </form>
+  ${!isNew && isAdmin ? (() => {
+    const otros = PANELES_COMERCIALES.filter((p) => p.slug !== panel);
+    const ganadoAprobado = d.etapa === 'Ganado' && d.aprobacion === 'aprobado';
+    return `
+  <details class="card migrar-box">
+    <summary class="small" style="cursor:pointer;color:var(--accent-ink);font-weight:600">Migrar esta lead a otro panel comercial</summary>
+    ${ganadoAprobado ? `<p class="small muted" style="margin:.6rem 0 0">Esta venta está <strong>Ganada y aprobada</strong>: no se puede migrar porque sus comisiones se generaron con las reglas de este panel.</p>` : `
+    <div class="flash bad" style="margin:.7rem 0 .6rem; font-weight:400">
+      <strong>Atención — al migrar entre rubros no todos los datos viajan:</strong><br>
+      · <strong>Se conservan:</strong> empresa, vendedor, teléfono, contacto, valor, origen, ubicación, fechas, notas y todo el historial.<br>
+      · <strong>Se pierde la campaña</strong> (las campañas son propias de cada panel).<br>
+      · <strong>La etapa</strong>: si no existe una igual en el panel destino, la lead pasa a la <strong>primera etapa</strong> de ese panel.<br>
+      · <strong>El tipo de venta</strong> solo aplica en Cloud For Deploy; en los demás rubros no se usa (y al volver a CFD arranca como "Proyecto único").<br>
+      El cambio queda registrado en el historial y el vendedor recibe una notificación.
+    </div>
+    <form method="post" action="/deals/${d.id}/migrar" class="cfg-inline" onsubmit="return confirm('¿Migrar «${esc(d.empresa)}» al panel elegido? Revisá el cartel de arriba: la campaña se pierde y la etapa puede cambiar.')">
+      <select name="destino" style="width:auto">${otros.map((p) => `<option value="${p.slug}">Comercial ${esc(p.nombre)}</option>`).join('')}</select>
+      <button class="btn danger small">Migrar lead</button>
+    </form>`}
+  </details>`;
+  })() : ''}
   ${!isNew ? `
   <h2 style="margin-top:1.25rem">Historial del deal</h2>
   <div class="card hist">
