@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.21.0',
+    fecha: '2026-08-20',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Encuestas al equipo: se arman en Administración → Comunicación (pregunta + 2 a 5 opciones) y le aparecen a todos como ventana al entrar, hasta que voten (con opción "Más tarde" para la sesión). Un voto por persona.' },
+      { tipo: 'nuevo', texto: 'Resultados en vivo para el admin: barras con conteo y porcentaje por opción, quién votó qué (con foto y hora), la lista de quiénes faltan votar, y el botón para cerrar o reabrir la encuesta.' },
+    ],
+  },
+  {
     version: '2.20.0',
     fecha: '2026-08-19',
     cambios: [

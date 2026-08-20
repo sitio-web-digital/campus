@@ -172,7 +172,32 @@ ${user && user.modalBanner ? `
     <p style="margin:.4rem 0 1.1rem; line-height:1.6">${esc(user.modalBanner.texto)}</p>
     <button class="btn" onclick="cerrarAnuncio('/banners/${user.modalBanner.id}/visto')">Entendido</button>
   </div>
-</div>` : user && user.modalChangelog ? `
+</div>` : user && user.modalEncuesta ? `
+<div class="modal-back anuncio" id="anuncioModal" data-encuesta="${user.modalEncuesta.id}">
+  <div class="modal anuncio-box">
+    <span class="anuncio-tag">Encuesta del equipo</span>
+    <h2>${esc(user.modalEncuesta.pregunta)}</h2>
+    <form method="post" action="/encuestas/${user.modalEncuesta.id}/votar" style="margin-top:.6rem">
+      ${user.modalEncuesta.opciones.map((op, i) => `<label class="quiz-op"><input type="radio" name="opcion" value="${i}" required> ${esc(op)}</label>`).join('')}
+      <div style="display:flex; gap:.6rem; align-items:center; margin-top:1rem">
+        <button class="btn">Votar</button>
+        <button type="button" class="btn secondary" onclick="posponerEncuesta()">Más tarde</button>
+      </div>
+    </form>
+    <p class="caption" style="margin-top:.7rem">Tu voto es visible para administración. Se responde una sola vez.</p>
+  </div>
+</div>
+<script>
+function posponerEncuesta() {
+  var m = document.getElementById('anuncioModal');
+  try { sessionStorage.setItem('enc-later-' + m.dataset.encuesta, '1'); } catch (e) {}
+  m.remove();
+}
+(function () {
+  var m = document.getElementById('anuncioModal');
+  try { if (m && m.dataset.encuesta && sessionStorage.getItem('enc-later-' + m.dataset.encuesta)) m.remove(); } catch (e) {}
+})();
+</script>` : user && user.modalChangelog ? `
 <div class="modal-back anuncio" id="anuncioModal">
   <div class="modal anuncio-box">
     <span class="anuncio-tag">Actualización del sistema</span>
@@ -1544,7 +1569,7 @@ const vistosDetalle = (lista, fmtQuien) => `
       <div class="hist" style="margin-top:.3rem">${lista.length ? lista.map(fmtQuien).join('') : '<p class="muted small" style="margin:.3rem 0 0">Nadie todavía.</p>'}</div>
     </details>`;
 
-function adminComunicacionPage({ user, users, avisos = [], banners = [], totalUsuarios = 0 }) {
+function adminComunicacionPage({ user, users, avisos = [], banners = [], encuestas = [], totalUsuarios = 0 }) {
   return layout({
     title: 'Comunicación', user, active: 'comunicacion', sistema: 'admin',
     body: `
@@ -1606,6 +1631,45 @@ function adminComunicacionPage({ user, users, avisos = [], banners = [], totalUs
       <div class="small muted">${esc(b.texto)}</div>
       ${vistosDetalle(b.quienes, (q) => `<div class="hist-item"><span class="chip" style="background:#3E9B57">Visto</span><span>${esc(q.name)}</span><span class="cuando" style="margin-left:auto">${fechaHora(q.visto_at)}</span></div>`)}
     </div>`).join('')}` : ''}
+  </div>
+
+  <div class="card card--accent">
+    <h3 style="margin-top:0">Encuesta al equipo</h3>
+    <p class="small muted">Le aparece a todos como ventana al entrar, hasta que voten (pueden posponerla dentro de la misma sesión). Acá ves los resultados en vivo y quién votó qué.</p>
+    <form method="post" action="/admin/encuestas">
+      <label>Pregunta *</label><input name="pregunta" required maxlength="200" placeholder="Ej: ¿Qué día prefieren la reunión semanal?">
+      <div class="grid2">
+        <div><label>Opción 1 *</label><input name="op1" required maxlength="100"></div>
+        <div><label>Opción 2 *</label><input name="op2" required maxlength="100"></div>
+        <div><label>Opción 3</label><input name="op3" maxlength="100"></div>
+        <div><label>Opción 4</label><input name="op4" maxlength="100"></div>
+        <div><label>Opción 5</label><input name="op5" maxlength="100"></div>
+      </div>
+      <div style="margin-top:.9rem"><button class="btn">Lanzar encuesta</button></div>
+    </form>
+    ${encuestas.length ? `
+    <h4 style="margin:1.1rem 0 .3rem">Encuestas</h4>
+    ${encuestas.map((e) => {
+      const total = e.votos.length;
+      return `
+    <div class="cfg-row" style="display:block">
+      <div class="small" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+        <strong>${esc(e.pregunta)}</strong>
+        ${e.activo ? '<span class="chip" style="background:#3E9B57">Activa</span>' : '<span class="chip chip--estado-cancelado">Cerrada</span>'}
+        <span class="muted">${fechaHora(e.created_at)} · <strong>${total} de ${totalUsuarios}</strong> votaron</span>
+        <form method="post" action="/admin/encuestas/${e.id}/toggle" style="display:inline;margin-left:auto"><button class="btn secondary small">${e.activo ? 'Cerrar' : 'Reabrir'}</button></form>
+      </div>
+      <div style="margin:.45rem 0 .2rem">
+        ${e.opciones.map((op, i) => {
+          const n = e.conteo[i];
+          const pct = total > 0 ? Math.round((n / total) * 100) : 0;
+          return `<div class="prog-row"><span class="pl" title="${esc(op)}">${esc(op)}</span><div class="prog"><i style="width:${Math.max(2, pct)}%"></i></div><span class="pv"><strong>${n}</strong> · ${pct}%</span></div>`;
+        }).join('')}
+      </div>
+      ${vistosDetalle(e.votos, (v) => `<div class="hist-item"><span style="display:inline-flex;align-items:center;gap:.45rem">${avatar({ id: v.user_id, name: v.name, avatar: v.avatar })}${esc(v.name)}</span><span class="chip" style="background:#0E6E66">${esc(e.opciones[v.opcion] || '?')}</span><span class="cuando" style="margin-left:auto">${fechaHora(v.created_at)}</span></div>`)}
+      ${e.sinVotar.length && e.activo ? `<p class="small muted" style="margin:.35rem 0 0">Sin votar todavía: ${e.sinVotar.map(esc).join(', ')}</p>` : ''}
+    </div>`;
+    }).join('')}` : ''}
   </div>`
   });
 }

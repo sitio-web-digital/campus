@@ -76,11 +76,18 @@ function requireAuth(req, res, next) {
   if (!user.last_seen_at || user.last_seen_at < haceUnMin) {
     db.prepare("UPDATE users SET last_seen_at = datetime('now') WHERE id = ?").run(user.id);
   }
-  // Ventana modal pendiente: primero una alerta del admin no vista; si no hay, el changelog de la versión nueva.
+  // Ventana modal pendiente, en orden de prioridad: alerta del admin > encuesta sin votar > changelog nuevo.
   user.modalBanner = db.prepare(`SELECT b.* FROM banners b WHERE b.activo = 1
     AND NOT EXISTS (SELECT 1 FROM banner_vistos v WHERE v.banner_id = b.id AND v.user_id = ?)
     ORDER BY b.id DESC LIMIT 1`).get(user.id) || null;
-  if (!user.modalBanner && user.last_version_vista !== CHANGELOG[0].version) user.modalChangelog = CHANGELOG[0];
+  if (!user.modalBanner) {
+    const enc = db.prepare(`SELECT e.* FROM encuestas e WHERE e.activo = 1
+      AND NOT EXISTS (SELECT 1 FROM encuesta_votos v WHERE v.encuesta_id = e.id AND v.user_id = ?)
+      ORDER BY e.id ASC LIMIT 1`).get(user.id) || null;
+    if (enc) { try { enc.opciones = JSON.parse(enc.opciones); } catch { enc.opciones = []; } }
+    user.modalEncuesta = enc && enc.opciones.length >= 2 ? enc : null;
+  }
+  if (!user.modalBanner && !user.modalEncuesta && user.last_version_vista !== CHANGELOG[0].version) user.modalChangelog = CHANGELOG[0];
   req.user = user;
   next();
 }
@@ -531,7 +538,14 @@ app.get('/admin/comunicacion', requireAuth, requireAdmin, (req, res) => {
   const totalUsuarios = db.prepare('SELECT COUNT(*) c FROM users WHERE active = 1').get().c;
   const banners = db.prepare('SELECT b.*, (SELECT COUNT(*) FROM banner_vistos v WHERE v.banner_id = b.id) vistos FROM banners b ORDER BY b.id DESC LIMIT 10').all()
     .map((b) => ({ ...b, quienes: db.prepare('SELECT u.name, v.visto_at FROM banner_vistos v JOIN users u ON u.id = v.user_id WHERE v.banner_id = ? ORDER BY v.visto_at').all(b.id) }));
-  res.send(V.adminComunicacionPage({ user: req.user, users: usuariosAdmin(), avisos, banners, totalUsuarios }));
+  const encuestas = db.prepare('SELECT e.* FROM encuestas e ORDER BY e.id DESC LIMIT 10').all().map((e) => {
+    let ops = []; try { ops = JSON.parse(e.opciones); } catch {}
+    const votos = db.prepare('SELECT v.*, u.name, u.avatar FROM encuesta_votos v JOIN users u ON u.id = v.user_id WHERE v.encuesta_id = ? ORDER BY v.created_at').all(e.id);
+    const sinVotar = db.prepare(`SELECT name FROM users WHERE active = 1 AND role != 'developer'
+      AND id NOT IN (SELECT user_id FROM encuesta_votos WHERE encuesta_id = ?) ORDER BY name`).all(e.id).map((u) => u.name);
+    return { ...e, opciones: ops, votos, sinVotar, conteo: ops.map((_, i) => votos.filter((v) => v.opcion === i).length) };
+  });
+  res.send(V.adminComunicacionPage({ user: req.user, users: usuariosAdmin(), avisos, banners, encuestas, totalUsuarios }));
 });
 
 // Sección Preferencias: notificaciones del propio admin.
@@ -638,6 +652,35 @@ app.post('/changelog/visto', requireAuth, (req, res) => {
 app.post('/banners/:id/visto', requireAuth, (req, res) => {
   db.prepare('INSERT OR IGNORE INTO banner_vistos (banner_id, user_id) VALUES (?, ?)').run(req.params.id, req.user.id);
   res.json({ ok: true });
+});
+
+// Voto de encuesta: una sola vez por usuario; vuelve a la página donde estaba.
+app.post('/encuestas/:id/votar', requireAuth, (req, res) => {
+  const enc = db.prepare('SELECT * FROM encuestas WHERE id = ? AND activo = 1').get(req.params.id);
+  if (enc) {
+    let ops = []; try { ops = JSON.parse(enc.opciones); } catch {}
+    const opcion = parseInt(req.body.opcion, 10);
+    if (Number.isFinite(opcion) && opcion >= 0 && opcion < ops.length) {
+      db.prepare('INSERT OR IGNORE INTO encuesta_votos (encuesta_id, user_id, opcion) VALUES (?, ?, ?)').run(enc.id, req.user.id, opcion);
+    }
+  }
+  const volver = req.get('referer');
+  res.redirect(volver && volver.startsWith(`${req.protocol}://${req.get('host')}/`) ? volver : '/hub');
+});
+
+// Encuestas del admin: crear (2 a 5 opciones) y cerrar/reabrir.
+app.post('/admin/encuestas', requireAuth, requireAdmin, (req, res) => {
+  const pregunta = clean(req.body.pregunta);
+  const opciones = [req.body.op1, req.body.op2, req.body.op3, req.body.op4, req.body.op5].map((o) => clean(o)).filter(Boolean);
+  if (pregunta && opciones.length >= 2) {
+    db.prepare('INSERT INTO encuestas (pregunta, opciones, created_by) VALUES (?, ?, ?)').run(pregunta, JSON.stringify(opciones), req.user.id);
+  }
+  res.redirect('/admin/comunicacion');
+});
+
+app.post('/admin/encuestas/:id/toggle', requireAuth, requireAdmin, (req, res) => {
+  db.prepare('UPDATE encuestas SET activo = 1 - activo WHERE id = ?').run(req.params.id);
+  res.redirect('/admin/comunicacion');
 });
 
 // Alerta modal del admin: le aparece a cada usuario al entrar hasta que toque "Entendido".

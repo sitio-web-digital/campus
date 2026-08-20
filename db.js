@@ -299,6 +299,23 @@ db.exec(`CREATE TABLE IF NOT EXISTS campus_items (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );`);
 
+// Migración 2.21.0: encuestas al equipo (modal de votación + resultados en vivo).
+db.exec(`CREATE TABLE IF NOT EXISTS encuestas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  pregunta TEXT NOT NULL,
+  opciones TEXT NOT NULL,
+  activo INTEGER NOT NULL DEFAULT 1,
+  created_by INTEGER NOT NULL REFERENCES users(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS encuesta_votos (
+  encuesta_id INTEGER NOT NULL REFERENCES encuestas(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  opcion INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (encuesta_id, user_id)
+);`);
+
 // Migración 2.19.0: cursos del campus + quizzes por contenido.
 db.exec(`CREATE TABLE IF NOT EXISTS campus_cursos (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
