@@ -233,6 +233,13 @@ db.exec(`CREATE TABLE IF NOT EXISTS robo_avisos (
   tipo TEXT NOT NULL,
   UNIQUE (deal_id, marca, tipo)
 );`);
+// Recordatorios de carga de actividad: un solo aviso por vendedor, panel y fecha.
+db.exec(`CREATE TABLE IF NOT EXISTS actividad_avisos (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  panel TEXT NOT NULL,
+  fecha TEXT NOT NULL,
+  UNIQUE (user_id, panel, fecha)
+);`);
 // Migración 2.8.0: campaña de origen y ubicación de la lead.
 if (!dealCols.includes('campana_id')) {
   db.exec('ALTER TABLE deals ADD COLUMN campana_id INTEGER REFERENCES campanas(id)');

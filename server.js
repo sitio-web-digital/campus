@@ -1846,6 +1846,29 @@ function avisarVencimientos() {
   } catch (e) { console.error('avisarVencimientos:', e.message); }
 }
 setInterval(avisarVencimientos, 5 * 60 * 1000);
+
+// Recordatorio de carga diaria: si ayer quedó sin cargar, una notificación por panel (recién desde las 9 AR
+// para no avisar de madrugada). actividad_avisos garantiza un solo aviso por vendedor, panel y fecha.
+function recordarActividad() {
+  try {
+    const horaAR = parseInt(new Date().toLocaleString('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', hour12: false }), 10);
+    if (!(horaAR >= 9)) return;
+    const ayer = ventanaFechas(1)[1];
+    const vendedores = db.prepare("SELECT id, permisos FROM users WHERE role = 'vendedor' AND active = 1").all();
+    for (const P of PANELES_COMERCIALES) {
+      if (diasAtrasDe(P.slug) < 1) continue; // sin carga retroactiva, ayer ya no se puede cargar
+      for (const u of vendedores) {
+        let permisos = []; try { permisos = JSON.parse(u.permisos || '[]'); } catch {}
+        if (!permisos.includes(P.slug)) continue;
+        if (db.prepare('SELECT 1 FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha = ?').get(P.slug, u.id, ayer)) continue;
+        const r = db.prepare('INSERT OR IGNORE INTO actividad_avisos (user_id, panel, fecha) VALUES (?, ?, ?)').run(u.id, P.slug, ayer);
+        if (r.changes > 0) notifyUser(u.id, `No te olvides de cargar tu actividad de ayer en ${P.nombre} — toma 2 minutos`, `${baseDePanel(P.slug)}/actividad?fecha=${ayer}&abrir=1`);
+      }
+    }
+  } catch (e) { console.error('recordarActividad:', e.message); }
+}
+setInterval(recordarActividad, 15 * 60 * 1000);
+setTimeout(recordarActividad, 20 * 1000);
 setTimeout(avisarVencimientos, 15 * 1000);
 
 const PORT = process.env.PORT || 3000;

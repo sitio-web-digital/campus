@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.24.1',
+    fecha: '2026-08-22',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Recordatorio de carga diaria: si ayer quedó sin cargar la actividad, te llega una notificación por panel (a partir de las 9 de la mañana) con un link que abre directo la carga de ese día. Un solo aviso por día y por panel.' },
+    ],
+  },
+  {
     version: '2.24.0',
     fecha: '2026-08-22',
     cambios: [
