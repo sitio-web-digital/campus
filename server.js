@@ -1084,7 +1084,7 @@ for (const PANEL of PANELES_COMERCIALES) {
     for (const r of filasHeat) {
       try { heat[r.fecha] = (heat[r.fecha] || 0) + Object.values(JSON.parse(r.valores || '{}')).reduce((acu, x) => acu + (Number(x) || 0), 0); } catch {}
     }
-    res.send(V.panelActividadPage({ user: req.user, campos: camposPanel(slug), today, history, info, fecha, ventana, cargadas, esAdmin, esGeneral, target, vendedores, base, heat, diasAtras }));
+    res.send(V.panelActividadPage({ user: req.user, campos: camposPanel(slug), today, history, info, fecha, ventana, cargadas, esAdmin, esGeneral, target, vendedores, base, heat, diasAtras, abrir: req.query.abrir === '1' }));
   });
 
   app.post(base + '/actividad', requireAuth, requireSistema(slug), (req, res) => {

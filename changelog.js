@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.23.3',
+    fecha: '2026-08-22',
+    cambios: [
+      { tipo: 'mejora', texto: 'Pantalla de Actividad rediseñada alrededor de la carga en modal: si te faltan días aparece un aviso con cada día pendiente como botón (lo tocás y la modal se abre en esa fecha), el selector de días vive dentro de la modal, y la página queda limpia con la grilla de constancia y el historial.' },
+    ],
+  },
+  {
     version: '2.23.2',
     fecha: '2026-08-22',
     cambios: [

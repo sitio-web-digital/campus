@@ -2555,29 +2555,40 @@ function reporteImprimirPage({ user, p, nombrePeriodo, desde, hasta, r, info = {
 
 /* --------- paneles comerciales configurables --------- */
 
-function panelActividadPage({ user, campos, today, history, info, fecha: fechaSel, ventana = [], cargadas = [], esAdmin, esGeneral, target, vendedores = [], heat = {}, diasAtras = 3 }) {
+function panelActividadPage({ user, campos, today, history, info, fecha: fechaSel, ventana = [], cargadas = [], esAdmin, esGeneral, target, vendedores = [], heat = {}, diasAtras = 3, abrir = false }) {
   const vals = today ? (() => { try { return JSON.parse(today.valores || '{}'); } catch { return {}; } })() : {};
   const otro = esAdmin && target && target.id !== user.id;
-  const extraQS = esGeneral ? '&vendedor=todos' : (otro ? '&vendedor=' + target.id : '');
+  const qsVend = esGeneral ? '&vendedor=todos' : (otro ? '&vendedor=' + target.id : '');
+  const ddmm = (f) => `${+f.slice(8, 10)}/${+f.slice(5, 7)}`;
+  const etiqueta = (f, i) => (i === 0 ? 'Hoy' : i === 1 ? 'Ayer' : ddmm(f));
+  const faltantes = ventana.filter((f, i) => i > 0 && !cargadas.includes(f));
   return layout({
     title: `Actividad · ${info.nombre}`, user, active: 'actividad', sistema: info.slug,
     body: `
-  <h1>${esGeneral ? 'Actividad de todo el equipo' : (otro ? 'Actividad de ' + esc(target.name) : 'Mi actividad')}</h1>
-  <p class="muted small">${esGeneral ? 'La grilla suma lo cargado por todos los vendedores. Elegí una persona en el selector para ver su detalle o cargarle un día.' : `Cargala al final de cada día.${diasAtras > 0 ? ` Podés cargar o corregir hasta ${diasAtras} día${diasAtras === 1 ? '' : 's'} para atrás — los días con <span class="warn">•</span> están sin cargar.` : ' Solo se carga el día de hoy.'}`}</p>
-  <div class="toolbar">
-    ${esGeneral ? '' : tabsDias(ventana, cargadas, fechaSel, info.base + '/actividad', otro ? '&vendedor=' + target.id : '')}
+  <div class="toolbar" style="margin-bottom:.4rem">
+    <h1 style="margin:0">${esGeneral ? 'Actividad de todo el equipo' : (otro ? 'Actividad de ' + esc(target.name) : 'Mi actividad')}</h1>
+    <div class="sp"></div>
     ${esAdmin ? `
     <form method="get" action="${info.base}/actividad" class="cfg-inline" style="flex:0">
       <select name="vendedor" style="width:auto" onchange="this.form.submit()">
         <option value="todos" ${esGeneral ? 'selected' : ''}>— Todo el equipo —</option>
-        ${vendedores.map((v) => `<option value="${v.id}" ${!esGeneral && target && v.id === target.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}
+        ${vendedores.map((vu) => `<option value="${vu.id}" ${!esGeneral && target && vu.id === target.id ? 'selected' : ''}>${esc(vu.name)}</option>`).join('')}
       </select>
       <input type="date" name="fecha" value="${fechaSel}" style="width:auto">
       <button class="btn secondary small">Ver</button>
     </form>` : ''}
-    <div class="sp"></div>
-    ${esGeneral ? '' : `<button type="button" class="btn" onclick="document.getElementById('modalActividad').classList.add('abierto')">Cargar el día ${(() => { const pp = fechaSel.split('-'); return pp[2] + '/' + pp[1]; })()}</button>`}
+    ${esGeneral ? '' : `<button type="button" class="btn" onclick="document.getElementById('modalActividad').classList.add('abierto')">Cargar actividad</button>`}
   </div>
+  <p class="muted small" style="margin:.2rem 0 .9rem">${esGeneral ? 'La grilla suma lo cargado por todos los vendedores. Elegí una persona en el selector para ver su detalle o cargarle un día.' : `Cargala al final de cada día — toma 2 minutos.${diasAtras > 0 ? ` Podés corregir hasta ${diasAtras} día${diasAtras === 1 ? '' : 's'} para atrás.` : ''}`}</p>
+
+  ${!esGeneral && faltantes.length ? `
+  <div class="card" style="border-left:4px solid var(--bad)">
+    <div style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap">
+      <strong class="small">${otro ? 'Le faltan' : 'Te faltan'} cargar ${faltantes.length} día${faltantes.length === 1 ? '' : 's'}:</strong>
+      ${faltantes.map((f) => `<a class="btn secondary small" href="${info.base}/actividad?fecha=${f}&abrir=1${qsVend}">${etiqueta(f, ventana.indexOf(f))} <span class="warn">•</span></a>`).join('')}
+      <span class="small muted">— tocá un día para cargarlo</span>
+    </div>
+  </div>` : ''}
 
   <div class="card">
     <h3 style="margin-top:0">Constancia de carga · últimos 6 meses</h3>
@@ -2586,11 +2597,16 @@ function panelActividadPage({ user, campos, today, history, info, fecha: fechaSe
   </div>
 
   ${esGeneral ? '' : `
-  <div class="modal-back modal-carga" id="modalActividad">
+  <div class="modal-back modal-carga ${abrir ? 'abierto' : ''}" id="modalActividad">
     <div class="modal">
-      <div class="modal-h"><h2>${otro ? 'Actividad de ' + esc(target.name) : 'Mi actividad'} · ${(() => { const pp = fechaSel.split('-'); return pp[2] + '/' + pp[1] + '/' + pp[0]; })()}</h2><button type="button" class="modal-x" onclick="document.getElementById('modalActividad').classList.remove('abierto')" aria-label="Cerrar">&times;</button></div>
-      <p class="small muted" style="margin:0 0 .4rem">Los campos los define administración (Config). Si volvés a guardar el mismo día, se actualiza.</p>
+      <div class="modal-h"><h2>${otro ? 'Actividad de ' + esc(target.name) : 'Mi actividad'}</h2><button type="button" class="modal-x" onclick="document.getElementById('modalActividad').classList.remove('abierto')" aria-label="Cerrar">&times;</button></div>
+      <div class="toolbar" style="margin-bottom:.5rem">
+        <div class="seg">
+          ${ventana.map((f, i) => `<a href="${info.base}/actividad?fecha=${f}&abrir=1${qsVend}" class="${f === fechaSel ? 'on' : ''}">${etiqueta(f, i)}${i > 0 && !cargadas.includes(f) ? ' <span class="warn">•</span>' : ''}</a>`).join('')}
+        </div>
+      </div>
       <form method="post" action="${info.base}/actividad" class="card">
+        <p class="small" style="margin:0 0 .3rem"><strong>Cargando el día ${(() => { const pp = fechaSel.split('-'); return pp[2] + '/' + pp[1] + '/' + pp[0]; })()}</strong>${otro ? ' de ' + esc(target.name) : ''}${cargadas.includes(fechaSel) || (today && fechaSel === ventana[0]) ? ' <span class="muted">— ya tiene carga: al guardar se actualiza</span>' : ''}</p>
         <input type="hidden" name="fecha" value="${fechaSel}">
         ${otro ? `<input type="hidden" name="user_id" value="${target.id}">` : ''}
         <div class="grid2">
@@ -2607,8 +2623,8 @@ function panelActividadPage({ user, campos, today, history, info, fecha: fechaSe
   <div class="tablewrap"><table>
     <thead><tr><th>Fecha</th>${campos.map((c) => `<th>${esc(c.label)}</th>`).join('')}<th>Notas</th></tr></thead>
     <tbody>${history.length ? history.map((r) => {
-      let v = {}; try { v = JSON.parse(r.valores || '{}'); } catch {}
-      return `<tr><td>${fecha(r.fecha)}</td>${campos.map((c) => `<td>${v['c' + c.id] ?? 0}</td>`).join('')}<td class="muted">${esc(r.notas || '')}</td></tr>`;
+      let vv = {}; try { vv = JSON.parse(r.valores || '{}'); } catch {}
+      return `<tr><td>${fecha(r.fecha)}</td>${campos.map((c) => `<td>${vv['c' + c.id] ?? 0}</td>`).join('')}<td class="muted">${esc(r.notas || '')}</td></tr>`;
     }).join('') : `<tr><td colspan="${campos.length + 2}" class="muted">Todavía no cargó ningún día.</td></tr>`}</tbody>
   </table></div>`}`
   });
