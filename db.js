@@ -226,6 +226,13 @@ db.exec(`CREATE TABLE IF NOT EXISTS panel_config (
   valor TEXT,
   PRIMARY KEY (panel, clave)
 );`);
+// Avisos de vencimiento por lead (mitad del tiempo / última hora): uno solo por cada período de inactividad.
+db.exec(`CREATE TABLE IF NOT EXISTS robo_avisos (
+  deal_id INTEGER NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
+  marca TEXT NOT NULL,
+  tipo TEXT NOT NULL,
+  UNIQUE (deal_id, marca, tipo)
+);`);
 // Migración 2.8.0: campaña de origen y ubicación de la lead.
 if (!dealCols.includes('campana_id')) {
   db.exec('ALTER TABLE deals ADD COLUMN campana_id INTEGER REFERENCES campanas(id)');

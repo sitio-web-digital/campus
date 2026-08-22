@@ -331,6 +331,7 @@ app.get('/deals/:id', requireAuth, (req, res) => {
     user: req.user, deal, vendedores, isAdmin: req.user.role === 'admin', eventos, ultimaEd,
     errAprob: req.query.err === 'valor', errCalif: req.query.err === 'calificacion', errMigrar: req.query.err === 'migrar-ganado',
     tiempos: tiemposDeLead(deal), companeros: companerosDe(deal, req.user),
+    tomar: (() => { const robo = configRobo(deal.panel); return leadDisponible(deal, robo) && deal.user_id !== req.user.id ? { horas: robo.horas } : null; })(),
     panel: deal.panel, etapas: etapasDePanel(deal.panel), backHref: homeDePanel(deal.panel),
     campanas: db.prepare('SELECT id, nombre FROM campanas WHERE panel = ? AND (activa = 1 OR id = ?) ORDER BY nombre').all(deal.panel, deal.campana_id || 0),
   });
@@ -1728,6 +1729,31 @@ app.post('/perfil/password', requireAuth, (req, res) => {
   }
   res.redirect('/perfil');
 });
+
+// Avisos de vencimiento de leads: a la mitad del tiempo configurado y una hora antes de liberarse.
+// Corre cada 5 minutos; robo_avisos garantiza un solo aviso por lead y por período de inactividad.
+function avisarVencimientos() {
+  try {
+    for (const P of PANELES_COMERCIALES) {
+      const robo = configRobo(P.slug);
+      if (!robo.activo || !(robo.horas > 0)) continue;
+      const abiertas = db.prepare("SELECT id, empresa, user_id, etapa, etapa_movida_at FROM deals WHERE panel = ? AND etapa NOT IN ('Ganado','Perdido') AND etapa_movida_at IS NOT NULL").all(P.slug);
+      for (const d of abiertas) {
+        const horasSin = msDesde(d.etapa_movida_at) / 3600000;
+        if (!Number.isFinite(horasSin) || horasSin >= robo.horas) continue; // ya liberada: no tiene sentido avisar
+        const avisos = [];
+        if (horasSin >= robo.horas / 2) avisos.push(['mitad', `Tu lead «${d.empresa}» lleva ${Math.floor(horasSin)} h sin movimiento de etapa — a las ${robo.horas} h queda liberada para que otro vendedor la tome`]);
+        if (robo.horas > 1 && horasSin >= robo.horas - 1) avisos.push(['1h', `¡Última hora! Tu lead «${d.empresa}» se libera en menos de 1 hora si no la movés de etapa`]);
+        for (const [tipo, texto] of avisos) {
+          const r = db.prepare('INSERT OR IGNORE INTO robo_avisos (deal_id, marca, tipo) VALUES (?, ?, ?)').run(d.id, d.etapa_movida_at, tipo);
+          if (r.changes > 0) notifyUser(d.user_id, texto, `/deals/${d.id}`);
+        }
+      }
+    }
+  } catch (e) { console.error('avisarVencimientos:', e.message); }
+}
+setInterval(avisarVencimientos, 5 * 60 * 1000);
+setTimeout(avisarVencimientos, 15 * 1000);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Panel Comercial corriendo en http://localhost:${PORT}`));

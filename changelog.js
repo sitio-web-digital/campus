@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.22.1',
+    fecha: '2026-08-21',
+    cambios: [
+      { tipo: 'mejora', texto: 'Leads liberadas más sutiles: borde fino y un punto rojo que late suave en la tarjeta (chau titileo); el botón "Tomar lead" ahora vive dentro de la ficha, con el contexto completo antes de tomar.' },
+      { tipo: 'nuevo', texto: 'Avisos de vencimiento al dueño de la lead: una notificación a la mitad del tiempo configurado sin movimiento y otra una hora antes de que se libere. Un solo aviso por período — si movés la lead, el reloj y los avisos arrancan de cero.' },
+    ],
+  },
+  {
     version: '2.22.0',
     fecha: '2026-08-21',
     cambios: [

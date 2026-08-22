@@ -1019,13 +1019,15 @@ html.dark .theme-btn .ic-luna { display:none; }
 .curso-flecha { padding:.15rem .45rem; font-size:.72rem; }
 .curso-flecha[disabled] { opacity:.35; cursor:default; }
 
-/* ---------- leads liberadas (toma por inactividad) ---------- */
-@keyframes lead-titila { 0%, 100% { border-color:#C05450; box-shadow:0 0 0 0 rgba(192,84,80,.35); } 50% { border-color:#E8837F; box-shadow:0 0 0 4px rgba(192,84,80,.12); } }
-.kcard-libre { border:2px solid #C05450; animation: lead-titila 1.2s ease-in-out infinite; }
-.kcard-tomar { width:100%; margin-top:.35rem; background:#B3403C; }
-.kcard-tomar:hover { background:#8E3B38; }
+/* ---------- leads liberadas (toma por inactividad): señal sutil, la acción vive en la ficha ---------- */
+.kcard-libre { border:1px solid rgba(179,64,60,.5); }
 .kcard-hace { font-size:.6rem; }
-@media (prefers-reduced-motion: reduce) { .kcard-libre { animation:none; } }
+.kcard-hace-libre { color:#B3403C; font-weight:600; display:flex; align-items:center; gap:.28rem; }
+@keyframes punto-late { 0%, 100% { opacity:.35; } 50% { opacity:1; } }
+.punto-libre { width:.42rem; height:.42rem; border-radius:50%; background:#B3403C; flex-shrink:0; animation: punto-late 2.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .punto-libre { animation:none; } }
+.tomar-box { display:flex; gap:1rem; align-items:center; justify-content:space-between; flex-wrap:wrap; background:var(--warn-soft); border:1px solid rgba(168,121,31,.45); border-radius:10px; padding:.8rem 1rem; margin-bottom:.9rem; }
+.tomar-box form { flex-shrink:0; }
 .doc-curso { background:linear-gradient(140deg, #0E6E66, #0A3D39); }
 .doc-curso .ic, .doc-curso svg { width:2.6rem; height:2.6rem; }
 .quiz-preg { padding:.7rem 0; border-bottom:1px solid var(--line); }
@@ -1113,8 +1115,7 @@ function pipelinePage({ user, deals, scope, closed, modal, err = null, robo = nu
       <a class="kcard-t" href="/deals/${d.id}">${esc(d.empresa)}</a>
       <div class="kcard-m"><span class="mrr">${money(d.mrr)}${d.tipo_venta === 'Suscripción mensual' ? '<span style="font-weight:400">/mes</span>' : ''}</span><span>${d.ciudad ? esc(d.ciudad) + ' · ' : ''}${esc(d.vendedor_name.split(' ')[0])}</span></div>
       ${pie}
-      ${!cerrado && d.etapa_movida_at ? `<div class="kcard-w kcard-hace ${d.disponible ? 'warn' : 'ok'}" title="Tiempo sin movimiento de etapa">${d.disponible ? 'Liberada — sin movimiento ' : 'En etapa '}${tiempoRel(d.etapa_movida_at).replace('hace ', 'hace ')}</div>` : ''}
-      ${d.disponible ? `<form method="post" action="/deals/${d.id}/tomar" onsubmit="return confirm('¿Tomar la lead «${esc(d.empresa)}»? Pasa a ser tuya y su contador arranca de cero.')"><button class="btn small kcard-tomar">Tomar lead</button></form>` : ''}
+      ${!cerrado && d.etapa_movida_at ? `<div class="kcard-w kcard-hace ${d.disponible ? 'kcard-hace-libre' : 'ok'}" title="${d.disponible ? 'Liberada: abrila para tomarla' : 'Tiempo sin movimiento de etapa'}">${d.disponible ? '<span class="punto-libre"></span>Liberada · ' : 'En etapa '}${tiempoRel(d.etapa_movida_at)}</div>` : ''}
     </div>`;
   };
   const col = (etapa, sub) => {
@@ -1208,7 +1209,7 @@ const PROVINCIAS_AR = ['Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', '
 // Orígenes de lead para los paneles comerciales configurables (los de CFD son de venta de software).
 const ORIGENES_PANEL = ['MarketPlace', 'Ads', 'WhatsApp', 'Instagram', 'Referido', 'Cliente anterior', 'Propio', 'Otro'];
 
-function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, errCalif, errMigrar, tiempos, companeros = [], panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
+function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, errCalif, errMigrar, tiempos, companeros = [], tomar = null, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
   const d = deal || {};
   const isNew = !deal;
   const opt = (list, sel) => list.map((o) => `<option value="${esc(o)}" ${o === sel ? 'selected' : ''}>${esc(o)}</option>`).join('');
@@ -1222,6 +1223,14 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
   ${errAprob ? `<div class="flash bad">No se pudo aprobar: falta cargar el <strong>valor del deal</strong>, que es la base para calcular la comisión del vendedor. Completalo, guardá y volvé a aprobar.</div>` : ''}
   ${errCalif ? `<div class="flash bad">No se pudo aprobar: falta la <strong>calificación del cliente</strong> (Calificado / Descalificado / Cliente / Cliente de Alto Valor). Elegila abajo, guardá y volvé a aprobar.</div>` : ''}
   ${errMigrar ? `<div class="flash bad">Una venta <strong>Ganada y aprobada</strong> no se puede migrar: sus comisiones se generaron con las reglas de este panel. Si corresponde migrarla igual, primero reabrila (movela de etapa).</div>` : ''}
+  ${!isNew && tomar ? `
+  <div class="tomar-box">
+    <div>
+      <strong>Esta lead está liberada</strong>
+      <p class="small" style="margin:.15rem 0 0">Lleva más de ${tomar.horas} horas sin movimiento de etapa. Si la tomás, pasa a ser tuya con todo el historial, su dueño actual recibe una notificación y el contador arranca de cero.</p>
+    </div>
+    <form method="post" action="/deals/${d.id}/tomar" onsubmit="return confirm('¿Tomar la lead «${esc(d.empresa)}»?')"><button class="btn">Tomar lead</button></form>
+  </div>` : ''}
   ${!isNew && d.etapa === 'Ganado' && d.aprobacion !== 'aprobado' ? (isAdmin ? `
   <div class="aprob-box">
     ${d.mrr > 0 && d.calificacion ? `
