@@ -239,12 +239,13 @@ app.post('/login', (req, res) => {
 function avisarDiasFaltantes(user) {
   try {
     let permisos = []; try { permisos = JSON.parse(user.permisos || '[]'); } catch {}
-    const ventana = ventanaFechas().slice(1); // ayer, -2, -3
     const ddmm = (f) => `${+f.slice(8, 10)}/${+f.slice(5, 7)}`;
     const avisos = [];
     for (const P of PANELES_COMERCIALES) {
       if (!permisos.includes(P.slug)) continue;
-      const cargadas = db.prepare('SELECT fecha FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(P.slug, user.id, ventana[2]).map((r) => r.fecha);
+      const ventana = ventanaFechas(diasAtrasDe(P.slug)).slice(1); // ayer .. -N
+      if (!ventana.length) continue;
+      const cargadas = db.prepare('SELECT fecha FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(P.slug, user.id, ventana[ventana.length - 1]).map((r) => r.fecha);
       const faltan = ventana.filter((d) => !cargadas.includes(d));
       if (faltan.length) avisos.push({ texto: `Te faltan cargar días de actividad en Comercial ${P.nombre}: ${faltan.map(ddmm).join(', ')}`, url: `${baseDePanel(P.slug)}/actividad?fecha=${faltan[0]}` });
     }
@@ -526,10 +527,10 @@ app.post('/deals/:id/delete', requireAuth, requireAdmin, (req, res) => {
 
 /* ---------------- actividad ---------------- */
 
-// Ventana de carga: hoy y hasta 3 días atrás (el admin no tiene límite).
-function ventanaFechas() {
+// Ventana de carga: hoy y hasta N días atrás (configurable por panel; el admin no tiene límite).
+function ventanaFechas(dias = 3) {
   const out = [];
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i <= dias; i++) {
     const d = new Date(hoyAR() + 'T00:00:00Z');
     d.setUTCDate(d.getUTCDate() - i);
     out.push(d.toISOString().slice(0, 10));
@@ -537,8 +538,14 @@ function ventanaFechas() {
   return out;
 }
 
+// Días para atrás que el vendedor puede cargar en un panel (Config; 3 por defecto).
+function diasAtrasDe(slug) {
+  const n = parseInt(getPanelConfig(slug, 'dias_atras'), 10);
+  return Number.isFinite(n) && n >= 0 && n <= 30 ? n : 3;
+}
+
 // Resuelve a quién y qué fecha se carga (vendedor: solo él, ventana de 3 días; admin: cualquiera, fecha libre).
-function targetActividad(req, fuente) {
+function targetActividad(req, fuente, slug) {
   const esAdmin = req.user.role === 'admin';
   let target = { id: req.user.id, name: req.user.name };
   const vendedorId = parseInt(fuente.vendedor || fuente.user_id, 10);
@@ -547,7 +554,7 @@ function targetActividad(req, fuente) {
     if (t) target = t;
   }
   let fecha = cleanDate(fuente.fecha) || hoyAR();
-  if (!esAdmin && !ventanaFechas().includes(fecha)) fecha = hoyAR();
+  if (!esAdmin && !ventanaFechas(slug ? diasAtrasDe(slug) : 3).includes(fecha)) fecha = hoyAR();
   return { esAdmin, target, fecha };
 }
 
@@ -1054,12 +1061,13 @@ for (const PANEL of PANELES_COMERCIALES) {
   });
 
   app.get(base + '/actividad', requireAuth, requireSistema(slug), (req, res) => {
-    const { esAdmin, target, fecha } = targetActividad(req, req.query);
+    const { esAdmin, target, fecha } = targetActividad(req, req.query, slug);
     const esGeneral = esAdmin && req.query.vendedor === 'todos';
+    const diasAtras = diasAtrasDe(slug);
     const today = db.prepare('SELECT * FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha = ?').get(slug, target.id, fecha);
     const history = db.prepare('SELECT * FROM panel_activity WHERE panel = ? AND user_id = ? ORDER BY fecha DESC LIMIT 14').all(slug, target.id);
-    const ventana = ventanaFechas();
-    const cargadas = db.prepare('SELECT fecha FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(slug, target.id, ventana[3]).map((r) => r.fecha);
+    const ventana = ventanaFechas(diasAtras);
+    const cargadas = db.prepare('SELECT fecha FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(slug, target.id, ventana[ventana.length - 1]).map((r) => r.fecha);
     const vendedores = esAdmin ? db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all() : [];
     // Grilla de constancia (estilo GitHub): suma de lo cargado por día en los últimos 6 meses.
     const dHeat = new Date(hoyAR() + 'T00:00:00Z'); dHeat.setUTCDate(dHeat.getUTCDate() - 181);
@@ -1071,11 +1079,11 @@ for (const PANEL of PANELES_COMERCIALES) {
     for (const r of filasHeat) {
       try { heat[r.fecha] = (heat[r.fecha] || 0) + Object.values(JSON.parse(r.valores || '{}')).reduce((acu, x) => acu + (Number(x) || 0), 0); } catch {}
     }
-    res.send(V.panelActividadPage({ user: req.user, campos: camposPanel(slug), today, history, info, fecha, ventana, cargadas, esAdmin, esGeneral, target, vendedores, base, heat }));
+    res.send(V.panelActividadPage({ user: req.user, campos: camposPanel(slug), today, history, info, fecha, ventana, cargadas, esAdmin, esGeneral, target, vendedores, base, heat, diasAtras }));
   });
 
   app.post(base + '/actividad', requireAuth, requireSistema(slug), (req, res) => {
-    const { esAdmin, target, fecha } = targetActividad(req, req.body);
+    const { esAdmin, target, fecha } = targetActividad(req, req.body, slug);
     const valores = {};
     for (const c of camposPanel(slug)) valores['c' + c.id] = cleanInt(req.body['c' + c.id]);
     db.prepare(`INSERT INTO panel_activity (panel, user_id, fecha, valores, notas) VALUES (?, ?, ?, ?, ?)
@@ -1172,7 +1180,14 @@ for (const PANEL of PANELES_COMERCIALES) {
   /* --- configuración del panel (solo admin) --- */
 
   app.get(base + '/config', requireAuth, requireAdmin, (req, res) => {
-    res.send(V.panelConfigPage({ user: req.user, etapas: etapasPanelCfg(slug), campos: camposPanel(slug), err: req.query.err, errEtapa: clean(req.query.etapa), errN: parseInt(req.query.n, 10) || 0, info, campanas: campanasDePanel(slug), robo: configRobo(slug) }));
+    res.send(V.panelConfigPage({ user: req.user, etapas: etapasPanelCfg(slug), campos: camposPanel(slug), err: req.query.err, errEtapa: clean(req.query.etapa), errN: parseInt(req.query.n, 10) || 0, info, campanas: campanasDePanel(slug), robo: configRobo(slug), diasAtras: diasAtrasDe(slug) }));
+  });
+
+  // Carga retroactiva de actividad: cuántos días para atrás puede cargar el vendedor.
+  app.post(base + '/config/actividad', requireAuth, requireAdmin, (req, res) => {
+    const dias = Math.max(0, Math.min(30, parseInt(req.body.dias, 10)));
+    if (Number.isFinite(dias)) setPanelConfig(slug, 'dias_atras', dias);
+    res.redirect(base + '/config');
   });
 
   // Toma de leads inactivas: se activa con una cantidad de horas sin movimiento de etapa.

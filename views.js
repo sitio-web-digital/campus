@@ -2555,7 +2555,7 @@ function reporteImprimirPage({ user, p, nombrePeriodo, desde, hasta, r, info = {
 
 /* --------- paneles comerciales configurables --------- */
 
-function panelActividadPage({ user, campos, today, history, info, fecha: fechaSel, ventana = [], cargadas = [], esAdmin, esGeneral, target, vendedores = [], heat = {} }) {
+function panelActividadPage({ user, campos, today, history, info, fecha: fechaSel, ventana = [], cargadas = [], esAdmin, esGeneral, target, vendedores = [], heat = {}, diasAtras = 3 }) {
   const vals = today ? (() => { try { return JSON.parse(today.valores || '{}'); } catch { return {}; } })() : {};
   const otro = esAdmin && target && target.id !== user.id;
   const extraQS = esGeneral ? '&vendedor=todos' : (otro ? '&vendedor=' + target.id : '');
@@ -2563,7 +2563,7 @@ function panelActividadPage({ user, campos, today, history, info, fecha: fechaSe
     title: `Actividad · ${info.nombre}`, user, active: 'actividad', sistema: info.slug,
     body: `
   <h1>${esGeneral ? 'Actividad de todo el equipo' : (otro ? 'Actividad de ' + esc(target.name) : 'Mi actividad')}</h1>
-  <p class="muted small">${esGeneral ? 'La grilla suma lo cargado por todos los vendedores. Elegí una persona en el selector para ver su detalle o cargarle un día.' : 'Cargala al final de cada día. Podés cargar o corregir hasta 3 días para atrás — los días con <span class="warn">•</span> están sin cargar.'}</p>
+  <p class="muted small">${esGeneral ? 'La grilla suma lo cargado por todos los vendedores. Elegí una persona en el selector para ver su detalle o cargarle un día.' : `Cargala al final de cada día.${diasAtras > 0 ? ` Podés cargar o corregir hasta ${diasAtras} día${diasAtras === 1 ? '' : 's'} para atrás — los días con <span class="warn">•</span> están sin cargar.` : ' Solo se carga el día de hoy.'}`}</p>
   <div class="toolbar">
     ${esGeneral ? '' : tabsDias(ventana, cargadas, fechaSel, info.base + '/actividad', otro ? '&vendedor=' + target.id : '')}
     ${esAdmin ? `
@@ -2759,7 +2759,7 @@ function panelDashboardPage({ user, k, campos, colores, etapas, info }) {
   });
 }
 
-function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, campanas = [], robo = null }) {
+function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, campanas = [], robo = null, diasAtras = 3 }) {
   const ERRS = { 'ultima-etapa': 'Tiene que quedar al menos una etapa activa.' };
   // Etapa con leads adentro: cartel con la cantidad y acceso directo a esas leads (regla: primero verlas y moverlas, después borrar).
   const cartelEtapa = err === 'etapa-en-uso' ? `
@@ -2809,6 +2809,15 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
     <form method="post" action="${info.base}/config/campos" class="cfg-inline" style="margin-top:.6rem">
       <input name="label" placeholder="Nuevo campo (ej: Presupuestos entregados)" required>
       <button class="btn small">Agregar campo</button>
+    </form>
+  </div>
+
+  <h2>Carga de actividad</h2>
+  <div class="card">
+    <p class="small muted">Cuántos días para atrás puede cargar o corregir su actividad un vendedor (el administrador no tiene límite). Con 0, solo puede cargar el día de hoy.</p>
+    <form method="post" action="${info.base}/config/actividad" class="perm-row">
+      <label class="perm" style="text-transform:none;letter-spacing:0">Días para atrás: <input name="dias" type="number" min="0" max="30" step="1" value="${diasAtras != null ? diasAtras : 3}" style="width:5rem;display:inline-block;margin-left:.3rem"></label>
+      <button class="btn small">Guardar</button>
     </form>
   </div>
 

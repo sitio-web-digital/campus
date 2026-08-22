@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.23.1',
+    fecha: '2026-08-22',
+    cambios: [
+      { tipo: 'mejora', texto: 'Los días de carga retroactiva de actividad ahora se definen en la Config de cada panel (0 a 30; antes eran 3 fijos). Las pestañas de días, el texto de ayuda, el recordatorio al entrar y la validación del servidor se ajustan solos.' },
+    ],
+  },
+  {
     version: '2.23.0',
     fecha: '2026-08-22',
     cambios: [
