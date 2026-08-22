@@ -212,6 +212,20 @@ if (!campCols.includes('panel')) {
 if (!dealCols.includes('telefono')) {
   db.exec('ALTER TABLE deals ADD COLUMN telefono TEXT');
 }
+// Migración 2.22.0: calificación del cliente + timestamp del último movimiento de etapa + config por panel.
+if (!dealCols.includes('calificacion')) {
+  db.exec('ALTER TABLE deals ADD COLUMN calificacion TEXT');
+}
+if (!dealCols.includes('etapa_movida_at')) {
+  db.exec('ALTER TABLE deals ADD COLUMN etapa_movida_at TEXT');
+  db.exec('UPDATE deals SET etapa_movida_at = updated_at WHERE etapa_movida_at IS NULL');
+}
+db.exec(`CREATE TABLE IF NOT EXISTS panel_config (
+  panel TEXT NOT NULL,
+  clave TEXT NOT NULL,
+  valor TEXT,
+  PRIMARY KEY (panel, clave)
+);`);
 // Migración 2.8.0: campaña de origen y ubicación de la lead.
 if (!dealCols.includes('campana_id')) {
   db.exec('ALTER TABLE deals ADD COLUMN campana_id INTEGER REFERENCES campanas(id)');
@@ -551,6 +565,8 @@ if (db.prepare('SELECT COUNT(*) AS c FROM commission_rules').get().c === 0) {
 }
 const ETAPAS_ACTIVAS = ETAPAS.slice(0, 6);
 const ORIGENES = ['Outbound frío', 'Referido', 'Inbound / Marketing', 'Red personal'];
+// Calificación del cliente: obligatoria para aprobar una venta Ganada.
+const CALIFICACIONES = ['Calificado', 'Descalificado', 'Cliente', 'Cliente de Alto Valor'];
 const MOTIVOS = ['Precio', 'Timing / no es prioridad', 'Eligió competencia', 'Sin presupuesto', 'No era el decisor', 'Dejó de responder', 'No calificado'];
 
 // Primer arranque: crea el admin y muestra la clave inicial en consola.
@@ -576,4 +592,4 @@ function getSessionSecret() {
 // Secciones del Campus de formación: una por empresa + General.
 const CAMPUS_EMPRESAS = [['general', 'General'], ...PANELES_COMERCIALES.map((p) => [p.slug, p.nombre])];
 
-module.exports = { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, SISTEMAS, PANELES_COMERCIALES, CAMPUS_EMPRESAS };
+module.exports = { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, CALIFICACIONES, SISTEMAS, PANELES_COMERCIALES, CAMPUS_EMPRESAS };

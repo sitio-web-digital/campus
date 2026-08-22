@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.22.0',
+    fecha: '2026-08-21',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Calificación del cliente en las leads (Calificado / Descalificado / Cliente / Cliente de Alto Valor): obligatoria para aprobar una venta Ganada, junto al valor. El admin puede exportar el directorio de clientes por panel (CSV clientes en el Dashboard) con teléfono y calificación.' },
+      { tipo: 'nuevo', texto: 'Toma de leads inactivas, configurable por panel en Config: se activa con una cantidad de horas sin cambio de etapa. Las leads que pasan ese tiempo titilan en rojo en el pipeline y cualquier vendedor puede tomarlas; el dueño anterior recibe notificación y el contador arranca de cero. Si dos van por la misma, el que llega tarde ve quién se la llevó.' },
+      { tipo: 'nuevo', texto: 'Traspaso voluntario: el vendedor puede pasarle su lead a un compañero desde la ficha (con notificación e historial). Además, cada lead muestra hace cuánto no se mueve de etapa (en la tarjeta y la ficha) y su promedio de tiempo entre cambios de etapa.' },
+    ],
+  },
+  {
     version: '2.21.0',
     fecha: '2026-08-20',
     cambios: [

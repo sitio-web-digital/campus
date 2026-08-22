@@ -1,4 +1,4 @@
-const { ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, PANELES_COMERCIALES } = require('./db');
+const { ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, CALIFICACIONES, PANELES_COMERCIALES } = require('./db');
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = (n) => n == null ? '—' : '$' + Number(n).toLocaleString('es-AR', { maximumFractionDigits: 0 });
@@ -1018,6 +1018,14 @@ html.dark .theme-btn .ic-luna { display:none; }
 .curso-num { display:inline-flex; align-items:center; justify-content:center; width:1.35rem; height:1.35rem; border-radius:50%; background:var(--surface2); color:var(--muted); font-size:.68rem; font-weight:700; flex-shrink:0; }
 .curso-flecha { padding:.15rem .45rem; font-size:.72rem; }
 .curso-flecha[disabled] { opacity:.35; cursor:default; }
+
+/* ---------- leads liberadas (toma por inactividad) ---------- */
+@keyframes lead-titila { 0%, 100% { border-color:#C05450; box-shadow:0 0 0 0 rgba(192,84,80,.35); } 50% { border-color:#E8837F; box-shadow:0 0 0 4px rgba(192,84,80,.12); } }
+.kcard-libre { border:2px solid #C05450; animation: lead-titila 1.2s ease-in-out infinite; }
+.kcard-tomar { width:100%; margin-top:.35rem; background:#B3403C; }
+.kcard-tomar:hover { background:#8E3B38; }
+.kcard-hace { font-size:.6rem; }
+@media (prefers-reduced-motion: reduce) { .kcard-libre { animation:none; } }
 .doc-curso { background:linear-gradient(140deg, #0E6E66, #0A3D39); }
 .doc-curso .ic, .doc-curso svg { width:2.6rem; height:2.6rem; }
 .quiz-preg { padding:.7rem 0; border-bottom:1px solid var(--line); }
@@ -1087,7 +1095,7 @@ function loginPage({ err, seeded }) {
   });
 }
 
-function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPAS_ACTIVAS, colores = ETAPA_COLOR, base = '', nuevoHref = '/deals/new', sistema = 'comercial', q = '', fVendedor = null, fOrigen = null, fEtapa = null, origenes = [], vendedores = [], totalSinFiltro = 0 }) {
+function pipelinePage({ user, deals, scope, closed, modal, err = null, robo = null, etapasActivas = ETAPAS_ACTIVAS, colores = ETAPA_COLOR, base = '', nuevoHref = '/deals/new', sistema = 'comercial', q = '', fVendedor = null, fOrigen = null, fEtapa = null, origenes = [], vendedores = [], totalSinFiltro = 0 }) {
   const colorDe = (etapa) => colores[etapa] || '#8494A6';
   const puedeMover = (d) => user.role === 'admin' || d.user_id === user.id;
   const kcard = (d) => {
@@ -1101,10 +1109,12 @@ function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPA
       : vencido ? `<div class="kcard-w warn">Vencido ${fecha(d.fecha_proximo_paso)}</div>`
       : d.fecha_proximo_paso ? `<div class="kcard-w ok">→ ${fecha(d.fecha_proximo_paso)}${d.proximo_paso ? ' · ' + esc(d.proximo_paso) : ''}</div>` : '';
     return `
-    <div class="kcard" ${puedeMover(d) ? 'draggable="true"' : ''} data-id="${d.id}">
+    <div class="kcard ${d.disponible ? 'kcard-libre' : ''}" ${puedeMover(d) ? 'draggable="true"' : ''} data-id="${d.id}">
       <a class="kcard-t" href="/deals/${d.id}">${esc(d.empresa)}</a>
       <div class="kcard-m"><span class="mrr">${money(d.mrr)}${d.tipo_venta === 'Suscripción mensual' ? '<span style="font-weight:400">/mes</span>' : ''}</span><span>${d.ciudad ? esc(d.ciudad) + ' · ' : ''}${esc(d.vendedor_name.split(' ')[0])}</span></div>
       ${pie}
+      ${!cerrado && d.etapa_movida_at ? `<div class="kcard-w kcard-hace ${d.disponible ? 'warn' : 'ok'}" title="Tiempo sin movimiento de etapa">${d.disponible ? 'Liberada — sin movimiento ' : 'En etapa '}${tiempoRel(d.etapa_movida_at).replace('hace ', 'hace ')}</div>` : ''}
+      ${d.disponible ? `<form method="post" action="/deals/${d.id}/tomar" onsubmit="return confirm('¿Tomar la lead «${esc(d.empresa)}»? Pasa a ser tuya y su contador arranca de cero.')"><button class="btn small kcard-tomar">Tomar lead</button></form>` : ''}
     </div>`;
   };
   const col = (etapa, sub) => {
@@ -1127,7 +1137,7 @@ function pipelinePage({ user, deals, scope, closed, modal, etapasActivas = ETAPA
   const amp = qsF ? '&' + qsF : '';
   const filtrando = !!(q || fVendedor || fOrigen || fEtapa);
   return layout({
-    title: 'Pipeline', user, active: 'pipeline', sistema,
+    title: 'Pipeline', user, active: 'pipeline', sistema, err,
     body: `
   <form method="get" action="${pipeUrl}" class="pipebar">
     <input type="hidden" name="scope" value="${scope}">
@@ -1198,7 +1208,7 @@ const PROVINCIAS_AR = ['Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', '
 // Orígenes de lead para los paneles comerciales configurables (los de CFD son de venta de software).
 const ORIGENES_PANEL = ['MarketPlace', 'Ads', 'WhatsApp', 'Instagram', 'Referido', 'Cliente anterior', 'Propio', 'Otro'];
 
-function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, errMigrar, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
+function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, errCalif, errMigrar, tiempos, companeros = [], panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
   const d = deal || {};
   const isNew = !deal;
   const opt = (list, sel) => list.map((o) => `<option value="${esc(o)}" ${o === sel ? 'selected' : ''}>${esc(o)}</option>`).join('');
@@ -1208,16 +1218,17 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
   <div class="modal-back" id="modalBack">
   <div class="modal">
   <div class="modal-h"><h2>${isNew ? 'Nuevo deal' : esc(d.empresa)}</h2><a class="modal-x" href="${backHref}" aria-label="Cerrar">&times;</a></div>
-  ${!isNew && ultimaEd ? `<p class="small muted" style="margin:-.3rem 0 .7rem">Última edición: <strong>${esc(ultimaEd.nombre)}</strong> · ${fechaHora(ultimaEd.fecha)}</p>` : ''}
+  ${!isNew && ultimaEd ? `<p class="small muted" style="margin:-.3rem 0 .7rem">Última edición: <strong>${esc(ultimaEd.nombre)}</strong> · ${fechaHora(ultimaEd.fecha)}${tiempos ? ` &nbsp;·&nbsp; Último movimiento de etapa: <strong>${tiempoRel(tiempos.ultima)}</strong> &nbsp;·&nbsp; Promedio entre etapas: <strong>${tiempos.promedio != null ? durLegible(tiempos.promedio) : '—'}</strong>` : ''}</p>` : ''}
   ${errAprob ? `<div class="flash bad">No se pudo aprobar: falta cargar el <strong>valor del deal</strong>, que es la base para calcular la comisión del vendedor. Completalo, guardá y volvé a aprobar.</div>` : ''}
+  ${errCalif ? `<div class="flash bad">No se pudo aprobar: falta la <strong>calificación del cliente</strong> (Calificado / Descalificado / Cliente / Cliente de Alto Valor). Elegila abajo, guardá y volvé a aprobar.</div>` : ''}
   ${errMigrar ? `<div class="flash bad">Una venta <strong>Ganada y aprobada</strong> no se puede migrar: sus comisiones se generaron con las reglas de este panel. Si corresponde migrarla igual, primero reabrila (movela de etapa).</div>` : ''}
   ${!isNew && d.etapa === 'Ganado' && d.aprobacion !== 'aprobado' ? (isAdmin ? `
   <div class="aprob-box">
-    ${d.mrr > 0 ? `
+    ${d.mrr > 0 && d.calificacion ? `
     <p><strong>Esta venta espera tu aprobación.</strong> Validá los datos antes de aprobar (corregilos abajo y guardá si algo está mal):</p>
-    <p class="small" style="margin:.2rem 0 .7rem"><strong>Vendedor:</strong> ${esc((vendedores.find((v) => v.id === d.user_id) || {}).name || '—')} · <strong>Tipo:</strong> ${esc(panel === 'cfd' ? d.tipo_venta || '—' : 'Venta ' + panel)} · <strong>Valor:</strong> ${money(d.mrr)} · <strong>Cierre:</strong> ${fecha(d.fecha_cierre) || 'se estampa al aprobar'}</p>
+    <p class="small" style="margin:.2rem 0 .7rem"><strong>Vendedor:</strong> ${esc((vendedores.find((v) => v.id === d.user_id) || {}).name || '—')} · <strong>Tipo:</strong> ${esc(panel === 'cfd' ? d.tipo_venta || '—' : 'Venta ' + panel)} · <strong>Valor:</strong> ${money(d.mrr)} · <strong>Calificación:</strong> ${esc(d.calificacion || '—')} · <strong>Cierre:</strong> ${fecha(d.fecha_cierre) || 'se estampa al aprobar'}</p>
     <form method="post" action="/deals/${d.id}/aprobar"><button class="btn">Aprobar venta</button></form>` : `
-    <p style="margin:0"><strong>Faltan datos para aprobar: el valor del deal.</strong> Cargalo abajo y guardá — sin ese dato no se puede calcular la comisión del vendedor.</p>`}
+    <p style="margin:0"><strong>Faltan datos para aprobar:</strong> ${[!(d.mrr > 0) && 'el valor del deal (base de la comisión)', !d.calificacion && 'la calificación del cliente'].filter(Boolean).join(' y ')}. Completalo abajo y guardá.</p>`}
   </div>` : `
   <div class="aprob-box">
     <p style="margin:0"><strong>Esperando aprobación del administrador.</strong> La venta va a impactar en métricas y comisiones cuando sea aprobada.</p>
@@ -1250,6 +1261,10 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
         <label>Valor ($)</label>
         <input name="mrr" type="number" step="any" min="0" inputmode="decimal" value="${d.mrr ?? ''}" placeholder="Proyecto: total · Suscripción: por mes">
       </div>`}
+      <div>
+        <label>Calificación del cliente ${d.etapa === 'Ganado' ? '· obligatoria para aprobar' : ''}</label>
+        <select name="calificacion"><option value="">— Sin calificar —</option>${opt(CALIFICACIONES, d.calificacion)}</select>
+      </div>
       <div>
         <label>Origen</label>
         <select name="origen"><option value="">—</option>${opt(origenes, d.origen)}</select>
@@ -1308,6 +1323,15 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
       <a class="btn secondary" href="${backHref}">Cancelar</a>
     </div>
   </form>
+  ${!isNew && !isAdmin && user.id === d.user_id && companeros.length ? `
+  <details class="card">
+    <summary class="small" style="cursor:pointer;color:var(--accent-ink);font-weight:600">Traspasar esta lead a un compañero</summary>
+    <p class="small muted" style="margin:.5rem 0 .4rem">La lead pasa a ser suya (con todo el historial), le llega una notificación y su contador de actividad arranca de cero. Queda registrado quién la traspasó.</p>
+    <form method="post" action="/deals/${d.id}/traspasar" class="cfg-inline" onsubmit="return confirm('¿Traspasar «${esc(d.empresa)}» al compañero elegido?')">
+      <select name="a" style="width:auto">${companeros.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
+      <button class="btn secondary small">Traspasar</button>
+    </form>
+  </details>` : ''}
   ${!isNew && isAdmin ? (() => {
     const otros = PANELES_COMERCIALES.filter((p) => p.slug !== panel);
     const ganadoAprobado = d.etapa === 'Ganado' && d.aprobacion === 'aprobado';
@@ -1507,6 +1531,15 @@ function dashboardPage({ user, k, campos = [], etapas = ETAPAS_ACTIVAS, colores 
 const ROL_LABEL = { admin: 'Administrador', vendedor: 'Vendedor', developer: 'Developer' };
 const ROL_COLOR = { admin: '#0F3459', vendedor: '#1D6FB8', developer: '#54657A' };
 const chipRol = (r) => `<span class="chip" style="background:${ROL_COLOR[r] || '#8494A6'}">${ROL_LABEL[r] || r}</span>`;
+
+// Duración legible: 90 → "1 m", 7200 → "2 h", 200000 → "2 d 8 h".
+function durLegible(seg) {
+  if (seg == null || !Number.isFinite(seg) || seg < 0) return '—';
+  const d = Math.floor(seg / 86400), h = Math.floor((seg % 86400) / 3600), m = Math.round((seg % 3600) / 60);
+  if (d > 0) return `${d} d${h ? ' ' + h + ' h' : ''}`;
+  if (h > 0) return `${h} h${m ? ' ' + m + ' m' : ''}`;
+  return `${Math.max(1, m)} m`;
+}
 
 // "hace 5 min" / "hace 2 h" / "hace 3 días" — para último login y última interacción.
 function tiempoRel(s) {
@@ -1994,6 +2027,7 @@ function dashboardUnificadoPage({ user, info, p, off, periodos, desde, hasta, r,
       </select>
     </form>
     <div class="sp"></div>
+    <a class="btn secondary small" href="${info.base}/clientes.csv" title="Todos los clientes del panel con teléfono y calificación">CSV clientes</a>
     <a class="btn secondary small" href="${dashUrl}.csv?p=${p}&off=${off}">Descargar CSV</a>
     <a class="btn small" href="${dashUrl}/imprimir?p=${p}&off=${off}" target="_blank" rel="noopener">Exportar PDF</a>
   </div>
@@ -2634,7 +2668,7 @@ function panelDashboardPage({ user, k, campos, colores, etapas, info }) {
   });
 }
 
-function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, campanas = [] }) {
+function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, campanas = [], robo = null }) {
   const ERRS = { 'ultima-etapa': 'Tiene que quedar al menos una etapa activa.' };
   // Etapa con leads adentro: cartel con la cantidad y acceso directo a esas leads (regla: primero verlas y moverlas, después borrar).
   const cartelEtapa = err === 'etapa-en-uso' ? `
@@ -2685,6 +2719,17 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
       <input name="label" placeholder="Nuevo campo (ej: Presupuestos entregados)" required>
       <button class="btn small">Agregar campo</button>
     </form>
+  </div>
+
+  <h2>Toma de leads inactivas</h2>
+  <div class="card">
+    <p class="small muted">Si está activa, toda lead que pase la cantidad de horas configurada <strong>sin cambio de etapa</strong> queda liberada: su tarjeta titila en rojo en el pipeline y cualquier vendedor puede tomarla (el dueño anterior recibe una notificación y el contador arranca de cero para el nuevo). Los vendedores también pueden traspasarse leads entre sí desde la ficha, esté esto activo o no.</p>
+    <form method="post" action="${info.base}/config/robo" class="perm-row">
+      <label class="perm"><input type="checkbox" name="activo" ${robo && robo.activo ? 'checked' : ''}> Permitir tomar leads inactivas</label>
+      <label class="perm" style="text-transform:none;letter-spacing:0">Horas sin movimiento para liberar: <input name="horas" type="number" min="1" max="720" step="1" value="${robo && robo.horas ? robo.horas : 48}" style="width:5.5rem;display:inline-block;margin-left:.3rem"></label>
+      <button class="btn small">Guardar</button>
+    </form>
+    ${robo && robo.activo ? `<p class="caption">Activo: las leads con más de <strong>${robo.horas} horas</strong> sin movimiento de etapa están liberadas.</p>` : '<p class="caption">Desactivado: nadie puede tomar leads ajenas (el traspaso voluntario sigue disponible).</p>'}
   </div>
 
   <h2>Campañas de ${esc(info.nombre)}</h2>

@@ -3,7 +3,7 @@ const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
-const { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, SISTEMAS, PANELES_COMERCIALES, CAMPUS_EMPRESAS } = require('./db');
+const { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, CALIFICACIONES, SISTEMAS, PANELES_COMERCIALES, CAMPUS_EMPRESAS } = require('./db');
 const PANEL_SLUGS = PANELES_COMERCIALES.map((p) => p.slug);
 const V = require('./views');
 const C = require('./comisiones');
@@ -121,7 +121,7 @@ function notifyUser(userId, texto, url, lote = null, actorId = null) {
 }
 
 const CAMPOS_DEAL = {
-  empresa: 'Empresa', tipo_venta: 'Tipo de venta', mrr: 'Valor', telefono: 'Teléfono', decisor: 'Decisor', origen: 'Origen',
+  empresa: 'Empresa', tipo_venta: 'Tipo de venta', mrr: 'Valor', telefono: 'Teléfono', calificacion: 'Calificación', decisor: 'Decisor', origen: 'Origen',
   campana_id: 'Campaña', pais: 'País', provincia: 'Provincia', ciudad: 'Ciudad',
   proximo_paso: 'Próximo paso', fecha_proximo_paso: 'Fecha próximo paso',
   fecha_primera_reunion: 'Fecha primera reunión', fecha_cierre: 'Fecha de cierre',
@@ -197,6 +197,7 @@ function dealFromBody(body, user, panel = 'cfd', etapaActual = 'Lead', tipoActua
     tipo_venta: cleanEnum(body.tipo_venta, TIPOS_VENTA) || tipoActual,
     mrr: cleanNum(body.mrr),
     telefono: clean(body.telefono),
+    calificacion: cleanEnum(body.calificacion, CALIFICACIONES),
     decisor: clean(body.decisor),
     // CFD valida contra sus orígenes de venta de software; los paneles aceptan cualquier origen
     // (el selector ofrece los suyos, y las leads importadas traen valores propios que no deben perderse).
@@ -307,10 +308,10 @@ app.post('/deals', requireAuth, (req, res) => {
   const d = dealFromBody(req.body, req.user, panel);
   if (!d.empresa) return res.redirect(home);
   // Ganado por admin CON valor cargado: aprobado directo. Sin valor o ganado por vendedor: pendiente.
-  d.aprobacion = d.etapa === 'Ganado' ? (req.user.role === 'admin' && d.mrr > 0 ? 'aprobado' : 'pendiente') : null;
+  d.aprobacion = d.etapa === 'Ganado' ? (req.user.role === 'admin' && d.mrr > 0 && d.calificacion ? 'aprobado' : 'pendiente') : null;
   const { nota: _n1, ...dInsert } = d;
-  const r = db.prepare(`INSERT INTO deals (empresa, user_id, panel, etapa, tipo_venta, mrr, telefono, decisor, origen, proximo_paso, fecha_proximo_paso, fecha_primera_reunion, fecha_cierre, motivo_perdida, campana_id, pais, provincia, ciudad, notas, aprobacion)
-    VALUES (@empresa, @user_id, @panel, @etapa, @tipo_venta, @mrr, @telefono, @decisor, @origen, @proximo_paso, @fecha_proximo_paso, @fecha_primera_reunion, @fecha_cierre, @motivo_perdida, @campana_id, @pais, @provincia, @ciudad, @notas, @aprobacion)`).run(dInsert);
+  const r = db.prepare(`INSERT INTO deals (empresa, user_id, panel, etapa, tipo_venta, mrr, telefono, calificacion, decisor, origen, proximo_paso, fecha_proximo_paso, fecha_primera_reunion, fecha_cierre, motivo_perdida, campana_id, pais, provincia, ciudad, notas, aprobacion, etapa_movida_at)
+    VALUES (@empresa, @user_id, @panel, @etapa, @tipo_venta, @mrr, @telefono, @calificacion, @decisor, @origen, @proximo_paso, @fecha_proximo_paso, @fecha_primera_reunion, @fecha_cierre, @motivo_perdida, @campana_id, @pais, @provincia, @ciudad, @notas, @aprobacion, datetime('now'))`).run(dInsert);
   logDealEvent(r.lastInsertRowid, req.user.id, 'creado', `Deal creado en etapa ${d.etapa}`);
   if (d.nota) logDealEvent(r.lastInsertRowid, req.user.id, 'edicion', `Nota: ${d.nota}`);
   notifyAdmins(req.user.id, `Creó el deal «${d.empresa}» en ${d.etapa}${d.aprobacion === 'pendiente' ? ' — requiere tu aprobación' : ''}`, `/deals/${r.lastInsertRowid}`, d.etapa === 'Ganado' ? 'ganado' : 'deal_nuevo');
@@ -327,7 +328,9 @@ app.get('/deals/:id', requireAuth, (req, res) => {
     WHERE e.deal_id = ? ORDER BY e.created_at DESC, e.id DESC`).all(deal.id);
   const ultimaEd = eventos[0] ? { nombre: eventos[0].user_name, fecha: eventos[0].created_at } : null;
   const modal = V.dealFormModal({
-    user: req.user, deal, vendedores, isAdmin: req.user.role === 'admin', eventos, ultimaEd, errAprob: req.query.err === 'valor', errMigrar: req.query.err === 'migrar-ganado',
+    user: req.user, deal, vendedores, isAdmin: req.user.role === 'admin', eventos, ultimaEd,
+    errAprob: req.query.err === 'valor', errCalif: req.query.err === 'calificacion', errMigrar: req.query.err === 'migrar-ganado',
+    tiempos: tiemposDeLead(deal), companeros: companerosDe(deal, req.user),
     panel: deal.panel, etapas: etapasDePanel(deal.panel), backHref: homeDePanel(deal.panel),
     campanas: db.prepare('SELECT id, nombre FROM campanas WHERE panel = ? AND (activa = 1 OR id = ?) ORDER BY nombre').all(deal.panel, deal.campana_id || 0),
   });
@@ -347,12 +350,13 @@ app.post('/deals/:id', requireAuth, (req, res) => {
   const cambioEtapa = d.etapa !== deal.etapa;
   // Aprobación: si entra a Ganado depende de quién lo hace Y de que el valor esté cargado; si sale, se limpia; si no cambió, se conserva.
   d.aprobacion = d.etapa !== 'Ganado' ? null
-    : cambioEtapa ? (req.user.role === 'admin' && d.mrr > 0 ? 'aprobado' : 'pendiente')
+    : cambioEtapa ? (req.user.role === 'admin' && d.mrr > 0 && d.calificacion ? 'aprobado' : 'pendiente')
     : deal.aprobacion;
   const { nota: _n2, ...dUpdate } = d;
-  db.prepare(`UPDATE deals SET empresa=@empresa, user_id=@user_id, panel=@panel, etapa=@etapa, tipo_venta=@tipo_venta, mrr=@mrr, telefono=@telefono, decisor=@decisor, origen=@origen,
+  db.prepare(`UPDATE deals SET empresa=@empresa, user_id=@user_id, panel=@panel, etapa=@etapa, tipo_venta=@tipo_venta, mrr=@mrr, telefono=@telefono, calificacion=@calificacion, decisor=@decisor, origen=@origen,
     proximo_paso=@proximo_paso, fecha_proximo_paso=@fecha_proximo_paso, fecha_primera_reunion=@fecha_primera_reunion,
-    fecha_cierre=@fecha_cierre, motivo_perdida=@motivo_perdida, campana_id=@campana_id, pais=@pais, provincia=@provincia, ciudad=@ciudad, notas=@notas, aprobacion=@aprobacion, updated_at=datetime('now') WHERE id=@id`)
+    fecha_cierre=@fecha_cierre, motivo_perdida=@motivo_perdida, campana_id=@campana_id, pais=@pais, provincia=@provincia, ciudad=@ciudad, notas=@notas, aprobacion=@aprobacion,
+    etapa_movida_at = CASE WHEN etapa != @etapa THEN datetime('now') ELSE etapa_movida_at END, updated_at=datetime('now') WHERE id=@id`)
     .run({ ...dUpdate, id: deal.id });
 
   // Historial: cambio de etapa es un evento propio; el resto va como edición.
@@ -389,7 +393,7 @@ app.post('/deals/:id/etapa', requireAuth, (req, res) => {
   if (!['Ganado', 'Perdido'].includes(etapa)) fechaCierre = null; // se reabre
   // Arrastrar a Ganado NUNCA aprueba (ni siendo admin): la revisión de datos se hace en la ficha con "Aprobar venta".
   const aprobacion = etapa === 'Ganado' ? 'pendiente' : null;
-  db.prepare("UPDATE deals SET etapa = ?, fecha_cierre = ?, aprobacion = ?, updated_at = datetime('now') WHERE id = ?").run(etapa, fechaCierre, aprobacion, deal.id);
+  db.prepare("UPDATE deals SET etapa = ?, fecha_cierre = ?, aprobacion = ?, etapa_movida_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(etapa, fechaCierre, aprobacion, deal.id);
   logDealEvent(deal.id, req.user.id, 'etapa', `${deal.etapa} → ${etapa}`);
   notifyAdmins(req.user.id, `Movió «${deal.empresa}» de ${deal.etapa} a ${etapa}${aprobacion === 'pendiente' ? ' — requiere tu aprobación' : ''}`, `/deals/${deal.id}`, etapa === 'Ganado' ? 'ganado' : 'cambio_etapa');
   if (req.user.id !== deal.user_id) {
@@ -405,6 +409,8 @@ app.post('/deals/:id/aprobar', requireAuth, requireAdmin, (req, res) => {
   if (deal && deal.etapa === 'Ganado' && deal.aprobacion !== 'aprobado') {
     // Sin valor cargado no hay base para calcular la comisión: se rechaza la aprobación.
     if (!deal.mrr || deal.mrr <= 0) return res.redirect(`/deals/${deal.id}?err=valor`);
+    // Sin calificación del cliente tampoco: es el dato que pidió administración para cerrar.
+    if (!deal.calificacion) return res.redirect(`/deals/${deal.id}?err=calificacion`);
     db.prepare("UPDATE deals SET aprobacion = 'aprobado', updated_at = datetime('now') WHERE id = ?").run(deal.id);
     logDealEvent(deal.id, req.user.id, 'etapa', 'Venta aprobada — impacta en métricas y cobranza');
     C.generarComisiones({ ...deal, aprobacion: 'aprobado' });
@@ -418,6 +424,78 @@ app.post('/deals/:id/aprobar', requireAuth, requireAdmin, (req, res) => {
 const money2 = (n) => '$' + Number(n || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 });
 
 const nombrePanel = (slug) => (PANELES_COMERCIALES.find((p) => p.slug === slug) || { nombre: slug }).nombre;
+
+// Última actividad de etapa y promedio de tiempo entre cambios de etapa de una lead.
+function tiemposDeLead(deal) {
+  const ts = db.prepare("SELECT created_at FROM deal_events WHERE deal_id = ? AND tipo IN ('creado','etapa') ORDER BY created_at").all(deal.id)
+    .map((r) => Date.parse(r.created_at.replace(' ', 'T') + 'Z')).filter(Number.isFinite);
+  let promedio = null;
+  if (ts.length >= 2) promedio = Math.round((ts[ts.length - 1] - ts[0]) / (ts.length - 1) / 1000);
+  return { ultima: deal.etapa_movida_at || deal.updated_at, promedio };
+}
+
+// Compañeros a los que el dueño puede traspasar la lead (activos, con permiso al panel).
+function companerosDe(deal, user) {
+  if (deal == null || (deal.user_id !== user.id && user.role !== 'admin')) return [];
+  return db.prepare("SELECT id, name, role, permisos FROM users WHERE active = 1 AND role != 'developer' AND id != ? ORDER BY name").all(deal.user_id)
+    .filter((u) => { if (u.role === 'admin') return true; try { return JSON.parse(u.permisos || '[]').includes(deal.panel); } catch { return false; } });
+}
+
+const getPanelConfig = (slug, clave, def = null) => {
+  const r = db.prepare('SELECT valor FROM panel_config WHERE panel = ? AND clave = ?').get(slug, clave);
+  return r ? r.valor : def;
+};
+const setPanelConfig = (slug, clave, valor) => db.prepare(`INSERT INTO panel_config (panel, clave, valor) VALUES (?, ?, ?)
+  ON CONFLICT(panel, clave) DO UPDATE SET valor = excluded.valor`).run(slug, clave, String(valor));
+
+// Config de toma de leads inactivas de un panel: { activo, horas }.
+function configRobo(slug) {
+  return { activo: getPanelConfig(slug, 'robo_activo') === '1', horas: parseFloat(getPanelConfig(slug, 'robo_horas')) || 0 };
+}
+const msDesde = (sqliteUtc) => Date.now() - Date.parse((sqliteUtc || '').replace(' ', 'T') + 'Z');
+
+// ¿La lead está liberada para que otro vendedor la tome? (abierta + robo activo + sin movimiento hace más de X horas)
+function leadDisponible(deal, robo) {
+  if (!robo.activo || !(robo.horas > 0)) return false;
+  if (['Ganado', 'Perdido'].includes(deal.etapa)) return false;
+  const ms = msDesde(deal.etapa_movida_at || deal.updated_at);
+  return Number.isFinite(ms) && ms >= robo.horas * 3600 * 1000;
+}
+
+// Un vendedor toma una lead liberada. Anti-desincronización: se revalida acá adentro (SQLite es
+// secuencial), así el segundo que llega recibe el aviso de que ya la tomaron y el reloj arranca de cero.
+app.post('/deals/:id/tomar', requireAuth, (req, res) => {
+  const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(req.params.id);
+  if (!deal || !puede(req.user, deal.panel)) return res.status(404).end();
+  const home = homeDePanel(deal.panel);
+  if (deal.user_id === req.user.id) return res.redirect(`/deals/${deal.id}`);
+  const robo = configRobo(deal.panel);
+  if (!leadDisponible(deal, robo)) {
+    const owner = db.prepare('SELECT name FROM users WHERE id = ?').get(deal.user_id);
+    return res.redirect(`${home}?scope=todos&err=lead-tomada&lead=${encodeURIComponent(deal.empresa)}&por=${encodeURIComponent(owner ? owner.name : 'otro vendedor')}`);
+  }
+  const anterior = db.prepare('SELECT id, name FROM users WHERE id = ?').get(deal.user_id);
+  db.prepare("UPDATE deals SET user_id = ?, etapa_movida_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(req.user.id, deal.id);
+  logDealEvent(deal.id, req.user.id, 'edicion', `Tomó la lead por inactividad (${robo.horas}+ horas sin movimiento; era de ${anterior ? anterior.name : '—'})`);
+  if (anterior) notifyUser(anterior.id, `Tomó tu lead «${deal.empresa}» por inactividad (${robo.horas} h sin movimiento de etapa)`, `/deals/${deal.id}`, null, req.user.id);
+  res.redirect(`/deals/${deal.id}`);
+});
+
+// El dueño de la lead se la traspasa a un compañero (el admin ya reasigna desde la ficha).
+app.post('/deals/:id/traspasar', requireAuth, (req, res) => {
+  const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(req.params.id);
+  if (!deal || !puede(req.user, deal.panel)) return res.status(404).end();
+  if (deal.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).end();
+  const destino = db.prepare("SELECT id, name, permisos FROM users WHERE id = ? AND active = 1 AND role != 'developer'").get(parseInt(req.body.a, 10));
+  let permisosOk = false;
+  if (destino) { try { permisosOk = destino.id !== deal.user_id && JSON.parse(destino.permisos || '[]').includes(deal.panel); } catch {} }
+  if (destino && (permisosOk || db.prepare('SELECT role FROM users WHERE id = ?').get(destino.id).role === 'admin')) {
+    db.prepare("UPDATE deals SET user_id = ?, etapa_movida_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(destino.id, deal.id);
+    logDealEvent(deal.id, req.user.id, 'edicion', `Traspasó la lead a ${destino.name}`);
+    if (destino.id !== req.user.id) notifyUser(destino.id, `Te traspasó la lead «${deal.empresa}»`, `/deals/${deal.id}`, null, req.user.id);
+  }
+  res.redirect(`/deals/${deal.id}`);
+});
 
 // Migra una lead a otro panel comercial. Solo admin. Los datos comunes viajan; lo específico
 // del panel se ajusta o se quita (queda registrado en el historial). Ganado aprobado no se migra:
@@ -924,7 +1002,9 @@ function panelPipelineData(req, slug) {
   if (scope === 'mios') { where.push('d.user_id = ?'); params.push(req.user.id); }
   const deals = db.prepare(`SELECT d.*, u.name AS vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
     WHERE ${where.join(' AND ')} ORDER BY d.fecha_proximo_paso IS NULL DESC, d.fecha_proximo_paso ASC, d.updated_at DESC`).all(...params);
-  return { scope, closed, ...filtrarPipeline(req, deals) };
+  const robo = configRobo(slug);
+  for (const d of deals) d.disponible = leadDisponible(d, robo) && d.user_id !== req.user.id;
+  return { scope, closed, robo, ...filtrarPipeline(req, deals) };
 }
 
 // Sumas de un vendedor en el período: campos dinámicos (JSON) + ventas aprobadas del panel.
@@ -966,7 +1046,10 @@ for (const PANEL of PANELES_COMERCIALES) {
   if (base) app.get(base, requireAuth, requireSistema(slug), (req, res) => res.redirect(base + '/pipeline'));
 
   app.get(base + '/pipeline', requireAuth, requireSistema(slug), (req, res) => {
-    res.send(V.pipelinePage({ user: req.user, ...panelPipelineData(req, slug), ...panelOpts(slug) }));
+    const errTexto = req.query.err === 'lead-tomada'
+      ? `Llegaste tarde: «${clean(req.query.lead) || 'esa lead'}» ya no está disponible — la tiene ${clean(req.query.por) || 'otro vendedor'} y su contador arrancó de cero.`
+      : null;
+    res.send(V.pipelinePage({ user: req.user, ...panelPipelineData(req, slug), ...panelOpts(slug), err: errTexto }));
   });
 
   app.get(base + '/actividad', requireAuth, requireSistema(slug), (req, res) => {
@@ -1054,6 +1137,19 @@ for (const PANEL of PANELES_COMERCIALES) {
     res.send(V.reporteImprimirPage({ user: req.user, info, p: d.p, nombrePeriodo: PERIODO_NOMBRE[d.p], desde: d.desde, hasta: d.hasta, r: d.r, campanas: d.campanas }));
   });
 
+  // Directorio de clientes del panel: empresa, teléfono y calificación (pedido de administración).
+  app.get(base + '/clientes.csv', requireAuth, requireAdmin, (req, res) => {
+    const filas = db.prepare(`SELECT d.empresa, d.telefono, d.calificacion, d.etapa, d.mrr, d.provincia, d.ciudad, d.created_at, d.etapa_movida_at, u.name AS vendedor
+      FROM deals d JOIN users u ON u.id = d.user_id WHERE d.panel = ? ORDER BY d.calificacion IS NULL, d.calificacion, d.empresa`).all(slug);
+    const escC = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const L = [`Clientes · Comercial ${nombrePanel(slug)};generado ${hoyAR()}`, ''];
+    L.push(['Cliente', 'Teléfono', 'Calificación', 'Etapa', 'Valor', 'Provincia', 'Ciudad', 'Vendedor', 'Creada', 'Último movimiento'].join(';'));
+    for (const f of filas) L.push([escC(f.empresa), escC(f.telefono || ''), escC(f.calificacion || 'Sin calificar'), f.etapa, f.mrr ?? '', escC(f.provincia || ''), escC(f.ciudad || ''), escC(f.vendedor), (f.created_at || '').slice(0, 10), (f.etapa_movida_at || '').slice(0, 10)].join(';'));
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="clientes-${slug}.csv"`);
+    res.send('\ufeff' + L.join('\r\n'));
+  });
+
   app.get(base + '/dashboard.csv', requireAuth, requireAdmin, (req, res) => {
     const d = datosDash(req);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -1064,7 +1160,17 @@ for (const PANEL of PANELES_COMERCIALES) {
   /* --- configuración del panel (solo admin) --- */
 
   app.get(base + '/config', requireAuth, requireAdmin, (req, res) => {
-    res.send(V.panelConfigPage({ user: req.user, etapas: etapasPanelCfg(slug), campos: camposPanel(slug), err: req.query.err, errEtapa: clean(req.query.etapa), errN: parseInt(req.query.n, 10) || 0, info, campanas: campanasDePanel(slug) }));
+    res.send(V.panelConfigPage({ user: req.user, etapas: etapasPanelCfg(slug), campos: camposPanel(slug), err: req.query.err, errEtapa: clean(req.query.etapa), errN: parseInt(req.query.n, 10) || 0, info, campanas: campanasDePanel(slug), robo: configRobo(slug) }));
+  });
+
+  // Toma de leads inactivas: se activa con una cantidad de horas sin movimiento de etapa.
+  app.post(base + '/config/robo', requireAuth, requireAdmin, (req, res) => {
+    const activo = req.body.activo === 'on';
+    const horas = Math.max(1, Math.min(720, parseFloat(req.body.horas) || 0));
+    if (activo && !(parseFloat(req.body.horas) > 0)) return res.redirect(base + '/config');
+    setPanelConfig(slug, 'robo_activo', activo ? '1' : '0');
+    setPanelConfig(slug, 'robo_horas', horas);
+    res.redirect(base + '/config');
   });
 
   app.post(base + '/config/etapas', requireAuth, requireAdmin, (req, res) => {
