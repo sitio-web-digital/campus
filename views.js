@@ -1116,6 +1116,11 @@ html.dark .theme-btn .ic-luna { display:none; }
 .hm-c { width:.7rem; height:.7rem; border-radius:3px; background:var(--surface2); display:inline-block; flex-shrink:0; }
 .hm-x { background:transparent; }
 .hm-0 { background:var(--surface2); }
+.hm-p { background:#E9C46A; }
+.hm-v { background:#E8837F; }
+html.dark .hm-p { background:#8A6D1F; }
+html.dark .hm-v { background:#8A3835; }
+.hm-sep { width:1px; height:.8rem; background:var(--line); margin:0 .25rem; display:inline-block; }
 .hm-1 { background:#BFE3D2; }
 .hm-2 { background:#7CC7A4; }
 .hm-3 { background:#3D9A72; }
@@ -1493,7 +1498,7 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
 }
 
 // Grilla de constancia estilo GitHub: columnas = semanas, filas = Lun..Dom, intensidad por lo cargado.
-function heatmapHtml(heat, nDias = 182) {
+function heatmapHtml(heat, { nDias = 182, ventana = null, desde = null } = {}) {
   const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   const hoy = new Date(hoyISO() + 'T00:00:00Z');
   const inicio = new Date(hoy); inicio.setUTCDate(inicio.getUTCDate() - (nDias - 1));
@@ -1510,9 +1515,15 @@ function heatmapHtml(heat, nDias = 182) {
       if (cursor > hoy) { celdas.push('<span class="hm-c hm-x"></span>'); }
       else {
         const v = heat[iso] || 0;
-        const lvl = v === 0 ? 0 : Math.min(4, Math.max(1, Math.ceil((v / max) * 4)));
         if (cursor.getUTCDate() === 1) mesCol = MES[cursor.getUTCMonth()];
-        celdas.push(`<span class="hm-c hm-${lvl}" title="${fecha(iso)}: ${v > 0 ? v + ' cargado' : 'sin carga'}"></span>`);
+        if (v === 0 && ventana && desde && iso >= desde) {
+          // Sin carga: amarillo si el día todavía entra en la ventana retroactiva, rojo si ya venció.
+          const puede = ventana.includes(iso);
+          celdas.push(`<span class="hm-c ${puede ? 'hm-p' : 'hm-v'}" title="${fecha(iso)}: ${puede ? 'sin cargar — todavía se puede cargar' : 'sin cargar — ya venció'}"></span>`);
+        } else {
+          const lvl = v === 0 ? 0 : Math.min(4, Math.max(1, Math.ceil((v / max) * 4)));
+          celdas.push(`<span class="hm-c hm-${lvl}" title="${fecha(iso)}: ${v > 0 ? v + ' cargado' : 'sin carga'}"></span>`);
+        }
       }
       cursor.setUTCDate(cursor.getUTCDate() + 1);
     }
@@ -1523,7 +1534,7 @@ function heatmapHtml(heat, nDias = 182) {
   <div class="hm-scroll">
     <div class="hm-meses">${meses.map((m) => `<span>${m}</span>`).join('')}</div>
     <div class="hm">${cols.join('')}</div>
-    <div class="hm-leyenda"><span>Menos</span><span class="hm-c hm-0"></span><span class="hm-c hm-1"></span><span class="hm-c hm-2"></span><span class="hm-c hm-3"></span><span class="hm-c hm-4"></span><span>Más</span></div>
+    <div class="hm-leyenda"><span>Menos</span><span class="hm-c hm-0"></span><span class="hm-c hm-1"></span><span class="hm-c hm-2"></span><span class="hm-c hm-3"></span><span class="hm-c hm-4"></span><span>Más</span>${ventana && desde ? '<span class="hm-sep"></span><span class="hm-c hm-p"></span><span>por cargar</span><span class="hm-c hm-v"></span><span>vencido</span>' : ''}</div>
   </div>`;
 }
 
@@ -2760,7 +2771,7 @@ function reporteImprimirPage({ user, p, nombrePeriodo, desde, hasta, r, info = {
 
 /* --------- paneles comerciales configurables --------- */
 
-function panelActividadPage({ user, campos, today, history, info, fecha: fechaSel, ventana = [], cargadas = [], esAdmin, esGeneral, target, vendedores = [], heat = {}, diasAtras = 3, abrir = false }) {
+function panelActividadPage({ user, campos, today, history, info, fecha: fechaSel, ventana = [], cargadas = [], esAdmin, esGeneral, target, vendedores = [], heat = {}, diasAtras = 3, alta = null, abrir = false }) {
   const vals = today ? (() => { try { return JSON.parse(today.valores || '{}'); } catch { return {}; } })() : {};
   const otro = esAdmin && target && target.id !== user.id;
   const qsVend = esGeneral ? '&vendedor=todos' : (otro ? '&vendedor=' + target.id : '');
@@ -2799,7 +2810,7 @@ function panelActividadPage({ user, campos, today, history, info, fecha: fechaSe
   <div class="card">
     <h3 style="margin-top:0">Constancia de carga · últimos 6 meses</h3>
     <p class="small muted" style="margin:.1rem 0 .6rem">Cada cuadrado es un día${esGeneral ? ' del equipo completo' : ''}: gris sin carga, más verde cuanto más se cargó. La constancia diaria es la métrica madre — un tablero al día vale más que uno perfecto a fin de mes.</p>
-    ${heatmapHtml(heat)}
+    ${heatmapHtml(heat, esGeneral ? {} : { ventana, desde: alta })}
   </div>
 
   ${esGeneral ? '' : `

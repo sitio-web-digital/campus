@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.25.2',
+    fecha: '2026-08-22',
+    cambios: [
+      { tipo: 'mejora', texto: 'Grilla de actividad: los días sin cargar ahora se pintan en amarillo si todavía se pueden cargar (dentro de la ventana retroactiva) y en rojo si ya vencieron. Solo cuenta desde el alta de cada usuario, y la vista de todo el equipo queda como estaba.' },
+    ],
+  },
+  {
     version: '2.25.1',
     fecha: '2026-08-22',
     cambios: [
