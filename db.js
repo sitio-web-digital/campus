@@ -240,6 +240,24 @@ db.exec(`CREATE TABLE IF NOT EXISTS actividad_avisos (
   fecha TEXT NOT NULL,
   UNIQUE (user_id, panel, fecha)
 );`);
+// Soporte: tickets con hilo de mensajes (texto y/o imagen adjunta).
+db.exec(`CREATE TABLE IF NOT EXISTS tickets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  asunto TEXT NOT NULL,
+  estado TEXT NOT NULL DEFAULT 'abierto' CHECK (estado IN ('abierto','cerrado')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS ticket_mensajes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticket_id INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  texto TEXT NOT NULL DEFAULT '',
+  imagen_path TEXT,
+  imagen_nombre TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);`);
 // Migración 2.8.0: campaña de origen y ubicación de la lead.
 if (!dealCols.includes('campana_id')) {
   db.exec('ALTER TABLE deals ADD COLUMN campana_id INTEGER REFERENCES campanas(id)');

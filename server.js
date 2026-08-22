@@ -32,6 +32,17 @@ const uploadAvatar = multer({
   fileFilter: (req, file, cb) => cb(null, ['.png', '.jpg', '.jpeg', '.webp'].includes(path.extname(file.originalname).toLowerCase())),
 });
 
+const SOPORTE_DIR = path.join(__dirname, 'data', 'soporte');
+if (!fs.existsSync(SOPORTE_DIR)) fs.mkdirSync(SOPORTE_DIR, { recursive: true });
+const uploadSoporte = multer({
+  storage: multer.diskStorage({
+    destination: SOPORTE_DIR,
+    filename: (req, file, cb) => cb(null, `t${Date.now()}-${Math.random().toString(36).slice(2, 8)}${path.extname(file.originalname).toLowerCase()}`),
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => cb(null, ['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(path.extname(file.originalname).toLowerCase())),
+});
+
 const app = express();
 app.set('trust proxy', 1);
 app.get('/health', (req, res) => res.json({ ok: true }));
@@ -1807,6 +1818,68 @@ app.post('/perfil/foto/quitar', requireAuth, (req, res) => {
 });
 
 // Sirve la foto de un usuario (cualquier usuario logueado puede verlas: aparecen en listas y nav).
+/* ---------------- soporte (tickets) ---------------- */
+
+const puedeVerTicket = (user, t) => !!t && (user.role === 'admin' || t.user_id === user.id);
+
+app.get('/soporte', requireAuth, (req, res) => {
+  const tickets = req.user.role === 'admin'
+    ? db.prepare(`SELECT t.*, u.name AS autor, (SELECT COUNT(*) FROM ticket_mensajes m WHERE m.ticket_id = t.id) AS mensajes
+        FROM tickets t JOIN users u ON u.id = t.user_id ORDER BY t.estado = 'abierto' DESC, t.updated_at DESC`).all()
+    : db.prepare(`SELECT t.*, (SELECT COUNT(*) FROM ticket_mensajes m WHERE m.ticket_id = t.id) AS mensajes
+        FROM tickets t WHERE t.user_id = ? ORDER BY t.estado = 'abierto' DESC, t.updated_at DESC`).all(req.user.id);
+  res.send(V.soporteListaPage({ user: req.user, tickets, abrir: req.query.abrir === '1' }));
+});
+
+app.post('/soporte', requireAuth, uploadSoporte.single('imagen'), (req, res) => {
+  const asunto = String(req.body.asunto || '').trim().slice(0, 120);
+  const texto = String(req.body.texto || '').trim().slice(0, 4000);
+  if (!asunto || (!texto && !req.file)) return res.redirect('/soporte?abrir=1');
+  const r = db.prepare('INSERT INTO tickets (user_id, asunto) VALUES (?, ?)').run(req.user.id, asunto);
+  db.prepare('INSERT INTO ticket_mensajes (ticket_id, user_id, texto, imagen_path, imagen_nombre) VALUES (?, ?, ?, ?, ?)')
+    .run(r.lastInsertRowid, req.user.id, texto, req.file ? req.file.filename : null, req.file ? req.file.originalname : null);
+  notifyAdmins(req.user.id, `Abrió el ticket de soporte «${asunto}»`, `/soporte/${r.lastInsertRowid}`);
+  res.redirect(`/soporte/${r.lastInsertRowid}`);
+});
+
+// Antes de /soporte/:id para que "img" no se tome como id de ticket.
+app.get('/soporte/img/:mid', requireAuth, (req, res) => {
+  const m = db.prepare('SELECT m.imagen_path, t.user_id AS duenio FROM ticket_mensajes m JOIN tickets t ON t.id = m.ticket_id WHERE m.id = ?').get(req.params.mid);
+  if (!m || !m.imagen_path || !(req.user.role === 'admin' || m.duenio === req.user.id)) return res.status(404).end();
+  const fp = path.join(SOPORTE_DIR, path.basename(m.imagen_path));
+  if (!fs.existsSync(fp)) return res.status(404).end();
+  res.sendFile(fp);
+});
+
+app.get('/soporte/:id', requireAuth, (req, res) => {
+  const t = db.prepare('SELECT t.*, u.name AS autor FROM tickets t JOIN users u ON u.id = t.user_id WHERE t.id = ?').get(req.params.id);
+  if (!puedeVerTicket(req.user, t)) return res.status(404).send('Ticket no encontrado.');
+  const mensajes = db.prepare('SELECT m.*, u.name, u.avatar, u.role FROM ticket_mensajes m JOIN users u ON u.id = m.user_id WHERE m.ticket_id = ? ORDER BY m.id').all(t.id);
+  res.send(V.soporteTicketPage({ user: req.user, ticket: t, mensajes }));
+});
+
+app.post('/soporte/:id/mensaje', requireAuth, uploadSoporte.single('imagen'), (req, res) => {
+  const t = db.prepare('SELECT * FROM tickets WHERE id = ?').get(req.params.id);
+  if (!puedeVerTicket(req.user, t)) return res.status(404).send('Ticket no encontrado.');
+  const texto = String(req.body.texto || '').trim().slice(0, 4000);
+  if (!texto && !req.file) return res.redirect(`/soporte/${t.id}`);
+  db.prepare('INSERT INTO ticket_mensajes (ticket_id, user_id, texto, imagen_path, imagen_nombre) VALUES (?, ?, ?, ?, ?)')
+    .run(t.id, req.user.id, texto, req.file ? req.file.filename : null, req.file ? req.file.originalname : null);
+  db.prepare("UPDATE tickets SET estado = 'abierto', updated_at = datetime('now') WHERE id = ?").run(t.id);
+  if (req.user.id === t.user_id) notifyAdmins(req.user.id, `Respondió en el ticket «${t.asunto}»`, `/soporte/${t.id}`);
+  else notifyUser(t.user_id, `Soporte respondió tu ticket «${t.asunto}»`, `/soporte/${t.id}`, null, req.user.id);
+  res.redirect(`/soporte/${t.id}`);
+});
+
+app.post('/soporte/:id/estado', requireAuth, (req, res) => {
+  const t = db.prepare('SELECT * FROM tickets WHERE id = ?').get(req.params.id);
+  if (!puedeVerTicket(req.user, t)) return res.status(404).send('Ticket no encontrado.');
+  const nuevo = t.estado === 'abierto' ? 'cerrado' : 'abierto';
+  db.prepare("UPDATE tickets SET estado = ?, updated_at = datetime('now') WHERE id = ?").run(nuevo, t.id);
+  if (req.user.id !== t.user_id) notifyUser(t.user_id, `Tu ticket «${t.asunto}» fue ${nuevo === 'cerrado' ? 'marcado como resuelto' : 'reabierto'} por soporte`, `/soporte/${t.id}`, null, req.user.id);
+  res.redirect(`/soporte/${t.id}`);
+});
+
 app.get('/avatars/:uid', requireAuth, (req, res) => {
   const u = db.prepare('SELECT avatar FROM users WHERE id = ?').get(parseInt(req.params.uid, 10));
   if (!u || !u.avatar || !/^[\w.-]+$/.test(u.avatar)) return res.status(404).end();

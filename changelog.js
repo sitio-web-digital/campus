@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.25.0',
+    fecha: '2026-08-22',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Tu foto (arriba a la derecha) ya no navega: despliega una burbuja con tu cuenta, Configuración, Soporte y Cerrar sesión.' },
+      { tipo: 'nuevo', texto: 'Canal de soporte: abrí tickets con asunto, descripción y capturas de pantalla; el equipo responde en un hilo tipo chat, con estados Abierto/Resuelto y notificaciones cruzadas (a los admins cuando escribís, a vos cuando te responden). Si escribís en un ticket resuelto, se reabre solo.' },
+      { tipo: 'mejora', texto: 'La página Perfil ahora se llama Configuración (foto de perfil y contraseña); los menús desplegables se cierran al tocar fuera.' },
+    ],
+  },
+  {
     version: '2.24.1',
     fecha: '2026-08-22',
     cambios: [

@@ -113,8 +113,16 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <svg class="ic-sol" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="10" r="3.6"/><path d="M10 2.2v1.9M10 15.9v1.9M2.2 10h1.9M15.9 10h1.9M4.5 4.5l1.35 1.35M14.15 14.15l1.35 1.35M15.5 4.5l-1.35 1.35M5.85 14.15L4.5 15.5"/></svg>
         <svg class="ic-luna" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 12.2A6.8 6.8 0 0 1 7.8 3.5a6.8 6.8 0 1 0 8.7 8.7z"/></svg>
       </button>` : '';
-  const perfilLink = `
-        <a href="/perfil" class="nav-user ${active === 'perfil' ? 'on' : ''}">${user ? avatar(user) : ''}<span>${user ? esc(user.name.split(' ')[0]) : ''}</span></a>`;
+  const perfilLink = user ? `
+        <details class="umenu">
+          <summary class="nav-user ${['perfil', 'soporte'].includes(active) ? 'on' : ''}">${avatar(user)}<span>${esc(user.name.split(' ')[0])}</span></summary>
+          <div class="umenu-pop">
+            <div class="umenu-head">${avatar(user)}<div class="uh-t"><strong>${esc(user.name)}</strong><small>${esc(user.email)}</small></div></div>
+            <a href="/perfil">${ICONS.perfil}<span>Configuración</span></a>
+            <a href="/soporte">${IC('<circle cx="10" cy="10" r="6.8"/><circle cx="10" cy="10" r="2.8"/><path d="M4.9 4.9l3 3M12.1 12.1l3 3M15.1 4.9l-3 3M7.9 12.1l-3 3"/>')}<span>Soporte</span></a>
+            <form method="post" action="/logout"><button type="submit">${IC('<path d="M8 3.5H4.5v13H8M12.5 6.5L16 10l-3.5 3.5M16 10H7.5"/>')}<span>Cerrar sesión</span></button></form>
+          </div>
+        </details>` : '';
   let links = '';
   if (sistema === 'cobranza') {
     links = `
@@ -229,6 +237,9 @@ ${user ? `
 <script>
 document.addEventListener('click', function (e) {
   if (e.target.classList && e.target.classList.contains('modal-carga')) e.target.classList.remove('abierto');
+  document.querySelectorAll('details.sys[open], details.umenu[open]').forEach(function (d) {
+    if (!d.contains(e.target)) d.removeAttribute('open');
+  });
 });
 function cerrarAnuncio(url) {
   fetch(url, { method: 'POST' }).finally(function () {
@@ -719,6 +730,44 @@ html.dark .hc-chip.bien { color:#6FBF8F; }
 .sys-info { margin-left:auto; font-size:.66rem; font-weight:600; color:var(--faint); white-space:nowrap; }
 .sys-dot { width:.45rem; height:.45rem; border-radius:50%; background:#E05550; flex-shrink:0; animation: punto-late 2.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .hc-chip.mal, .hub-card .hc-ic.deuda, .sys-dot { animation:none; } }
+
+/* ---------- burbuja de usuario (foto arriba a la derecha) ---------- */
+.umenu { position:relative; }
+.umenu summary { list-style:none; cursor:pointer; }
+.umenu summary::-webkit-details-marker { display:none; }
+.umenu-pop { position:absolute; top:calc(100% + .5rem); right:0; z-index:80; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--sh-lg); min-width:15rem; padding:.3rem; display:grid; gap:.1rem; }
+.umenu-head { display:flex; align-items:center; gap:.6rem; padding:.5rem .6rem .65rem; border-bottom:1px solid var(--line); margin-bottom:.2rem; }
+.umenu-head .avatar { width:2.1rem; height:2.1rem; }
+.umenu-head .uh-t { display:flex; flex-direction:column; line-height:1.3; min-width:0; }
+.umenu-head strong { font-size:.85rem; color:var(--ink); }
+.umenu-head small { font-size:.68rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.umenu-pop a, .umenu-pop button { display:flex; align-items:center; gap:.55rem; width:100%; text-align:left; background:none; border:none; font:inherit; font-size:.84rem; font-weight:500; color:var(--ink); padding:.48rem .6rem; border-radius:6px; cursor:pointer; text-decoration:none; }
+.umenu-pop a:hover, .umenu-pop button:hover { background:var(--surface2); color:var(--accent-ink); text-decoration:none; }
+.umenu-pop svg { width:1rem; height:1rem; color:var(--muted); flex-shrink:0; }
+.umenu-pop form { display:contents; }
+@media (max-width:640px) { .umenu-pop { position:fixed; top:3.3rem; right:.5rem; } }
+
+/* ---------- soporte (tickets) ---------- */
+.tk-row { display:flex; align-items:center; gap:.8rem; text-decoration:none; color:inherit; padding:.8rem 1rem; }
+.tk-row:hover { text-decoration:none; border-color:var(--line2); }
+.tk-c { display:flex; flex-direction:column; gap:.1rem; min-width:0; flex:1; }
+.tk-flecha { color:var(--faint); font-size:1.2rem; }
+.tk-estado { font-size:.62rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; border-radius:99px; padding:.16rem .55rem; flex-shrink:0; white-space:nowrap; }
+.tk-estado.abierto { color:#2E7D4F; border:1px solid rgba(46,125,79,.4); }
+html.dark .tk-estado.abierto { color:#6FBF8F; }
+.tk-estado.cerrado { color:var(--muted); border:1px solid var(--line); }
+.tk-hilo { display:flex; flex-direction:column; gap:.7rem; margin-bottom:1rem; }
+.tk-msg { display:flex; gap:.55rem; align-items:flex-start; max-width:46rem; }
+.tk-msg .avatar { width:1.8rem; height:1.8rem; flex-shrink:0; margin-top:.15rem; }
+.tk-burbuja { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:.6rem .85rem; min-width:0; }
+.tk-msg.mio .tk-burbuja { background:var(--accent-soft); border-color:transparent; }
+.tk-mh { display:flex; align-items:center; gap:.45rem; margin-bottom:.15rem; flex-wrap:wrap; }
+.tk-mh strong { font-size:.8rem; }
+.tk-mh .f { font-size:.66rem; color:var(--faint); }
+.tk-chip-sop { font-size:.55rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--accent-ink); background:var(--accent-soft); border-radius:4px; padding:.1rem .35rem; }
+html.dark .tk-msg.mio .tk-burbuja .tk-chip-sop { background:rgba(255,255,255,.14); }
+.tk-burbuja p { margin:.1rem 0; font-size:.86rem; line-height:1.5; }
+.tk-img { max-width:min(22rem,100%); border-radius:8px; border:1px solid var(--line); display:block; margin-top:.35rem; }
 
 /* ---------- notificaciones e historial ---------- */
 .noti-pop { position:absolute; top:calc(100% + .5rem); right:-.4rem; z-index:90; width:23rem; max-width:calc(100vw - 1.5rem); max-height:62vh; overflow:auto;
@@ -1886,9 +1935,9 @@ function adminUserPage({ user, target, sistemas, historial = [], resetInfo }) {
 
 function perfilPage({ user }) {
   return layout({
-    title: 'Perfil', user, active: 'perfil', sistema: 'hub',
+    title: 'Configuración', user, active: 'perfil', sistema: 'hub',
     body: `
-  <h1>Mi perfil</h1>
+  <h1>Configuración</h1>
   <div class="card">
     <div class="perfil-foto">
       ${avatar(user, 'avatar-xl')}
@@ -1910,8 +1959,86 @@ function perfilPage({ user }) {
     <label>Contraseña nueva (mínimo 6)</label>
     <input type="password" name="next" required minlength="6" autocomplete="new-password">
     <div style="margin-top:1rem"><button class="btn">Cambiar contraseña</button></div>
-  </form>
-  <form method="post" action="/logout"><button class="btn secondary">Cerrar sesión</button></form>`
+  </form>`
+  });
+}
+
+/* --------- soporte --------- */
+
+const tkTexto = (t) => esc(t).replace(/\r?\n/g, '<br>');
+
+function soporteListaPage({ user, tickets, abrir }) {
+  const esAdmin = user.role === 'admin';
+  return layout({
+    title: 'Soporte', user, active: 'soporte', sistema: 'hub',
+    body: `
+  <h1>Soporte</h1>
+  <p class="muted small">${esAdmin ? 'Tickets del equipo: respondé, pedí más datos y marcalos resueltos cuando estén listos.' : '¿Algo no funciona o necesitás ayuda? Abrí un ticket y te respondemos acá — podés adjuntar capturas de pantalla.'}</p>
+  <div class="toolbar">
+    <div class="sp"></div>
+    <button type="button" class="btn" onclick="document.getElementById('modalTicket').classList.add('abierto')">Nuevo ticket</button>
+  </div>
+  ${tickets.length ? tickets.map((t) => `
+  <a class="card tk-row" href="/soporte/${t.id}">
+    <span class="tk-estado ${t.estado}">${t.estado === 'abierto' ? 'Abierto' : 'Resuelto'}</span>
+    <div class="tk-c">
+      <strong>${esc(t.asunto)}</strong>
+      <span class="small muted">${esAdmin ? esc(t.autor) + ' · ' : ''}${t.mensajes} mensaje${t.mensajes === 1 ? '' : 's'} · última actividad ${tiempoRel(t.updated_at)}</span>
+    </div>
+    <span class="tk-flecha">›</span>
+  </a>`).join('') : `<div class="card"><p class="muted" style="margin:0">${esAdmin ? 'Todavía no hay tickets del equipo.' : 'Todavía no abriste ningún ticket.'}</p></div>`}
+
+  <div class="modal-back modal-carga ${abrir ? 'abierto' : ''}" id="modalTicket">
+    <div class="modal">
+      <div class="modal-h"><h2>Nuevo ticket</h2><button type="button" class="modal-x" onclick="document.getElementById('modalTicket').classList.remove('abierto')" aria-label="Cerrar">&times;</button></div>
+      <form method="post" action="/soporte" enctype="multipart/form-data" class="card">
+        <label>Asunto</label>
+        <input name="asunto" required maxlength="120" placeholder="Ej: no me deja aprobar una venta">
+        <label>Contanos qué pasa</label>
+        <textarea name="texto" rows="5" required maxlength="4000" placeholder="Qué estabas haciendo, qué esperabas que pase y qué pasó. Cuanto más detalle, más rápido lo resolvemos."></textarea>
+        <label>Captura de pantalla (opcional)</label>
+        <input type="file" name="imagen" accept=".jpg,.jpeg,.png,.webp,.gif">
+        <p class="caption" style="margin:.3rem 0 0">JPG, PNG, WebP o GIF, hasta 5 MB.</p>
+        <div style="margin-top:1rem"><button class="btn" style="width:100%">Abrir ticket</button></div>
+      </form>
+    </div>
+  </div>`
+  });
+}
+
+function soporteTicketPage({ user, ticket, mensajes }) {
+  return layout({
+    title: `Ticket #${ticket.id}`, user, active: 'soporte', sistema: 'hub',
+    body: `
+  <p style="margin:0 0 .5rem"><a href="/soporte" class="small">‹ Volver a soporte</a></p>
+  <div class="toolbar" style="align-items:flex-start; margin-bottom:1rem">
+    <div>
+      <h1 style="margin:0; display:flex; align-items:center; gap:.6rem; flex-wrap:wrap">${esc(ticket.asunto)} <span class="tk-estado ${ticket.estado}">${ticket.estado === 'abierto' ? 'Abierto' : 'Resuelto'}</span></h1>
+      <p class="small muted" style="margin:.25rem 0 0">Ticket #${ticket.id} · abierto por ${esc(ticket.autor)} ${tiempoRel(ticket.created_at)}</p>
+    </div>
+    <div class="sp"></div>
+    <form method="post" action="/soporte/${ticket.id}/estado"><button class="btn secondary small">${ticket.estado === 'abierto' ? 'Marcar resuelto' : 'Reabrir'}</button></form>
+  </div>
+  <div class="tk-hilo">
+    ${mensajes.map((m) => `
+    <div class="tk-msg ${m.user_id === user.id ? 'mio' : ''}">
+      ${avatar({ id: m.user_id, name: m.name, avatar: m.avatar })}
+      <div class="tk-burbuja">
+        <div class="tk-mh"><strong>${esc(m.name)}</strong>${m.role === 'admin' ? '<span class="tk-chip-sop">Soporte</span>' : ''}<span class="f">${fechaHora(m.created_at)}</span></div>
+        ${m.texto ? `<p>${tkTexto(m.texto)}</p>` : ''}
+        ${m.imagen_path ? `<a href="/soporte/img/${m.id}" target="_blank" rel="noopener"><img class="tk-img" src="/soporte/img/${m.id}" alt="${esc(m.imagen_nombre || 'imagen adjunta')}" loading="lazy"></a>` : ''}
+      </div>
+    </div>`).join('')}
+  </div>
+  ${ticket.estado === 'cerrado' ? '<p class="small muted">Este ticket está resuelto — si escribís de nuevo, se reabre solo.</p>' : ''}
+  <form method="post" action="/soporte/${ticket.id}/mensaje" enctype="multipart/form-data" class="card">
+    <label>Tu respuesta</label>
+    <textarea name="texto" rows="3" maxlength="4000" placeholder="Escribí tu mensaje…"></textarea>
+    <div style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin-top:.6rem">
+      <input type="file" name="imagen" accept=".jpg,.jpeg,.png,.webp,.gif" style="width:auto;flex:1;min-width:11rem">
+      <button class="btn">Enviar</button>
+    </div>
+  </form>`
   });
 }
 
@@ -3431,7 +3558,7 @@ function changelogPage({ user, versiones }) {
 }
 
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusCursoPage, campusQuizPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,
