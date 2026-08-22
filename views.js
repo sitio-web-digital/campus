@@ -1053,6 +1053,15 @@ html.dark .hm-4 { background:#57B8AB; }
 .modal-carga { display:none; }
 .modal-carga.abierto { display:block; }
 .modal-carga .modal { max-width:38rem; }
+.cfg-actividad { flex:0 1 auto; }
+@media (max-width:640px) {
+  .cfg-inline { flex-wrap:wrap; }
+  .cfg-actividad { flex:1 1 100%; width:100%; }
+  .cfg-actividad select { flex:1 1 10rem; min-width:0; max-width:none; }
+  .cfg-actividad input[type=date] { flex:1 1 7.5rem; min-width:0; max-width:none; }
+  .modal-carga .modal { max-width:none; }
+  .toolbar > .sp + .btn, .toolbar > .btn:last-child:not(.small):not(.secondary) { flex:1 1 100%; text-align:center; }
+}
 .doc-curso { background:linear-gradient(140deg, #0E6E66, #0A3D39); }
 .doc-curso .ic, .doc-curso svg { width:2.6rem; height:2.6rem; }
 .quiz-preg { padding:.7rem 0; border-bottom:1px solid var(--line); }
@@ -2570,7 +2579,7 @@ function panelActividadPage({ user, campos, today, history, info, fecha: fechaSe
   <p class="muted small">${esGeneral ? 'La grilla suma lo cargado por todos los vendedores. Elegí una persona en el selector para ver su detalle o cargarle un día.' : `Cargala al final de cada día — toma 2 minutos.${diasAtras > 0 ? ` Podés corregir hasta ${diasAtras} día${diasAtras === 1 ? '' : 's'} para atrás.` : ''}`}</p>
   <div class="toolbar">
     ${esAdmin ? `
-    <form method="get" action="${info.base}/actividad" class="cfg-inline" style="flex:0">
+    <form method="get" action="${info.base}/actividad" class="cfg-inline cfg-actividad">
       <select name="vendedor" style="width:auto" onchange="this.form.submit()">
         <option value="todos" ${esGeneral ? 'selected' : ''}>— Todo el equipo —</option>
         ${vendedores.map((vu) => `<option value="${vu.id}" ${!esGeneral && target && vu.id === target.id ? 'selected' : ''}>${esc(vu.name)}</option>`).join('')}
