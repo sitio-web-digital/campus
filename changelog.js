@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.23.4',
+    fecha: '2026-08-22',
+    cambios: [
+      { tipo: 'fix', texto: 'Actividad: encabezado remaquetado (título en su lugar, barra de acciones aparte), la fecha a cargar se elige con un selector dentro de la ventana modal, y si el día elegido ya tiene carga aparece una advertencia clara antes de sobreescribir (el botón pasa a decir Actualizar el día).' },
+    ],
+  },
+  {
     version: '2.23.3',
     fecha: '2026-08-22',
     cambios: [

@@ -2560,14 +2560,15 @@ function panelActividadPage({ user, campos, today, history, info, fecha: fechaSe
   const otro = esAdmin && target && target.id !== user.id;
   const qsVend = esGeneral ? '&vendedor=todos' : (otro ? '&vendedor=' + target.id : '');
   const ddmm = (f) => `${+f.slice(8, 10)}/${+f.slice(5, 7)}`;
-  const etiqueta = (f, i) => (i === 0 ? 'Hoy' : i === 1 ? 'Ayer' : ddmm(f));
+  const etiqueta = (f, i) => (i === 0 ? `Hoy (${ddmm(f)})` : i === 1 ? `Ayer (${ddmm(f)})` : ddmm(f));
   const faltantes = ventana.filter((f, i) => i > 0 && !cargadas.includes(f));
+  const yaCargado = today != null;
   return layout({
     title: `Actividad · ${info.nombre}`, user, active: 'actividad', sistema: info.slug,
     body: `
-  <div class="toolbar" style="margin-bottom:.4rem">
-    <h1 style="margin:0">${esGeneral ? 'Actividad de todo el equipo' : (otro ? 'Actividad de ' + esc(target.name) : 'Mi actividad')}</h1>
-    <div class="sp"></div>
+  <h1>${esGeneral ? 'Actividad de todo el equipo' : (otro ? 'Actividad de ' + esc(target.name) : 'Mi actividad')}</h1>
+  <p class="muted small">${esGeneral ? 'La grilla suma lo cargado por todos los vendedores. Elegí una persona en el selector para ver su detalle o cargarle un día.' : `Cargala al final de cada día — toma 2 minutos.${diasAtras > 0 ? ` Podés corregir hasta ${diasAtras} día${diasAtras === 1 ? '' : 's'} para atrás.` : ''}`}</p>
+  <div class="toolbar">
     ${esAdmin ? `
     <form method="get" action="${info.base}/actividad" class="cfg-inline" style="flex:0">
       <select name="vendedor" style="width:auto" onchange="this.form.submit()">
@@ -2577,13 +2578,13 @@ function panelActividadPage({ user, campos, today, history, info, fecha: fechaSe
       <input type="date" name="fecha" value="${fechaSel}" style="width:auto">
       <button class="btn secondary small">Ver</button>
     </form>` : ''}
+    <div class="sp"></div>
     ${esGeneral ? '' : `<button type="button" class="btn" onclick="document.getElementById('modalActividad').classList.add('abierto')">Cargar actividad</button>`}
   </div>
-  <p class="muted small" style="margin:.2rem 0 .9rem">${esGeneral ? 'La grilla suma lo cargado por todos los vendedores. Elegí una persona en el selector para ver su detalle o cargarle un día.' : `Cargala al final de cada día — toma 2 minutos.${diasAtras > 0 ? ` Podés corregir hasta ${diasAtras} día${diasAtras === 1 ? '' : 's'} para atrás.` : ''}`}</p>
 
   ${!esGeneral && faltantes.length ? `
   <div class="card" style="border-left:4px solid var(--bad)">
-    <div style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap">
+    <div style="display:flex; gap:.5rem .6rem; align-items:center; flex-wrap:wrap">
       <strong class="small">${otro ? 'Le faltan' : 'Te faltan'} cargar ${faltantes.length} día${faltantes.length === 1 ? '' : 's'}:</strong>
       ${faltantes.map((f) => `<a class="btn secondary small" href="${info.base}/actividad?fecha=${f}&abrir=1${qsVend}">${etiqueta(f, ventana.indexOf(f))} <span class="warn">•</span></a>`).join('')}
       <span class="small muted">— tocá un día para cargarlo</span>
@@ -2599,14 +2600,16 @@ function panelActividadPage({ user, campos, today, history, info, fecha: fechaSe
   ${esGeneral ? '' : `
   <div class="modal-back modal-carga ${abrir ? 'abierto' : ''}" id="modalActividad">
     <div class="modal">
-      <div class="modal-h"><h2>${otro ? 'Actividad de ' + esc(target.name) : 'Mi actividad'}</h2><button type="button" class="modal-x" onclick="document.getElementById('modalActividad').classList.remove('abierto')" aria-label="Cerrar">&times;</button></div>
-      <div class="toolbar" style="margin-bottom:.5rem">
-        <div class="seg">
-          ${ventana.map((f, i) => `<a href="${info.base}/actividad?fecha=${f}&abrir=1${qsVend}" class="${f === fechaSel ? 'on' : ''}">${etiqueta(f, i)}${i > 0 && !cargadas.includes(f) ? ' <span class="warn">•</span>' : ''}</a>`).join('')}
-        </div>
-      </div>
+      <div class="modal-h"><h2>${otro ? 'Cargar actividad de ' + esc(target.name) : 'Cargar mi actividad'}</h2><button type="button" class="modal-x" onclick="document.getElementById('modalActividad').classList.remove('abierto')" aria-label="Cerrar">&times;</button></div>
+      <label style="margin-top:.2rem">Día a cargar</label>
+      <select onchange="location='${info.base}/actividad?fecha=' + this.value + '&abrir=1${qsVend}'" style="margin-bottom:.6rem">
+        ${ventana.map((f, i) => `<option value="${f}" ${f === fechaSel ? 'selected' : ''}>${etiqueta(f, i)}${i > 0 ? (cargadas.includes(f) ? ' — ya cargado' : ' — sin cargar') : ''}</option>`).join('')}
+      </select>
+      ${yaCargado ? `
+      <div class="aprob-box" style="margin-bottom:.7rem">
+        <p style="margin:0"><strong>Atención:</strong> el día ${(() => { const pp = fechaSel.split('-'); return pp[2] + '/' + pp[1]; })()} <strong>ya tiene actividad cargada</strong>. Los valores de abajo son los guardados — si guardás de nuevo, se sobreescriben.</p>
+      </div>` : ''}
       <form method="post" action="${info.base}/actividad" class="card">
-        <p class="small" style="margin:0 0 .3rem"><strong>Cargando el día ${(() => { const pp = fechaSel.split('-'); return pp[2] + '/' + pp[1] + '/' + pp[0]; })()}</strong>${otro ? ' de ' + esc(target.name) : ''}${cargadas.includes(fechaSel) || (today && fechaSel === ventana[0]) ? ' <span class="muted">— ya tiene carga: al guardar se actualiza</span>' : ''}</p>
         <input type="hidden" name="fecha" value="${fechaSel}">
         ${otro ? `<input type="hidden" name="user_id" value="${target.id}">` : ''}
         <div class="grid2">
@@ -2614,7 +2617,7 @@ function panelActividadPage({ user, campos, today, history, info, fecha: fechaSe
         </div>
         <label>Notas del día</label>
         <input name="notas" value="${esc(today?.notas)}" placeholder="Opcional">
-        <div style="margin-top:1.2rem"><button class="btn" style="width:100%">Guardar el día</button></div>
+        <div style="margin-top:1.2rem"><button class="btn" style="width:100%">${yaCargado ? 'Actualizar el día' : 'Guardar el día'}</button></div>
       </form>
     </div>
   </div>
