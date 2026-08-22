@@ -7,7 +7,7 @@ const fecha = (s) => {
   const [y, m, d] = s.slice(0, 10).split('-');
   return `${d}/${m}/${y.slice(2)}`;
 };
-const hoyISO = () => new Date().toISOString().slice(0, 10);
+const hoyISO = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
 // created_at viene de SQLite en UTC ("YYYY-MM-DD HH:MM:SS"); se muestra en hora argentina.
 const fechaHora = (s) => {
   if (!s) return '—';

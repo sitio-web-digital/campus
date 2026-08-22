@@ -79,10 +79,19 @@ const puede = (user, sistema) => user.role === 'admin' || (user.permisos || []).
 
 // Deudas del vendedor según las reglas de Config del panel: días de actividad sin cargar
 // y leads propias vencidas (liberadas por inactividad). Alimentan el brillo de los íconos de la barra.
+// Desde cuándo se le mide la constancia a un usuario en un panel: la fecha en que se le
+// asignó el panel (fallback: alta de la cuenta, para admins u otros casos sin registro).
+function inicioPanelDe(userId, slug) {
+  const asig = db.prepare('SELECT fecha FROM panel_asignaciones WHERE user_id = ? AND panel = ?').get(userId, slug);
+  if (asig && asig.fecha) return asig.fecha;
+  return (db.prepare('SELECT created_at FROM users WHERE id = ?').get(userId)?.created_at || '').slice(0, 10) || null;
+}
+
 function deudasDe(user, slug) {
   if (!user || user.role !== 'vendedor' || !PANEL_SLUGS.includes(slug)) return null;
   try {
-    const ventana = ventanaFechas(diasAtrasDe(slug)).slice(1);
+    const inicio = inicioPanelDe(user.id, slug);
+    const ventana = ventanaFechas(diasAtrasDe(slug)).slice(1).filter((f) => !inicio || f >= inicio);
     let diasFaltan = 0;
     if (ventana.length) {
       const cargadas = db.prepare('SELECT fecha FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(slug, user.id, ventana[ventana.length - 1]).map((r) => r.fecha);
@@ -731,8 +740,12 @@ app.post('/admin/usuarios', requireAuth, requireAdmin, (req, res) => {
   const role = ROLES.includes(req.body.role) ? req.body.role : 'vendedor';
   if (name && email && password.length >= 6) {
     try {
+      const permisosStr = permisosDeBody(req.body);
       const r = db.prepare('INSERT INTO users (name, email, password_hash, role, permisos) VALUES (?, ?, ?, ?, ?)')
-        .run(name, email, bcrypt.hashSync(password, 10), role, permisosDeBody(req.body));
+        .run(name, email, bcrypt.hashSync(password, 10), role, permisosStr);
+      for (const slug of JSON.parse(permisosStr)) {
+        if (PANEL_SLUGS.includes(slug)) db.prepare('INSERT OR REPLACE INTO panel_asignaciones (user_id, panel, fecha) VALUES (?, ?, ?)').run(r.lastInsertRowid, slug, hoyAR());
+      }
       logUserEvent(r.lastInsertRowid, 'cuenta', `Cuenta creada por ${req.user.name}`);
     } catch (e) { return res.redirect('/admin?err=email&abrir=1'); }
   }
@@ -741,10 +754,17 @@ app.post('/admin/usuarios', requireAuth, requireAdmin, (req, res) => {
 
 // Cambiar rol (promocionar/degradar) y permisos por sistema.
 app.post('/admin/usuarios/:id', requireAuth, requireAdmin, (req, res) => {
-  const target = db.prepare('SELECT id, role FROM users WHERE id = ?').get(req.params.id);
+  const target = db.prepare('SELECT id, role, permisos FROM users WHERE id = ?').get(req.params.id);
   if (target && target.id !== req.user.id) {
     const role = ROLES.includes(req.body.role) ? req.body.role : 'vendedor';
-    db.prepare('UPDATE users SET role = ?, permisos = ? WHERE id = ?').run(role, permisosDeBody(req.body), target.id);
+    let antes = []; try { antes = JSON.parse(target.permisos || '[]'); } catch {}
+    const permisosStr = permisosDeBody(req.body);
+    const ahora = JSON.parse(permisosStr);
+    db.prepare('UPDATE users SET role = ?, permisos = ? WHERE id = ?').run(role, permisosStr, target.id);
+    for (const slug of PANEL_SLUGS) {
+      if (ahora.includes(slug) && !antes.includes(slug)) db.prepare('INSERT OR REPLACE INTO panel_asignaciones (user_id, panel, fecha) VALUES (?, ?, ?)').run(target.id, slug, hoyAR());
+      if (!ahora.includes(slug) && antes.includes(slug)) db.prepare('DELETE FROM panel_asignaciones WHERE user_id = ? AND panel = ?').run(target.id, slug);
+    }
     logUserEvent(target.id, 'cuenta', `${req.user.name} actualizó su rol y permisos${role !== target.role ? ` (ahora ${role})` : ''}`);
   }
   res.redirect(`/admin/usuarios/${req.params.id}`);
@@ -1144,7 +1164,8 @@ for (const PANEL of PANELES_COMERCIALES) {
     const diasAtras = diasAtrasDe(slug);
     const today = db.prepare('SELECT * FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha = ?').get(slug, target.id, fecha);
     const history = db.prepare('SELECT * FROM panel_activity WHERE panel = ? AND user_id = ? ORDER BY fecha DESC LIMIT 14').all(slug, target.id);
-    const ventana = ventanaFechas(diasAtras);
+    const inicioPanel = inicioPanelDe(target.id, slug);
+    const ventana = ventanaFechas(diasAtras).filter((f, i) => i === 0 || !inicioPanel || f >= inicioPanel);
     const cargadas = db.prepare('SELECT fecha FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(slug, target.id, ventana[ventana.length - 1]).map((r) => r.fecha);
     const vendedores = esAdmin ? db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all() : [];
     // Grilla de constancia (estilo GitHub): suma de lo cargado por día en los últimos 6 meses.
@@ -1157,8 +1178,7 @@ for (const PANEL of PANELES_COMERCIALES) {
     for (const r of filasHeat) {
       try { heat[r.fecha] = (heat[r.fecha] || 0) + Object.values(JSON.parse(r.valores || '{}')).reduce((acu, x) => acu + (Number(x) || 0), 0); } catch {}
     }
-    const alta = (db.prepare('SELECT created_at FROM users WHERE id = ?').get(target.id)?.created_at || '').slice(0, 10) || null;
-    res.send(V.panelActividadPage({ user: req.user, campos: camposPanel(slug), today, history, info, fecha, ventana, cargadas, esAdmin, esGeneral, target, vendedores, base, heat, diasAtras, alta, abrir: req.query.abrir === '1' }));
+    res.send(V.panelActividadPage({ user: req.user, campos: camposPanel(slug), today, history, info, fecha, ventana, cargadas, esAdmin, esGeneral, target, vendedores, base, heat, diasAtras, alta: inicioPanel, abrir: req.query.abrir === '1' }));
   });
 
   app.post(base + '/actividad', requireAuth, requireSistema(slug), (req, res) => {
@@ -1934,6 +1954,8 @@ function recordarActividad() {
       for (const u of vendedores) {
         let permisos = []; try { permisos = JSON.parse(u.permisos || '[]'); } catch {}
         if (!permisos.includes(P.slug)) continue;
+        const inicio = inicioPanelDe(u.id, P.slug);
+        if (inicio && ayer < inicio) continue;
         if (db.prepare('SELECT 1 FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha = ?').get(P.slug, u.id, ayer)) continue;
         const r = db.prepare('INSERT OR IGNORE INTO actividad_avisos (user_id, panel, fecha) VALUES (?, ?, ?)').run(u.id, P.slug, ayer);
         if (r.changes > 0) notifyUser(u.id, `No te olvides de cargar tu actividad de ayer en ${P.nombre} — toma 2 minutos`, `${baseDePanel(P.slug)}/actividad?fecha=${ayer}&abrir=1`);

@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.26.0',
+    fecha: '2026-08-22',
+    cambios: [
+      { tipo: 'mejora', texto: 'La constancia de carga ahora se mide desde el día en que a cada usuario se le asignó el panel (no desde el alta de la cuenta): la grilla, los chips de días pendientes, las deudas del inicio y los recordatorios arrancan recién ahí. Si se quita y se vuelve a dar un panel, el contador arranca de cero.' },
+      { tipo: 'fix', texto: 'La grilla ya no puede dibujar una celda fantasma de "mañana" en rojo entre las 21:00 y la medianoche (la fecha de hoy se calcula en hora argentina, no UTC).' },
+    ],
+  },
+  {
     version: '2.25.2',
     fecha: '2026-08-22',
     cambios: [

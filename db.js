@@ -302,6 +302,30 @@ const PANELES_COMERCIALES = [
   { slug: 'sitioweb', nombre: 'SitioWeb Digital' },
 ];
 
+// Migración 2.26.0: desde cuándo cada usuario está asignado a cada panel comercial —
+// la constancia de carga (rojos/amarillos de la grilla, deudas, recordatorios) se mide desde ahí.
+db.exec(`CREATE TABLE IF NOT EXISTS panel_asignaciones (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  panel TEXT NOT NULL,
+  fecha TEXT NOT NULL,
+  UNIQUE (user_id, panel)
+);`);
+// Backfill para usuarios previos a esta versión: su primera carga en el panel o el alta de la
+// cuenta, lo que sea anterior. INSERT OR IGNORE lo hace idempotente en cada arranque.
+{
+  const insAsig = db.prepare('INSERT OR IGNORE INTO panel_asignaciones (user_id, panel, fecha) VALUES (?, ?, ?)');
+  const primeraCarga = db.prepare('SELECT MIN(fecha) AS f FROM panel_activity WHERE panel = ? AND user_id = ?');
+  for (const u of db.prepare('SELECT id, permisos, created_at FROM users').all()) {
+    let perms = []; try { perms = JSON.parse(u.permisos || '[]'); } catch {}
+    for (const P of PANELES_COMERCIALES) {
+      if (!perms.includes(P.slug)) continue;
+      const alta = (u.created_at || '').slice(0, 10);
+      const prim = primeraCarga.get(P.slug, u.id).f;
+      insAsig.run(u.id, P.slug, prim && prim < alta ? prim : alta);
+    }
+  }
+}
+
 // Migración 2.9.0: preferencias de notificaciones del admin.
 const userCols2 = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
 if (!userCols2.includes('notif_prefs')) {
