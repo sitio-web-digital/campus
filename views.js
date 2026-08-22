@@ -1019,13 +1019,13 @@ html.dark .theme-btn .ic-luna { display:none; }
 .curso-flecha { padding:.15rem .45rem; font-size:.72rem; }
 .curso-flecha[disabled] { opacity:.35; cursor:default; }
 
-/* ---------- leads liberadas (toma por inactividad): señal sutil, la acción vive en la ficha ---------- */
-.kcard-libre { border:1px solid rgba(179,64,60,.5); }
+/* ---------- leads liberadas (toma por inactividad): borde que respira suave, aviso adentro de la tarjeta ---------- */
+@keyframes lead-late { 0%, 100% { border-color:rgba(192,84,80,.3); } 50% { border-color:rgba(192,84,80,.75); } }
+.kcard-libre { border:1.5px solid rgba(192,84,80,.45); animation: lead-late 2.6s ease-in-out infinite; }
 .kcard-hace { font-size:.6rem; }
-.kcard-hace-libre { color:#B3403C; font-weight:600; display:flex; align-items:center; gap:.28rem; }
-@keyframes punto-late { 0%, 100% { opacity:.35; } 50% { opacity:1; } }
-.punto-libre { width:.42rem; height:.42rem; border-radius:50%; background:#B3403C; flex-shrink:0; animation: punto-late 2.2s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .punto-libre { animation:none; } }
+.kcard-venc { margin-top:.35rem; background:var(--bad-soft); color:#B3403C; font-size:.62rem; font-weight:600; line-height:1.4; padding:.3rem .5rem; border-radius:7px; }
+html.dark .kcard-venc { background:rgba(214,112,107,.14); color:#D6706B; }
+@media (prefers-reduced-motion: reduce) { .kcard-libre { animation:none; } }
 .tomar-box { display:flex; gap:1rem; align-items:center; justify-content:space-between; flex-wrap:wrap; background:var(--warn-soft); border:1px solid rgba(168,121,31,.45); border-radius:10px; padding:.8rem 1rem; margin-bottom:.9rem; }
 .tomar-box form { flex-shrink:0; }
 .doc-curso { background:linear-gradient(140deg, #0E6E66, #0A3D39); }
@@ -1115,7 +1115,9 @@ function pipelinePage({ user, deals, scope, closed, modal, err = null, robo = nu
       <a class="kcard-t" href="/deals/${d.id}">${esc(d.empresa)}</a>
       <div class="kcard-m"><span class="mrr">${money(d.mrr)}${d.tipo_venta === 'Suscripción mensual' ? '<span style="font-weight:400">/mes</span>' : ''}</span><span>${d.ciudad ? esc(d.ciudad) + ' · ' : ''}${esc(d.vendedor_name.split(' ')[0])}</span></div>
       ${pie}
-      ${!cerrado && d.etapa_movida_at ? `<div class="kcard-w kcard-hace ${d.disponible ? 'kcard-hace-libre' : 'ok'}" title="${d.disponible ? 'Liberada: abrila para tomarla' : 'Tiempo sin movimiento de etapa'}">${d.disponible ? '<span class="punto-libre"></span>Liberada · ' : 'En etapa '}${tiempoRel(d.etapa_movida_at)}</div>` : ''}
+      ${!cerrado && d.etapa_movida_at ? (d.disponible
+        ? `<div class="kcard-venc" title="Abrila para tomarla">Tiempo vencido · sin movimiento ${tiempoRel(d.etapa_movida_at)} — abrila para tomarla</div>`
+        : `<div class="kcard-w kcard-hace ok" title="Tiempo sin movimiento de etapa">En etapa ${tiempoRel(d.etapa_movida_at)}</div>`) : ''}
     </div>`;
   };
   const col = (etapa, sub) => {
