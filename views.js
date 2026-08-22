@@ -214,6 +214,9 @@ function posponerEncuesta() {
 </div>` : ''}
 ${user ? `
 <script>
+document.addEventListener('click', function (e) {
+  if (e.target.classList && e.target.classList.contains('modal-carga')) e.target.classList.remove('abierto');
+});
 function cerrarAnuncio(url) {
   fetch(url, { method: 'POST' }).finally(function () {
     var m = document.getElementById('anuncioModal'); if (m) m.remove();
@@ -1025,6 +1028,31 @@ html.dark .theme-btn .ic-luna { display:none; }
 @media (prefers-reduced-motion: reduce) { .kcard-libre { animation:none; } }
 .tomar-box { display:flex; gap:1rem; align-items:center; justify-content:space-between; flex-wrap:wrap; background:var(--warn-soft); border:1px solid rgba(168,121,31,.45); border-radius:10px; padding:.8rem 1rem; margin-bottom:.9rem; }
 .tomar-box form { flex-shrink:0; }
+
+/* ---------- grilla de constancia (estilo GitHub) ---------- */
+.hm-scroll { overflow-x:auto; padding-bottom:.2rem; }
+.hm { display:flex; gap:3px; width:max-content; }
+.hm-col { display:flex; flex-direction:column; gap:3px; }
+.hm-c { width:.7rem; height:.7rem; border-radius:3px; background:var(--surface2); display:inline-block; flex-shrink:0; }
+.hm-x { background:transparent; }
+.hm-0 { background:var(--surface2); }
+.hm-1 { background:#BFE3D2; }
+.hm-2 { background:#7CC7A4; }
+.hm-3 { background:#3D9A72; }
+.hm-4 { background:#166B4A; }
+html.dark .hm-0 { background:#1C242D; }
+html.dark .hm-1 { background:#14392C; }
+html.dark .hm-2 { background:#1D5B43; }
+html.dark .hm-3 { background:#2C8663; }
+html.dark .hm-4 { background:#57B8AB; }
+.hm-meses { display:flex; gap:3px; width:max-content; margin-bottom:.2rem; }
+.hm-meses span { width:.7rem; font-size:.56rem; color:var(--faint); overflow:visible; white-space:nowrap; flex-shrink:0; }
+.hm-leyenda { display:flex; gap:.25rem; align-items:center; margin-top:.5rem; font-size:.66rem; color:var(--faint); }
+
+/* ---------- modales de carga (actividad, objetivos generales) ---------- */
+.modal-carga { display:none; }
+.modal-carga.abierto { display:block; }
+.modal-carga .modal { max-width:38rem; }
 .doc-curso { background:linear-gradient(140deg, #0E6E66, #0A3D39); }
 .doc-curso .ic, .doc-curso svg { width:2.6rem; height:2.6rem; }
 .quiz-preg { padding:.7rem 0; border-bottom:1px solid var(--line); }
@@ -1373,6 +1401,41 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
   </div>
   </div>
   <script>document.getElementById('modalBack').addEventListener('click', function (e) { if (e.target === this) location = '${backHref}'; });</script>`;
+}
+
+// Grilla de constancia estilo GitHub: columnas = semanas, filas = Lun..Dom, intensidad por lo cargado.
+function heatmapHtml(heat, nDias = 182) {
+  const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const hoy = new Date(hoyISO() + 'T00:00:00Z');
+  const inicio = new Date(hoy); inicio.setUTCDate(inicio.getUTCDate() - (nDias - 1));
+  inicio.setUTCDate(inicio.getUTCDate() - ((inicio.getUTCDay() + 6) % 7)); // alinear a lunes
+  const max = Math.max(1, ...Object.values(heat));
+  const cols = [];
+  const meses = [];
+  const cursor = new Date(inicio);
+  while (cursor <= hoy) {
+    const celdas = [];
+    let mesCol = '';
+    for (let i = 0; i < 7; i++) {
+      const iso = cursor.toISOString().slice(0, 10);
+      if (cursor > hoy) { celdas.push('<span class="hm-c hm-x"></span>'); }
+      else {
+        const v = heat[iso] || 0;
+        const lvl = v === 0 ? 0 : Math.min(4, Math.max(1, Math.ceil((v / max) * 4)));
+        if (cursor.getUTCDate() === 1) mesCol = MES[cursor.getUTCMonth()];
+        celdas.push(`<span class="hm-c hm-${lvl}" title="${fecha(iso)}: ${v > 0 ? v + ' cargado' : 'sin carga'}"></span>`);
+      }
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    meses.push(mesCol);
+    cols.push(`<span class="hm-col">${celdas.join('')}</span>`);
+  }
+  return `
+  <div class="hm-scroll">
+    <div class="hm-meses">${meses.map((m) => `<span>${m}</span>`).join('')}</div>
+    <div class="hm">${cols.join('')}</div>
+    <div class="hm-leyenda"><span>Menos</span><span class="hm-c hm-0"></span><span class="hm-c hm-1"></span><span class="hm-c hm-2"></span><span class="hm-c hm-3"></span><span class="hm-c hm-4"></span><span>Más</span></div>
+  </div>`;
 }
 
 // Tabs de días de la ventana de carga (con punto rojo en los días pasados sin cargar).
@@ -2492,43 +2555,62 @@ function reporteImprimirPage({ user, p, nombrePeriodo, desde, hasta, r, info = {
 
 /* --------- paneles comerciales configurables --------- */
 
-function panelActividadPage({ user, campos, today, history, info, fecha: fechaSel, ventana = [], cargadas = [], esAdmin, target, vendedores = [] }) {
+function panelActividadPage({ user, campos, today, history, info, fecha: fechaSel, ventana = [], cargadas = [], esAdmin, esGeneral, target, vendedores = [], heat = {} }) {
   const vals = today ? (() => { try { return JSON.parse(today.valores || '{}'); } catch { return {}; } })() : {};
   const otro = esAdmin && target && target.id !== user.id;
-  const extraQS = otro ? '&vendedor=' + target.id : '';
+  const extraQS = esGeneral ? '&vendedor=todos' : (otro ? '&vendedor=' + target.id : '');
   return layout({
     title: `Actividad · ${info.nombre}`, user, active: 'actividad', sistema: info.slug,
     body: `
-  <h1>${otro ? 'Actividad de ' + esc(target.name) : 'Mi actividad'}</h1>
-  <p class="muted small">Los campos los define administración (Config). Podés cargar o corregir hasta 3 días para atrás — los días con <span class="warn">•</span> están sin cargar.</p>
+  <h1>${esGeneral ? 'Actividad de todo el equipo' : (otro ? 'Actividad de ' + esc(target.name) : 'Mi actividad')}</h1>
+  <p class="muted small">${esGeneral ? 'La grilla suma lo cargado por todos los vendedores. Elegí una persona en el selector para ver su detalle o cargarle un día.' : 'Cargala al final de cada día. Podés cargar o corregir hasta 3 días para atrás — los días con <span class="warn">•</span> están sin cargar.'}</p>
   <div class="toolbar">
-    ${tabsDias(ventana, cargadas, fechaSel, info.base + '/actividad', extraQS)}
+    ${esGeneral ? '' : tabsDias(ventana, cargadas, fechaSel, info.base + '/actividad', otro ? '&vendedor=' + target.id : '')}
     ${esAdmin ? `
     <form method="get" action="${info.base}/actividad" class="cfg-inline" style="flex:0">
-      <select name="vendedor" style="width:auto">${vendedores.map((v) => `<option value="${v.id}" ${target && v.id === target.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
+      <select name="vendedor" style="width:auto" onchange="this.form.submit()">
+        <option value="todos" ${esGeneral ? 'selected' : ''}>— Todo el equipo —</option>
+        ${vendedores.map((v) => `<option value="${v.id}" ${!esGeneral && target && v.id === target.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}
+      </select>
       <input type="date" name="fecha" value="${fechaSel}" style="width:auto">
       <button class="btn secondary small">Ver</button>
     </form>` : ''}
+    <div class="sp"></div>
+    ${esGeneral ? '' : `<button type="button" class="btn" onclick="document.getElementById('modalActividad').classList.add('abierto')">Cargar el día ${(() => { const pp = fechaSel.split('-'); return pp[2] + '/' + pp[1]; })()}</button>`}
   </div>
-  <form method="post" action="${info.base}/actividad" class="card">
-    <p class="small" style="margin:0 0 .3rem"><strong>Cargando el día ${fecha(fechaSel)}</strong>${otro ? ' de ' + esc(target.name) : ''}</p>
-    <input type="hidden" name="fecha" value="${fechaSel}">
-    ${otro ? `<input type="hidden" name="user_id" value="${target.id}">` : ''}
-    <div class="grid2">
-      ${campos.map((c) => `<div><label>${esc(c.label)}</label><input name="c${c.id}" type="number" min="0" inputmode="numeric" value="${vals['c' + c.id] ?? ''}" placeholder="0"></div>`).join('')}
+
+  <div class="card">
+    <h3 style="margin-top:0">Constancia de carga · últimos 6 meses</h3>
+    <p class="small muted" style="margin:.1rem 0 .6rem">Cada cuadrado es un día${esGeneral ? ' del equipo completo' : ''}: gris sin carga, más verde cuanto más se cargó. La constancia diaria es la métrica madre — un tablero al día vale más que uno perfecto a fin de mes.</p>
+    ${heatmapHtml(heat)}
+  </div>
+
+  ${esGeneral ? '' : `
+  <div class="modal-back modal-carga" id="modalActividad">
+    <div class="modal">
+      <div class="modal-h"><h2>${otro ? 'Actividad de ' + esc(target.name) : 'Mi actividad'} · ${(() => { const pp = fechaSel.split('-'); return pp[2] + '/' + pp[1] + '/' + pp[0]; })()}</h2><button type="button" class="modal-x" onclick="document.getElementById('modalActividad').classList.remove('abierto')" aria-label="Cerrar">&times;</button></div>
+      <p class="small muted" style="margin:0 0 .4rem">Los campos los define administración (Config). Si volvés a guardar el mismo día, se actualiza.</p>
+      <form method="post" action="${info.base}/actividad" class="card">
+        <input type="hidden" name="fecha" value="${fechaSel}">
+        ${otro ? `<input type="hidden" name="user_id" value="${target.id}">` : ''}
+        <div class="grid2">
+          ${campos.map((c) => `<div><label>${esc(c.label)}</label><input name="c${c.id}" type="number" min="0" inputmode="numeric" value="${vals['c' + c.id] ?? ''}" placeholder="0"></div>`).join('')}
+        </div>
+        <label>Notas del día</label>
+        <input name="notas" value="${esc(today?.notas)}" placeholder="Opcional">
+        <div style="margin-top:1.2rem"><button class="btn" style="width:100%">Guardar el día</button></div>
+      </form>
     </div>
-    <label>Notas del día</label>
-    <input name="notas" value="${esc(today?.notas)}" placeholder="Opcional">
-    <div style="margin-top:1.2rem"><button class="btn" style="width:100%">Guardar mi día</button></div>
-  </form>
-  <h2>Mis últimos 14 días</h2>
+  </div>
+
+  <h2>${otro ? 'Sus últimos 14 días' : 'Mis últimos 14 días'}</h2>
   <div class="tablewrap"><table>
     <thead><tr><th>Fecha</th>${campos.map((c) => `<th>${esc(c.label)}</th>`).join('')}<th>Notas</th></tr></thead>
     <tbody>${history.length ? history.map((r) => {
       let v = {}; try { v = JSON.parse(r.valores || '{}'); } catch {}
       return `<tr><td>${fecha(r.fecha)}</td>${campos.map((c) => `<td>${v['c' + c.id] ?? 0}</td>`).join('')}<td class="muted">${esc(r.notas || '')}</td></tr>`;
-    }).join('') : `<tr><td colspan="${campos.length + 2}" class="muted">Todavía no cargaste ningún día.</td></tr>`}</tbody>
-  </table></div>`
+    }).join('') : `<tr><td colspan="${campos.length + 2}" class="muted">Todavía no cargó ningún día.</td></tr>`}</tbody>
+  </table></div>`}`
   });
 }
 
@@ -2565,16 +2647,20 @@ function panelObjetivosPage({ user, campos, data, esAdmin, info }) {
   </div>
   <p class="small muted">${esAdmin ? 'Las métricas salen de los campos de actividad que definiste en Config, más las fijas de venta.' : 'Tu progreso contra los objetivos que definió administración.'} La semana arranca el lunes; el mes, el día 1.</p>
   ${esAdmin ? `
-  <div class="card card--accent">
-    <h3 style="margin-top:0">Objetivos generales del equipo</h3>
-    <form method="post" action="${info.base}/objetivos-generales">
-      <div class="goal-cols">
-        <div><strong class="small">Diario</strong><div class="goal-inputs">${inputs('d', null)}</div></div>
-        <div><strong class="small">Semanal</strong><div class="goal-inputs">${inputs('s', null)}</div></div>
-        <div><strong class="small">Mensual</strong><div class="goal-inputs">${inputs('m', null)}</div></div>
-      </div>
-      <div style="margin-top:.8rem"><button class="btn small" onclick="return confirm('¿Aplicar a TODOS los vendedores activos?')">Aplicar a todo el equipo</button></div>
-    </form>
+  <div class="toolbar"><div class="sp"></div><button type="button" class="btn" onclick="document.getElementById('modalObjGen').classList.add('abierto')">Definir objetivos generales del equipo</button></div>
+  <div class="modal-back modal-carga" id="modalObjGen">
+    <div class="modal">
+      <div class="modal-h"><h2>Objetivos generales del equipo</h2><button type="button" class="modal-x" onclick="document.getElementById('modalObjGen').classList.remove('abierto')" aria-label="Cerrar">&times;</button></div>
+      <p class="small muted" style="margin:0 0 .4rem">Aplica los mismos objetivos a todos los vendedores activos de una sola vez (pisa los individuales). Después podés ajustar cada uno en su tarjeta.</p>
+      <form method="post" action="${info.base}/objetivos-generales" class="card">
+        <div class="goal-cols">
+          <div><strong class="small">Diario</strong><div class="goal-inputs">${inputs('d', null)}</div></div>
+          <div><strong class="small">Semanal</strong><div class="goal-inputs">${inputs('s', null)}</div></div>
+          <div><strong class="small">Mensual</strong><div class="goal-inputs">${inputs('m', null)}</div></div>
+        </div>
+        <div style="margin-top:1rem"><button class="btn" style="width:100%" onclick="return confirm('¿Aplicar a TODOS los vendedores activos?')">Aplicar a todo el equipo</button></div>
+      </form>
+    </div>
   </div>` : ''}
   ${data.map(({ u, goals, stats }) => `
   <div class="card">

@@ -1055,12 +1055,23 @@ for (const PANEL of PANELES_COMERCIALES) {
 
   app.get(base + '/actividad', requireAuth, requireSistema(slug), (req, res) => {
     const { esAdmin, target, fecha } = targetActividad(req, req.query);
+    const esGeneral = esAdmin && req.query.vendedor === 'todos';
     const today = db.prepare('SELECT * FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha = ?').get(slug, target.id, fecha);
     const history = db.prepare('SELECT * FROM panel_activity WHERE panel = ? AND user_id = ? ORDER BY fecha DESC LIMIT 14').all(slug, target.id);
     const ventana = ventanaFechas();
     const cargadas = db.prepare('SELECT fecha FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(slug, target.id, ventana[3]).map((r) => r.fecha);
     const vendedores = esAdmin ? db.prepare("SELECT id, name FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all() : [];
-    res.send(V.panelActividadPage({ user: req.user, campos: camposPanel(slug), today, history, info, fecha, ventana, cargadas, esAdmin, target, vendedores, base }));
+    // Grilla de constancia (estilo GitHub): suma de lo cargado por día en los últimos 6 meses.
+    const dHeat = new Date(hoyAR() + 'T00:00:00Z'); dHeat.setUTCDate(dHeat.getUTCDate() - 181);
+    const desdeHeat = dHeat.toISOString().slice(0, 10);
+    const filasHeat = esGeneral
+      ? db.prepare('SELECT fecha, valores FROM panel_activity WHERE panel = ? AND fecha >= ?').all(slug, desdeHeat)
+      : db.prepare('SELECT fecha, valores FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(slug, target.id, desdeHeat);
+    const heat = {};
+    for (const r of filasHeat) {
+      try { heat[r.fecha] = (heat[r.fecha] || 0) + Object.values(JSON.parse(r.valores || '{}')).reduce((acu, x) => acu + (Number(x) || 0), 0); } catch {}
+    }
+    res.send(V.panelActividadPage({ user: req.user, campos: camposPanel(slug), today, history, info, fecha, ventana, cargadas, esAdmin, esGeneral, target, vendedores, base, heat }));
   });
 
   app.post(base + '/actividad', requireAuth, requireSistema(slug), (req, res) => {

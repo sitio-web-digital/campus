@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.23.0',
+    fecha: '2026-08-22',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Grilla de constancia estilo GitHub en Actividad: cada cuadrado es un día de los últimos 6 meses — gris sin carga, más verde cuanto más se cargó. El vendedor ve la suya; el admin filtra por vendedor o ve la del equipo completo con "— Todo el equipo —".' },
+      { tipo: 'mejora', texto: 'La carga de actividad diaria y los objetivos generales del equipo ahora se hacen en ventanas modales prolijas (como la ficha de las leads): botón "Cargar el día" / "Definir objetivos generales" y el formulario aparece encima, sin ocupar la pantalla.' },
+    ],
+  },
+  {
     version: '2.22.1',
     fecha: '2026-08-21',
     cambios: [
