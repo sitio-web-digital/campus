@@ -1022,9 +1022,6 @@ html.dark .theme-btn .ic-luna { display:none; }
 /* ---------- leads liberadas (toma por inactividad): borde que respira suave, aviso adentro de la tarjeta ---------- */
 @keyframes lead-late { 0%, 100% { border-color:rgba(192,84,80,.3); } 50% { border-color:rgba(192,84,80,.75); } }
 .kcard-libre { border:1.5px solid rgba(192,84,80,.45); animation: lead-late 2.6s ease-in-out infinite; }
-.kcard-hace { font-size:.6rem; }
-.kcard-venc { margin-top:.35rem; background:var(--bad-soft); color:#B3403C; font-size:.62rem; font-weight:600; line-height:1.4; padding:.3rem .5rem; border-radius:7px; }
-html.dark .kcard-venc { background:rgba(214,112,107,.14); color:#D6706B; }
 @media (prefers-reduced-motion: reduce) { .kcard-libre { animation:none; } }
 .tomar-box { display:flex; gap:1rem; align-items:center; justify-content:space-between; flex-wrap:wrap; background:var(--warn-soft); border:1px solid rgba(168,121,31,.45); border-radius:10px; padding:.8rem 1rem; margin-bottom:.9rem; }
 .tomar-box form { flex-shrink:0; }
@@ -1115,9 +1112,6 @@ function pipelinePage({ user, deals, scope, closed, modal, err = null, robo = nu
       <a class="kcard-t" href="/deals/${d.id}">${esc(d.empresa)}</a>
       <div class="kcard-m"><span class="mrr">${money(d.mrr)}${d.tipo_venta === 'Suscripción mensual' ? '<span style="font-weight:400">/mes</span>' : ''}</span><span>${d.ciudad ? esc(d.ciudad) + ' · ' : ''}${esc(d.vendedor_name.split(' ')[0])}</span></div>
       ${pie}
-      ${!cerrado && d.etapa_movida_at ? (d.disponible
-        ? `<div class="kcard-venc" title="Abrila para tomarla">Tiempo vencido · sin movimiento ${tiempoRel(d.etapa_movida_at)} — abrila para tomarla</div>`
-        : `<div class="kcard-w kcard-hace ok" title="Tiempo sin movimiento de etapa">En etapa ${tiempoRel(d.etapa_movida_at)}</div>`) : ''}
     </div>`;
   };
   const col = (etapa, sub) => {
