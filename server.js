@@ -373,6 +373,11 @@ app.post('/deals/:id', requireAuth, (req, res) => {
     logDealEvent(deal.id, req.user.id, 'edicion', otros.join(' · '));
   }
   if (d.nota) logDealEvent(deal.id, req.user.id, 'edicion', `Nota: ${d.nota}`);
+  // El reloj de inactividad mide TRABAJO sobre la lead, no solo etapa: una nota o una edición
+  // real también lo reinician (guardar sin cambiar nada, no).
+  if (!cambioEtapa && (otros.length || d.nota)) {
+    db.prepare("UPDATE deals SET etapa_movida_at = datetime('now') WHERE id = ?").run(deal.id);
+  }
   // Si la lead la modificó otra persona (típicamente el admin), el vendedor dueño se entera.
   if (req.user.id !== d.user_id && (cambioEtapa || otros.length || d.nota)) {
     const resumen = cambioEtapa ? `${deal.etapa} → ${d.etapa}` : (otros.length ? otros.slice(0, 2).join(' · ') : 'nueva nota');
@@ -478,8 +483,8 @@ app.post('/deals/:id/tomar', requireAuth, (req, res) => {
   }
   const anterior = db.prepare('SELECT id, name FROM users WHERE id = ?').get(deal.user_id);
   db.prepare("UPDATE deals SET user_id = ?, etapa_movida_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(req.user.id, deal.id);
-  logDealEvent(deal.id, req.user.id, 'edicion', `Tomó la lead por inactividad (${robo.horas}+ horas sin movimiento; era de ${anterior ? anterior.name : '—'})`);
-  if (anterior) notifyUser(anterior.id, `Tomó tu lead «${deal.empresa}» por inactividad (${robo.horas} h sin movimiento de etapa)`, `/deals/${deal.id}`, null, req.user.id);
+  logDealEvent(deal.id, req.user.id, 'edicion', `Tomó la lead por inactividad (${robo.horas}+ horas sin actividad; era de ${anterior ? anterior.name : '—'})`);
+  if (anterior) notifyUser(anterior.id, `Tomó tu lead «${deal.empresa}» por inactividad (${robo.horas} h sin actividad)`, `/deals/${deal.id}`, null, req.user.id);
   res.redirect(`/deals/${deal.id}`);
 });
 
@@ -1768,8 +1773,8 @@ function avisarVencimientos() {
         const horasSin = msDesde(d.etapa_movida_at) / 3600000;
         if (!Number.isFinite(horasSin) || horasSin >= robo.horas) continue; // ya liberada: no tiene sentido avisar
         const avisos = [];
-        if (horasSin >= robo.horas / 2) avisos.push(['mitad', `Tu lead «${d.empresa}» lleva ${Math.floor(horasSin)} h sin movimiento de etapa — a las ${robo.horas} h queda liberada para que otro vendedor la tome`]);
-        if (robo.horas > 1 && horasSin >= robo.horas - 1) avisos.push(['1h', `¡Última hora! Tu lead «${d.empresa}» se libera en menos de 1 hora si no la movés de etapa`]);
+        if (horasSin >= robo.horas / 2) avisos.push(['mitad', `Tu lead «${d.empresa}» lleva ${Math.floor(horasSin)} h sin actividad — a las ${robo.horas} h queda liberada para que otro vendedor la tome (una nota o un cambio de etapa reinician el contador)`]);
+        if (robo.horas > 1 && horasSin >= robo.horas - 1) avisos.push(['1h', `¡Última hora! Tu lead «${d.empresa}» se libera en menos de 1 hora — una nota, una edición o un cambio de etapa la retienen`]);
         for (const [tipo, texto] of avisos) {
           const r = db.prepare('INSERT OR IGNORE INTO robo_avisos (deal_id, marca, tipo) VALUES (?, ?, ?)').run(d.id, d.etapa_movida_at, tipo);
           if (r.changes > 0) notifyUser(d.user_id, texto, `/deals/${d.id}`);

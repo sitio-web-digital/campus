@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.23.2',
+    fecha: '2026-08-22',
+    cambios: [
+      { tipo: 'mejora', texto: 'El reloj de inactividad de las leads ahora cuenta el trabajo real, no solo la etapa: agregar una nota o editar la ficha también reinicia el contador (guardar sin cambiar nada, no). Si llamaste al cliente y lo anotaste, la lead no se libera.' },
+    ],
+  },
+  {
     version: '2.23.1',
     fecha: '2026-08-22',
     cambios: [

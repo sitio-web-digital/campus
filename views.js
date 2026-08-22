@@ -1251,7 +1251,7 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
   <div class="tomar-box">
     <div>
       <strong>Esta lead está liberada</strong>
-      <p class="small" style="margin:.15rem 0 0">Lleva más de ${tomar.horas} horas sin movimiento de etapa. Si la tomás, pasa a ser tuya con todo el historial, su dueño actual recibe una notificación y el contador arranca de cero.</p>
+      <p class="small" style="margin:.15rem 0 0">Lleva más de ${tomar.horas} horas sin actividad (ni cambio de etapa, ni notas, ni ediciones). Si la tomás, pasa a ser tuya con todo el historial, su dueño actual recibe una notificación y el contador arranca de cero.</p>
     </div>
     <form method="post" action="/deals/${d.id}/tomar" onsubmit="return confirm('¿Tomar la lead «${esc(d.empresa)}»?')"><button class="btn">Tomar lead</button></form>
   </div>` : ''}
@@ -2823,13 +2823,13 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
 
   <h2>Toma de leads inactivas</h2>
   <div class="card">
-    <p class="small muted">Si está activa, toda lead que pase la cantidad de horas configurada <strong>sin cambio de etapa</strong> queda liberada: su tarjeta titila en rojo en el pipeline y cualquier vendedor puede tomarla (el dueño anterior recibe una notificación y el contador arranca de cero para el nuevo). Los vendedores también pueden traspasarse leads entre sí desde la ficha, esté esto activo o no.</p>
+    <p class="small muted">Si está activa, toda lead que pase la cantidad de horas configurada <strong>sin actividad</strong> (sin cambio de etapa, sin notas y sin ediciones) queda liberada: su tarjeta titila en rojo en el pipeline y cualquier vendedor puede tomarla (el dueño anterior recibe una notificación y el contador arranca de cero para el nuevo). Los vendedores también pueden traspasarse leads entre sí desde la ficha, esté esto activo o no.</p>
     <form method="post" action="${info.base}/config/robo" class="perm-row">
       <label class="perm"><input type="checkbox" name="activo" ${robo && robo.activo ? 'checked' : ''}> Permitir tomar leads inactivas</label>
       <label class="perm" style="text-transform:none;letter-spacing:0">Horas sin movimiento para liberar: <input name="horas" type="number" min="1" max="720" step="1" value="${robo && robo.horas ? robo.horas : 48}" style="width:5.5rem;display:inline-block;margin-left:.3rem"></label>
       <button class="btn small">Guardar</button>
     </form>
-    ${robo && robo.activo ? `<p class="caption">Activo: las leads con más de <strong>${robo.horas} horas</strong> sin movimiento de etapa están liberadas.</p>` : '<p class="caption">Desactivado: nadie puede tomar leads ajenas (el traspaso voluntario sigue disponible).</p>'}
+    ${robo && robo.activo ? `<p class="caption">Activo: las leads con más de <strong>${robo.horas} horas</strong> sin actividad están liberadas. Cualquier trabajo real sobre la lead (nota, edición o cambio de etapa) reinicia su contador.</p>` : '<p class="caption">Desactivado: nadie puede tomar leads ajenas (el traspaso voluntario sigue disponible).</p>'}
   </div>
 
   <h2>Campañas de ${esc(info.nombre)}</h2>
