@@ -72,19 +72,54 @@ function deudasDe(user, slug) {
   if (!user || user.role !== 'vendedor' || !PANEL_SLUGS.includes(slug)) return null;
   try {
     const ventana = ventanaFechas(diasAtrasDe(slug)).slice(1);
-    let actividad = false;
+    let diasFaltan = 0;
     if (ventana.length) {
       const cargadas = db.prepare('SELECT fecha FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(slug, user.id, ventana[ventana.length - 1]).map((r) => r.fecha);
-      actividad = ventana.some((f) => !cargadas.includes(f));
+      diasFaltan = ventana.filter((f) => !cargadas.includes(f)).length;
     }
-    let pipeline = false;
+    let vencidas = 0;
     const robo = configRobo(slug);
     if (robo.activo && robo.horas > 0) {
       const abiertas = db.prepare("SELECT etapa_movida_at FROM deals WHERE panel = ? AND user_id = ? AND etapa NOT IN ('Ganado','Perdido')").all(slug, user.id);
-      pipeline = abiertas.some((d) => Number.isFinite(msDesde(d.etapa_movida_at)) && msDesde(d.etapa_movida_at) >= robo.horas * 3600 * 1000);
+      vencidas = abiertas.filter((d) => Number.isFinite(msDesde(d.etapa_movida_at)) && msDesde(d.etapa_movida_at) >= robo.horas * 3600 * 1000).length;
     }
-    return { actividad, pipeline };
+    return { actividad: diasFaltan > 0, pipeline: vencidas > 0, diasFaltan, vencidas };
   } catch { return null; }
+}
+
+// Resumen para el inicio y el menú de paneles: qué te espera en cada uno antes de entrar.
+// Vendedor: sus leads abiertas + deudas según las reglas de Config. Admin: totales del equipo.
+function resumenPaneles(user) {
+  const r = {};
+  if (!user) return r;
+  try {
+    for (const slug of PANEL_SLUGS) {
+      if (!puede(user, slug)) continue;
+      if (user.role === 'vendedor') {
+        const abiertas = db.prepare("SELECT COUNT(*) AS c FROM deals WHERE panel = ? AND user_id = ? AND etapa NOT IN ('Ganado','Perdido')").get(slug, user.id).c;
+        r[slug] = { abiertas, ...(deudasDe(user, slug) || {}) };
+      } else {
+        const abiertas = db.prepare("SELECT COUNT(*) AS c FROM deals WHERE panel = ? AND etapa NOT IN ('Ganado','Perdido')").get(slug).c;
+        let liberadas = 0;
+        const robo = configRobo(slug);
+        if (robo.activo && robo.horas > 0) {
+          const filas = db.prepare("SELECT etapa_movida_at FROM deals WHERE panel = ? AND etapa NOT IN ('Ganado','Perdido')").all(slug);
+          liberadas = filas.filter((d) => Number.isFinite(msDesde(d.etapa_movida_at)) && msDesde(d.etapa_movida_at) >= robo.horas * 3600 * 1000).length;
+        }
+        r[slug] = { abiertas, liberadas };
+      }
+    }
+    if (puede(user, 'cobranza')) {
+      r.cobranza = user.role === 'admin'
+        ? db.prepare(`SELECT
+            COALESCE(SUM(CASE WHEN estado='pendiente' THEN monto END),0) AS pendiente,
+            COALESCE(SUM(CASE WHEN estado='pendiente' AND fecha_devengada <= date('now') THEN monto END),0) AS exigible,
+            COUNT(DISTINCT CASE WHEN estado='pendiente' THEN user_id END) AS personas
+            FROM commissions`).get()
+        : resumenComisiones(user.id);
+    }
+  } catch {}
+  return r;
 }
 
 const requireSistema = (sistema) => (req, res, next) => {
@@ -114,6 +149,7 @@ function requireAuth(req, res, next) {
     user.modalEncuesta = enc && enc.opciones.length >= 2 ? enc : null;
   }
   if (!user.modalBanner && !user.modalEncuesta && user.last_version_vista !== CHANGELOG[0].version) user.modalChangelog = CHANGELOG[0];
+  user.resumen = resumenPaneles(user);
   req.user = user;
   next();
 }

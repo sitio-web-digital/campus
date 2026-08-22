@@ -47,16 +47,27 @@ const ICON_PCO2 = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" st
 
 // Selector de sistemas (arriba a la izquierda): permite saltar entre paneles y sitios.
 function sysSwitch(sistema, user) {
+  const R = (user && user.resumen) || {};
+  const infoPanel = (slug) => {
+    const i = R[slug]; if (!i) return '';
+    const extra = i.liberadas > 0 ? ` · ${i.liberadas} lib.` : '';
+    const deuda = i.actividad || i.pipeline;
+    return `<span class="sys-info">${i.abiertas} abierta${i.abiertas === 1 ? '' : 's'}${extra}</span>${deuda ? '<span class="sys-dot" title="Tenés deudas en este panel"></span>' : ''}`;
+  };
+  const infoCobranza = () => {
+    const i = R.cobranza;
+    return i && i.pendiente > 0 ? `<span class="sys-info">${money(i.pendiente)} pend.</span>` : '';
+  };
   return `
   <details class="sys">
     <summary><span class="brand-txt">${SISTEMA_NOMBRE[sistema] || 'Panel Comercial'}<span class="sub">Cloud For Deploy ▾</span></span></summary>
     <div class="sys-menu">
       <a href="/hub">Campus (inicio)</a>
-      ${tieneSistema(user, 'cfd') ? `<a href="/pipeline">Comercial Cloud For Deploy</a>` : ''}
-      ${tieneSistema(user, 'gondolas') ? `<a href="/gondolas/pipeline">Comercial Góndolas</a>` : ''}
-      ${tieneSistema(user, 'estanterias') ? `<a href="/estanterias/pipeline">Comercial Estanterías Reforzadas</a>` : ''}
-      ${tieneSistema(user, 'sitioweb') ? `<a href="/sitioweb/pipeline">Comercial SitioWeb Digital</a>` : ''}
-      ${tieneSistema(user, 'cobranza') ? `<a href="/cobranza">Panel de Cobranza</a>` : ''}
+      ${tieneSistema(user, 'cfd') ? `<a href="/pipeline"><span>Comercial Cloud For Deploy</span>${infoPanel('cfd')}</a>` : ''}
+      ${tieneSistema(user, 'gondolas') ? `<a href="/gondolas/pipeline"><span>Comercial Góndolas</span>${infoPanel('gondolas')}</a>` : ''}
+      ${tieneSistema(user, 'estanterias') ? `<a href="/estanterias/pipeline"><span>Comercial Estanterías Reforzadas</span>${infoPanel('estanterias')}</a>` : ''}
+      ${tieneSistema(user, 'sitioweb') ? `<a href="/sitioweb/pipeline"><span>Comercial SitioWeb Digital</span>${infoPanel('sitioweb')}</a>` : ''}
+      ${tieneSistema(user, 'cobranza') ? `<a href="/cobranza"><span>Panel de Cobranza</span>${infoCobranza()}</a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
       <span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>
       <a href="/campus">Campus de formación</a>
@@ -696,6 +707,18 @@ tr.inactivo td { opacity:.5; }
 .hub-card.hub-sw .hc-ext { color:#FFC107; }
 .hub-card.hub-sw .hc-logo { border-radius:8px; height:44px; }
 .hub-card.hub-pco2 .hc-ic, .hub-card.hub-cfd .hc-ic, .hub-card.hub-est .hc-ic, .hub-card.hub-sw .hc-ic, .hub-card.hub-gon .hc-ic, .hub-card.hub-eol .hc-ic { background:rgba(255,255,255,.18); color:#fff; }
+
+/* ---------- info y alertas en las cards del inicio y en el menú de paneles ---------- */
+.hc-info { display:flex; flex-wrap:wrap; gap:.3rem; margin-top:.6rem; }
+.hc-chip { font-size:.66rem; font-weight:600; color:var(--muted); background:var(--surface2); border:1px solid var(--line); border-radius:99px; padding:.16rem .5rem; }
+.hc-chip.mal { color:#E05550; border-color:rgba(192,84,80,.45); background:transparent; animation: lead-late 2.6s ease-in-out infinite; }
+.hc-chip.bien { color:#2E7D4F; border-color:rgba(46,125,79,.4); background:transparent; }
+html.dark .hc-chip.bien { color:#6FBF8F; }
+.hub-card .hc-ic.deuda { color:#E05550; background:rgba(224,85,80,.12); animation: icono-deuda 1.8s ease-in-out infinite; }
+.sys-menu > a { display:flex; align-items:center; gap:.5rem; }
+.sys-info { margin-left:auto; font-size:.66rem; font-weight:600; color:var(--faint); white-space:nowrap; }
+.sys-dot { width:.45rem; height:.45rem; border-radius:50%; background:#E05550; flex-shrink:0; animation: punto-late 2.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .hc-chip.mal, .hub-card .hc-ic.deuda, .sys-dot { animation:none; } }
 
 /* ---------- notificaciones e historial ---------- */
 .noti-pop { position:absolute; top:calc(100% + .5rem); right:-.4rem; z-index:90; width:23rem; max-width:calc(100vw - 1.5rem); max-height:62vh; overflow:auto;
@@ -2253,6 +2276,30 @@ function campanasPage({ user, campanas }) {
 /* --------- campus / hub --------- */
 
 function hubPage({ user }) {
+  const R = user.resumen || {};
+  const esAdminHub = user.role === 'admin';
+  const chipsPanel = (slug) => {
+    const i = R[slug]; if (!i) return '';
+    const chips = [`<span class="hc-chip">${i.abiertas} lead${i.abiertas === 1 ? '' : 's'} abierta${i.abiertas === 1 ? '' : 's'}${esAdminHub ? ' del equipo' : ''}</span>`];
+    if (esAdminHub && i.liberadas > 0) chips.push(`<span class="hc-chip mal">${i.liberadas} liberada${i.liberadas === 1 ? '' : 's'} esperando que alguien la${i.liberadas === 1 ? '' : 's'} tome</span>`);
+    if (i.diasFaltan > 0) chips.push(`<span class="hc-chip mal">${i.diasFaltan} día${i.diasFaltan === 1 ? '' : 's'} sin cargar actividad</span>`);
+    if (i.vencidas > 0) chips.push(`<span class="hc-chip mal">${i.vencidas} lead${i.vencidas === 1 ? '' : 's'} tuya${i.vencidas === 1 ? '' : 's'} liberada${i.vencidas === 1 ? '' : 's'} — te la${i.vencidas === 1 ? '' : 's'} pueden tomar</span>`);
+    return `<span class="hc-info">${chips.join('')}</span>`;
+  };
+  const deudaPanel = (slug) => { const i = R[slug]; return i && (i.actividad || i.pipeline) ? ' deuda' : ''; };
+  const chipsCobranza = () => {
+    const i = R.cobranza; if (!i) return '';
+    const chips = [];
+    if (esAdminHub) {
+      chips.push(`<span class="hc-chip">${money(i.pendiente)} por pagar${i.personas > 0 ? ` a ${i.personas} vendedor${i.personas === 1 ? '' : 'es'}` : ''}</span>`);
+      if (i.exigible > 0) chips.push(`<span class="hc-chip mal">${money(i.exigible)} ya exigible</span>`);
+    } else {
+      chips.push(`<span class="hc-chip">${money(i.pendiente)} pendiente de cobro</span>`);
+      if (i.exigible > 0) chips.push(`<span class="hc-chip bien">${money(i.exigible)} ya exigible</span>`);
+      else if (i.proxima) chips.push(`<span class="hc-chip">próximo cobro: ${fecha(i.proxima)}</span>`);
+    }
+    return `<span class="hc-info">${chips.join('')}</span>`;
+  };
   return layout({
     title: 'Campus', user, active: '', sistema: 'hub',
     body: `
@@ -2264,33 +2311,38 @@ function hubPage({ user }) {
     <div class="hub-grid">
       ${tieneSistema(user, 'cfd') ? `
       <a class="hub-card" href="/pipeline">
-        <span class="hc-ic">${ICONS.pipeline}</span>
+        <span class="hc-ic${deudaPanel('cfd')}">${ICONS.pipeline}</span>
         <h3>Comercial Cloud For Deploy</h3>
         <p>Ventas de software: pipeline, actividad diaria, metas, ranking${user.role === 'admin' ? ', dashboard y reportes' : ''}.</p>
+        ${chipsPanel('cfd')}
       </a>` : ''}
       ${tieneSistema(user, 'gondolas') ? `
       <a class="hub-card" href="/gondolas/pipeline">
-        <span class="hc-ic">${IC('<path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/>')}</span>
+        <span class="hc-ic${deudaPanel('gondolas')}">${IC('<path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/>')}</span>
         <h3>Comercial Góndolas</h3>
         <p>Ventas de góndolas: pipeline con etapas propias y carga diaria a medida.</p>
+        ${chipsPanel('gondolas')}
       </a>` : ''}
       ${tieneSistema(user, 'estanterias') ? `
       <a class="hub-card" href="/estanterias/pipeline">
-        <span class="hc-ic">${IC('<path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/>')}</span>
+        <span class="hc-ic${deudaPanel('estanterias')}">${IC('<path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/>')}</span>
         <h3>Comercial Estanterías Reforzadas</h3>
         <p>Ventas de la nueva empresa: pipeline, actividad y metas propias.</p>
+        ${chipsPanel('estanterias')}
       </a>` : ''}
       ${tieneSistema(user, 'sitioweb') ? `
       <a class="hub-card" href="/sitioweb/pipeline">
-        <span class="hc-ic">${IC('<path d="M10 3a7 7 0 100 14 7 7 0 000-14z"/><path d="M3 10h14M10 3c-2 2.2-2 11.8 0 14M10 3c2 2.2 2 11.8 0 14"/>')}</span>
+        <span class="hc-ic${deudaPanel('sitioweb')}">${IC('<path d="M10 3a7 7 0 100 14 7 7 0 000-14z"/><path d="M3 10h14M10 3c-2 2.2-2 11.8 0 14M10 3c2 2.2 2 11.8 0 14"/>')}</span>
         <h3>Comercial SitioWeb Digital</h3>
         <p>Ventas de sitios web: pipeline, actividad y metas propias.</p>
+        ${chipsPanel('sitioweb')}
       </a>` : ''}
       ${tieneSistema(user, 'cobranza') ? `
       <a class="hub-card" href="/cobranza">
         <span class="hc-ic">${ICONS.cobranza}</span>
         <h3>Panel de Cobranza</h3>
         <p>${user.role === 'admin' ? 'Comisiones del equipo: cuánto, a quién y cuándo pagar.' : 'Tus comisiones: cuánto ganaste, qué está pendiente y cuándo cobrás.'}</p>
+        ${chipsCobranza()}
       </a>` : ''}
       ${user.role === 'admin' ? `
       <a class="hub-card" href="/admin">

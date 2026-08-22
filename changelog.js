@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.24.0',
+    fecha: '2026-08-22',
+    cambios: [
+      { tipo: 'nuevo', texto: 'El inicio ahora te adelanta qué te espera en cada panel: leads abiertas, días de actividad sin cargar, leads liberadas y estado de tus comisiones — con chips rojos titilando y el ícono de la card en rojo cuando hay deudas.' },
+      { tipo: 'nuevo', texto: 'El menú superior de paneles muestra info al costado de cada uno (leads abiertas, liberadas, plata pendiente en Cobranza) y un punto rojo en los paneles donde tenés deudas.' },
+      { tipo: 'mejora', texto: 'Admin: la card de Cobranza muestra el total por pagar, a cuántos vendedores y cuánto ya está exigible; las cards comerciales muestran las leads abiertas del equipo y las liberadas sin tomar.' },
+    ],
+  },
+  {
     version: '2.23.5',
     fecha: '2026-08-22',
     cambios: [
