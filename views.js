@@ -1717,11 +1717,15 @@ const rolOpts = (sel) => Object.entries(ROL_LABEL).map(([v, l]) => `<option valu
 const permChecks = (sistemas, u) => sistemas.map(([slug, nombre]) => `
     <label class="perm"><input type="checkbox" name="permisos" value="${slug}" ${u && u.permisos.includes(slug) ? 'checked' : ''}> ${esc(nombre)}</label>`).join('');
 
-function adminPage({ user, users, sistemas }) {
+function adminPage({ user, users, sistemas, abrir = false, errEmail = false }) {
   return layout({
     title: 'Administración', user, active: 'admin', sistema: 'admin',
     body: `
-  <h1>Usuarios y permisos</h1>
+  <div class="toolbar" style="margin-bottom:.2rem">
+    <h1 style="margin:0">Usuarios y permisos</h1>
+    <div class="sp"></div>
+    <button type="button" class="btn" onclick="document.getElementById('modalUsuario').classList.add('abierto')">+ Crear usuario</button>
+  </div>
   <p class="small muted">Tocá un usuario para ver su ficha: datos, rol, permisos y el historial de todo lo que hizo en el sistema.</p>
   <div class="tablewrap"><table class="users-tbl">
     <thead><tr><th>Usuario</th><th>Rol</th><th>Sistemas</th><th>Estado</th><th>Alta</th><th>Último login</th><th>Última interacción</th></tr></thead>
@@ -1738,18 +1742,23 @@ function adminPage({ user, users, sistemas }) {
   </table></div>
   <p class="caption">Los administradores tienen acceso total a todos los sistemas (los permisos no les aplican). "Última interacción" es la última vez que la persona usó el sistema, aunque no haya vuelto a loguearse.</p>
 
-  <h2>Crear usuario</h2>
-  <form method="post" action="/admin/usuarios" class="card">
-    <div class="grid2">
-      <div><label>Nombre</label><input name="name" required placeholder="Nombre y apellido"></div>
-      <div><label>Email (será su usuario)</label><input name="email" type="email" required></div>
-      <div><label>Contraseña inicial</label><input name="password" required minlength="6" placeholder="Mínimo 6 caracteres"></div>
-      <div><label>Rol</label><select name="role">${rolOpts('vendedor')}</select></div>
+  <div class="modal-back modal-carga ${abrir ? 'abierto' : ''}" id="modalUsuario">
+    <div class="modal">
+      <div class="modal-h"><h2>Crear usuario</h2><button type="button" class="modal-x" onclick="document.getElementById('modalUsuario').classList.remove('abierto')" aria-label="Cerrar">&times;</button></div>
+      ${errEmail ? '<div class="flash bad">Ya existe un usuario con ese email — revisá la lista, quizás está inactivo.</div>' : ''}
+      <form method="post" action="/admin/usuarios" class="card">
+        <div class="grid2">
+          <div><label>Nombre</label><input name="name" required placeholder="Nombre y apellido"></div>
+          <div><label>Email (será su usuario)</label><input name="email" type="email" required></div>
+          <div><label>Contraseña inicial</label><input name="password" required minlength="6" placeholder="Mínimo 6 caracteres"></div>
+          <div><label>Rol</label><select name="role">${rolOpts('vendedor')}</select></div>
+        </div>
+        <label>Permisos por sistema</label>
+        <div class="perm-row">${permChecks(sistemas, { permisos: ['cfd', 'cobranza'] })}</div>
+        <div style="margin-top:1.2rem"><button class="btn" style="width:100%">Crear usuario</button></div>
+      </form>
     </div>
-    <label>Permisos por sistema</label>
-    <div class="perm-row">${permChecks(sistemas, { permisos: ['cfd', 'cobranza'] })}</div>
-    <div style="margin-top:1rem"><button class="btn">Crear usuario</button></div>
-  </form>`
+  </div>`
   });
 }
 

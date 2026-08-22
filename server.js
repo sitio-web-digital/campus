@@ -691,7 +691,7 @@ app.get('/equipo', requireAuth, requireAdmin, (req, res) => res.redirect('/admin
 
 // Sección Usuarios: tabla del equipo + alta.
 app.get('/admin', requireAuth, requireAdmin, (req, res) => {
-  res.send(V.adminPage({ user: req.user, users: usuariosAdmin(), sistemas: SISTEMAS }));
+  res.send(V.adminPage({ user: req.user, users: usuariosAdmin(), sistemas: SISTEMAS, abrir: req.query.abrir === '1', errEmail: req.query.err === 'email' }));
 });
 
 // Sección Comunicación: avisos (con quién los vio) y alertas modales.
@@ -734,7 +734,7 @@ app.post('/admin/usuarios', requireAuth, requireAdmin, (req, res) => {
       const r = db.prepare('INSERT INTO users (name, email, password_hash, role, permisos) VALUES (?, ?, ?, ?, ?)')
         .run(name, email, bcrypt.hashSync(password, 10), role, permisosDeBody(req.body));
       logUserEvent(r.lastInsertRowid, 'cuenta', `Cuenta creada por ${req.user.name}`);
-    } catch (e) { /* email duplicado: ignorar y volver a la lista */ }
+    } catch (e) { return res.redirect('/admin?err=email&abrir=1'); }
   }
   res.redirect('/admin');
 });

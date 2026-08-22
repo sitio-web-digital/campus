@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.25.1',
+    fecha: '2026-08-22',
+    cambios: [
+      { tipo: 'mejora', texto: 'Administración: el formulario de crear usuario ahora es una ventana modal detrás del botón "+ Crear usuario". Si el email ya existe, el modal se reabre con el aviso en vez de fallar en silencio.' },
+    ],
+  },
+  {
     version: '2.25.0',
     fecha: '2026-08-22',
     cambios: [
