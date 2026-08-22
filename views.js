@@ -1029,10 +1029,11 @@ html.dark .theme-btn .ic-luna { display:none; }
 .kcard-libre { border:1.5px solid rgba(192,84,80,.45); animation: lead-late 2.6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .kcard-libre { animation:none; } }
 .chip-deuda { border:1.5px solid rgba(192,84,80,.45); animation: lead-late 2.6s ease-in-out infinite; }
-@keyframes icono-deuda { 0%, 100% { color:inherit; filter:none; } 50% { color:#E8837F; filter:drop-shadow(0 0 4px rgba(232,131,127,.8)); } }
+@keyframes icono-deuda { 0%, 100% { color:#E05550; filter:drop-shadow(0 0 2px rgba(224,85,80,.5)); } 50% { color:#FF7A73; filter:drop-shadow(0 0 8px rgba(255,122,115,.95)); } }
 .nav-links a.deuda .ic { animation: icono-deuda 1.8s ease-in-out infinite; }
+.nav-links a.deuda span { color:#E8837F; }
 @media (prefers-reduced-motion: reduce) { .chip-deuda, .nav-links a.deuda .ic { animation:none; } }
-@media (prefers-reduced-motion: reduce) { .nav-links a.deuda .ic { color:#E8837F; } }
+@media (prefers-reduced-motion: reduce) { .nav-links a.deuda .ic { color:#E05550; } }
 .tomar-box { display:flex; gap:1rem; align-items:center; justify-content:space-between; flex-wrap:wrap; background:var(--warn-soft); border:1px solid rgba(168,121,31,.45); border-radius:10px; padding:.8rem 1rem; margin-bottom:.9rem; }
 .tomar-box form { flex-shrink:0; }
 
