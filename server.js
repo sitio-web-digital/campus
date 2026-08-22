@@ -65,7 +65,33 @@ function currentUser(req) {
 
 // Permisos por sistema: el admin siempre puede todo.
 const puede = (user, sistema) => user.role === 'admin' || (user.permisos || []).includes(sistema);
-const requireSistema = (sistema) => (req, res, next) => (puede(req.user, sistema) ? next() : res.status(403).send('No tenés acceso a este sistema. Pedile al administrador que te lo habilite.'));
+
+// Deudas del vendedor según las reglas de Config del panel: días de actividad sin cargar
+// y leads propias vencidas (liberadas por inactividad). Alimentan el brillo de los íconos de la barra.
+function deudasDe(user, slug) {
+  if (!user || user.role !== 'vendedor' || !PANEL_SLUGS.includes(slug)) return null;
+  try {
+    const ventana = ventanaFechas(diasAtrasDe(slug)).slice(1);
+    let actividad = false;
+    if (ventana.length) {
+      const cargadas = db.prepare('SELECT fecha FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(slug, user.id, ventana[ventana.length - 1]).map((r) => r.fecha);
+      actividad = ventana.some((f) => !cargadas.includes(f));
+    }
+    let pipeline = false;
+    const robo = configRobo(slug);
+    if (robo.activo && robo.horas > 0) {
+      const abiertas = db.prepare("SELECT etapa_movida_at FROM deals WHERE panel = ? AND user_id = ? AND etapa NOT IN ('Ganado','Perdido')").all(slug, user.id);
+      pipeline = abiertas.some((d) => Number.isFinite(msDesde(d.etapa_movida_at)) && msDesde(d.etapa_movida_at) >= robo.horas * 3600 * 1000);
+    }
+    return { actividad, pipeline };
+  } catch { return null; }
+}
+
+const requireSistema = (sistema) => (req, res, next) => {
+  if (!puede(req.user, sistema)) return res.status(403).send('No tenés acceso a este sistema. Pedile al administrador que te lo habilite.');
+  req.user.deudas = deudasDe(req.user, sistema);
+  next();
+};
 
 function requireAuth(req, res, next) {
   const user = currentUser(req);

@@ -123,16 +123,18 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="/admin/preferencias" class="${active === 'preferencias' ? 'on' : ''}">${ICONS.docs}<span>Preferencias</span></a>`;
   } else if (sistema === 'gondolas' || sistema === 'estanterias' || sistema === 'sitioweb') {
     const b = '/' + sistema;
+    const dd = (user && user.deudas) || {};
     links = `
-        <a href="${b}/pipeline" class="${active === 'pipeline' ? 'on' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
-        <a href="${b}/actividad" class="${active === 'actividad' ? 'on' : ''}">${ICONS.actividad}<span>Actividad</span></a>
+        <a href="${b}/pipeline" class="${active === 'pipeline' ? 'on' : ''}${dd.pipeline ? ' deuda' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
+        <a href="${b}/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="${b}/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
         ${user && user.role === 'admin' ? `<a href="${b}/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
         <a href="${b}/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>` : ''}`;
   } else {
+    const dd = (user && user.deudas) || {};
     links = `
-        <a href="/pipeline" class="${active === 'pipeline' ? 'on' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
-        <a href="/actividad" class="${active === 'actividad' ? 'on' : ''}">${ICONS.actividad}<span>Actividad</span></a>
+        <a href="/pipeline" class="${active === 'pipeline' ? 'on' : ''}${dd.pipeline ? ' deuda' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
+        <a href="/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
         ${user && user.role === 'admin' ? `<a href="/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
         <a href="/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>
@@ -1026,6 +1028,11 @@ html.dark .theme-btn .ic-luna { display:none; }
 @keyframes lead-late { 0%, 100% { border-color:rgba(192,84,80,.3); } 50% { border-color:rgba(192,84,80,.75); } }
 .kcard-libre { border:1.5px solid rgba(192,84,80,.45); animation: lead-late 2.6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .kcard-libre { animation:none; } }
+.chip-deuda { border:1.5px solid rgba(192,84,80,.45); animation: lead-late 2.6s ease-in-out infinite; }
+@keyframes icono-deuda { 0%, 100% { color:inherit; filter:none; } 50% { color:#E8837F; filter:drop-shadow(0 0 4px rgba(232,131,127,.8)); } }
+.nav-links a.deuda .ic { animation: icono-deuda 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .chip-deuda, .nav-links a.deuda .ic { animation:none; } }
+@media (prefers-reduced-motion: reduce) { .nav-links a.deuda .ic { color:#E8837F; } }
 .tomar-box { display:flex; gap:1rem; align-items:center; justify-content:space-between; flex-wrap:wrap; background:var(--warn-soft); border:1px solid rgba(168,121,31,.45); border-radius:10px; padding:.8rem 1rem; margin-bottom:.9rem; }
 .tomar-box form { flex-shrink:0; }
 
@@ -2595,7 +2602,7 @@ function panelActividadPage({ user, campos, today, history, info, fecha: fechaSe
   <div class="card" style="border-left:4px solid var(--bad)">
     <div style="display:flex; gap:.5rem .6rem; align-items:center; flex-wrap:wrap">
       <strong class="small">${otro ? 'Le faltan' : 'Te faltan'} cargar ${faltantes.length} día${faltantes.length === 1 ? '' : 's'}:</strong>
-      ${faltantes.map((f) => `<a class="btn secondary small" href="${info.base}/actividad?fecha=${f}&abrir=1${qsVend}">${etiqueta(f, ventana.indexOf(f))} <span class="warn">•</span></a>`).join('')}
+      ${faltantes.map((f) => `<a class="btn secondary small chip-deuda" href="${info.base}/actividad?fecha=${f}&abrir=1${qsVend}">${etiqueta(f, ventana.indexOf(f))} <span class="warn">•</span></a>`).join('')}
       <span class="small muted">— tocá un día para cargarlo</span>
     </div>
   </div>` : ''}

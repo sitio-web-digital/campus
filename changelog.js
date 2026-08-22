@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.23.5',
+    fecha: '2026-08-22',
+    cambios: [
+      { tipo: 'mejora', texto: 'Señales de deuda para el vendedor: los chips de días sin cargar titilan en rojo como las leads liberadas, y los íconos de Pipeline y Actividad de la barra brillan cuando hay deudas según las reglas de Config (días de actividad sin cargar / leads propias vencidas por inactividad).' },
+    ],
+  },
+  {
     version: '2.23.4',
     fecha: '2026-08-22',
     cambios: [
