@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.26.1',
+    fecha: '2026-08-24',
+    cambios: [
+      { tipo: 'fix', texto: 'Config de paneles: las flechas ↑↓ para reordenar etapas del pipeline no funcionaban en paneles donde se habían borrado etapas (Góndolas). Ahora se mueve por posición y de paso se renumera el orden.' },
+    ],
+  },
+  {
     version: '2.26.0',
     fecha: '2026-08-22',
     cambios: [

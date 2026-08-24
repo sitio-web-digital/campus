@@ -1321,12 +1321,16 @@ for (const PANEL of PANELES_COMERCIALES) {
         } catch {}
       }
     } else if (accion === 'subir' || accion === 'bajar') {
-      const dir = accion === 'subir' ? -1 : 1;
-      const vecino = db.prepare('SELECT * FROM panel_etapas WHERE panel = ? AND orden = ?').get(slug, etapa.orden + dir);
-      if (vecino) {
-        db.prepare('UPDATE panel_etapas SET orden = ? WHERE id = ?').run(vecino.orden, etapa.id);
-        db.prepare('UPDATE panel_etapas SET orden = ? WHERE id = ?').run(etapa.orden, vecino.id);
-      }
+      // Se mueve por posición, no por "orden ± 1": borrar etapas deja huecos en orden
+      // (Góndolas tenía 1, 5, 6, 7…) y el vecino exacto no existía. Renumerar 1..n de paso.
+      db.transaction(() => {
+        const lista = db.prepare('SELECT id FROM panel_etapas WHERE panel = ? ORDER BY orden, id').all(slug);
+        const upd = db.prepare('UPDATE panel_etapas SET orden = ? WHERE id = ?');
+        lista.forEach((e, i) => upd.run(i + 1, e.id));
+        const pos = lista.findIndex((e) => e.id === etapa.id);
+        const j = pos + (accion === 'subir' ? -1 : 1);
+        if (pos >= 0 && j >= 0 && j < lista.length) { upd.run(j + 1, etapa.id); upd.run(pos + 1, lista[j].id); }
+      })();
     } else if (accion === 'borrar') {
       const enUso = db.prepare('SELECT COUNT(*) c FROM deals WHERE panel = ? AND etapa = ?').get(slug, etapa.nombre).c;
       if (enUso > 0) return res.redirect(`${base}/config?err=etapa-en-uso&etapa=${encodeURIComponent(etapa.nombre)}&n=${enUso}`);
