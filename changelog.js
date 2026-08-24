@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.26.2',
+    fecha: '2026-08-24',
+    cambios: [
+      { tipo: 'mejora', texto: 'Se retiró "Próximo paso" de las leads: ya no aparece el cartel en la tarjeta del pipeline ("Sin próximo paso" / "Vencido"), ni los campos en la ficha, ni la alerta del dashboard. El seguimiento vive en las notas y en el reloj de actividad.' },
+    ],
+  },
+  {
     version: '2.26.1',
     fecha: '2026-08-24',
     cambios: [

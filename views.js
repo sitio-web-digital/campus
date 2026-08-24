@@ -1221,14 +1221,9 @@ function pipelinePage({ user, deals, scope, closed, modal, err = null, robo = nu
   const puedeMover = (d) => user.role === 'admin' || d.user_id === user.id;
   const kcard = (d) => {
     const cerrado = ['Ganado', 'Perdido'].includes(d.etapa);
-    const sinPaso = !d.fecha_proximo_paso && !cerrado;
-    const vencido = d.fecha_proximo_paso && d.fecha_proximo_paso < hoyISO() && !cerrado;
     const pie = d.etapa === 'Perdido' && d.motivo_perdida ? `<div class="kcard-w warn">${esc(d.motivo_perdida)}</div>`
       : d.etapa === 'Ganado' && d.aprobacion !== 'aprobado' ? `<div class="kcard-w aprob">Por aprobar</div>`
-      : d.etapa === 'Ganado' && d.fecha_cierre ? `<div class="kcard-w ok">Cerrado ${fecha(d.fecha_cierre)}</div>`
-      : sinPaso ? `<div class="kcard-w warn">Sin próximo paso</div>`
-      : vencido ? `<div class="kcard-w warn">Vencido ${fecha(d.fecha_proximo_paso)}</div>`
-      : d.fecha_proximo_paso ? `<div class="kcard-w ok">→ ${fecha(d.fecha_proximo_paso)}${d.proximo_paso ? ' · ' + esc(d.proximo_paso) : ''}</div>` : '';
+      : d.etapa === 'Ganado' && d.fecha_cierre ? `<div class="kcard-w ok">Cerrado ${fecha(d.fecha_cierre)}</div>` : '';
     return `
     <div class="kcard ${d.disponible ? 'kcard-libre' : ''}" ${puedeMover(d) ? 'draggable="true"' : ''} data-id="${d.id}">
       <a class="kcard-t" href="/deals/${d.id}">${esc(d.empresa)}</a>
@@ -1422,14 +1417,6 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
         <label>Vendedor</label>
         <select name="user_id">${vendedores.map((v) => `<option value="${v.id}" ${v.id === (d.user_id || user.id) ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
       </div>` : ''}
-      <div>
-        <label>Próximo paso</label>
-        <input name="proximo_paso" value="${esc(d.proximo_paso)}" placeholder="Ej: enviar propuesta, llamada con decisor">
-      </div>
-      <div>
-        <label>Fecha próximo paso</label>
-        <input name="fecha_proximo_paso" type="date" value="${esc(d.fecha_proximo_paso)}">
-      </div>
       <div>
         <label>Fecha primera reunión</label>
         <input name="fecha_primera_reunion" type="date" value="${esc(d.fecha_primera_reunion)}">
@@ -2252,7 +2239,7 @@ function dashHeader(active) {
 }
 
 // Dashboard unificado por panel: métricas del período + gráficas + tablas + exportación (une Dashboard y Reportes).
-function dashboardUnificadoPage({ user, info, p, off, periodos, desde, hasta, r, etapas, colores, funnel, activos, enJuego, curva, curvaLabel, sinPaso, estancados, provincias, campanas, esCfd }) {
+function dashboardUnificadoPage({ user, info, p, off, periodos, desde, hasta, r, etapas, colores, funnel, activos, enJuego, curva, curvaLabel, estancados, provincias, campanas, esCfd }) {
   const dashUrl = `${info.base}/dashboard`;
   const barRows = (items, fmt = (v) => v, color = '#1D6FB8') => {
     const max = Math.max(1, ...items.map((i) => i.n));
@@ -2364,7 +2351,6 @@ function dashboardUnificadoPage({ user, info, p, off, periodos, desde, hasta, r,
     <tbody>${r.cerrados.length ? r.cerrados.map((d) => `<tr><td><strong>${esc(d.empresa)}</strong></td><td><span class="chip" style="background:${ETAPA_COLOR[d.etapa]}">${d.etapa}</span></td>${esCfd ? `<td class="small">${d.tipo_venta === 'Suscripción mensual' ? 'Suscripción' : 'Proyecto'}</td>` : ''}<td>${money(d.mrr)}${esCfd && d.tipo_venta === 'Suscripción mensual' ? '<span class="muted small">/mes</span>' : ''}</td><td>${fecha(d.fecha_cierre)}</td><td>${esc(d.motivo_perdida || '—')}</td><td>${esc(d.vendedor)}</td></tr>`).join('') : `<tr><td colspan="${esCfd ? 7 : 6}" class="muted">Sin cierres en este período.</td></tr>`}</tbody>
   </table></div>
 
-  ${alertas('Deals sin próximo paso definido (hoy)', sinPaso, 'Ninguno — todo el pipeline tiene próximo paso.')}
   ${alertas('Deals estancados: sin cambios hace +14 días (hoy)', estancados, 'Ninguno.')}`
   });
 }
@@ -3479,7 +3465,6 @@ function docsPage({ user, manualDisponible }) {
       <li><strong>Empresa</strong> y <strong>Contacto decisor</strong> (nombre y cargo de quien firma — si no hablás con esa persona, la venta se estanca).</li>
       <li><strong>Tipo de venta y valor</strong>: si es un <strong>proyecto único</strong> (desarrollo a medida), cargá el valor total del proyecto; si es una <strong>suscripción mensual</strong> (SaaS), cargá lo que pagaría por mes. El dashboard separa los dos: ingresos por proyectos y MRR nuevo.</li>
       <li><strong>Origen</strong>: de dónde salió el lead. Sirve para saber qué canal trae mejores clientes.</li>
-      <li><strong>Próximo paso + fecha</strong>: obligatorio en todo deal abierto. Un deal sin próximo paso aparece en rojo y en las alertas del dashboard — es un deal que se está muriendo.</li>
       <li><strong>Notas</strong>: objeciones, acuerdos, contexto. Tu yo de dentro de dos semanas te lo agradece.</li>
     </ul>
   </div>

@@ -429,6 +429,7 @@ app.post('/deals/:id', requireAuth, (req, res) => {
   const d = dealFromBody(req.body, req.user, deal.panel, deal.etapa, deal.tipo_venta);
   if (!d.empresa) return res.redirect(`/deals/${deal.id}`);
   if (req.user.role !== 'admin') d.user_id = deal.user_id; // un vendedor no reasigna deals
+  d.proximo_paso = deal.proximo_paso; d.fecha_proximo_paso = deal.fecha_proximo_paso; // campo retirado de la ficha (2.26.2)
   // Si pasa a Ganado/Perdido sin fecha de cierre, se estampa hoy.
   if (['Ganado', 'Perdido'].includes(d.etapa) && !d.fecha_cierre) d.fecha_cierre = new Date().toISOString().slice(0, 10);
   const cambioEtapa = d.etapa !== deal.etapa;
@@ -1044,14 +1045,12 @@ function dashboardData(slug, p, off) {
   const campoCurva = r.campos.find((c) => /toque/i.test(c.label)) || r.campos[0];
   const curvaDesde = p === 'dia' ? new Date(new Date(hasta + 'T00:00:00Z').getTime() - 13 * 864e5).toISOString().slice(0, 10) : desde;
   const curva = campoCurva ? seriePorDia(slug, 'c' + campoCurva.id, curvaDesde, hasta) : [];
-  const sinPaso = db.prepare(`SELECT d.id, d.empresa, d.etapa, d.updated_at, u.name vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
-    WHERE d.panel = ? AND d.etapa NOT IN ('Ganado','Perdido') AND d.fecha_proximo_paso IS NULL ORDER BY d.updated_at ASC`).all(slug);
   const estancados = db.prepare(`SELECT d.id, d.empresa, d.etapa, d.updated_at, u.name vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
     WHERE d.panel = ? AND d.etapa NOT IN ('Ganado','Perdido') AND d.updated_at < datetime('now','-14 days') ORDER BY d.updated_at ASC`).all(slug);
   const provincias = db.prepare(`SELECT COALESCE(NULLIF(provincia,''),'Sin provincia') label, COUNT(*) n FROM deals
     WHERE panel = ? AND substr(created_at,1,10) BETWEEN ? AND ? GROUP BY label ORDER BY n DESC LIMIT 12`).all(slug, desde, hasta);
   const campanas = statsCampanas(slug, desde, hasta);
-  return { desde, hasta, r, etapas, colores, funnel, activos, enJuego, curva, curvaLabel: campoCurva ? campoCurva.label : '', sinPaso, estancados, provincias, campanas, esCfd: slug === 'cfd' };
+  return { desde, hasta, r, etapas, colores, funnel, activos, enJuego, curva, curvaLabel: campoCurva ? campoCurva.label : '', estancados, provincias, campanas, esCfd: slug === 'cfd' };
 }
 
 // CSV del dashboard: por vendedor + cierres + campañas + provincias del período.
