@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.27.0',
+    fecha: '2026-08-25',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Campos calculados en Config → Campos de la carga diaria: creá un campo que sea la suma de otros (ej: "Leads tocadas en el día" = todo menos Publicaciones en MKP). No se carga a mano: se calcula solo y aparece marcado con Σ en la actividad, el dashboard, el ranking y los objetivos.' },
+      { tipo: 'mejora', texto: 'Si borrás un campo que forma parte de una suma, sale de la fórmula automáticamente (y si la suma queda con un solo campo, se elimina).' },
+    ],
+  },
+  {
     version: '2.26.2',
     fecha: '2026-08-24',
     cambios: [

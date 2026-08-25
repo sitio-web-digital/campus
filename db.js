@@ -302,6 +302,12 @@ const PANELES_COMERCIALES = [
   { slug: 'sitioweb', nombre: 'SitioWeb Digital' },
 ];
 
+// Migración 2.27.0: campos calculados de la carga diaria (formula JSON: {op:'suma', campos:[ids]}).
+// No se cargan ni se guardan: se calculan al leer sumando otros campos del mismo panel.
+if (!db.prepare('PRAGMA table_info(panel_campos)').all().some((c) => c.name === 'formula')) {
+  db.exec('ALTER TABLE panel_campos ADD COLUMN formula TEXT');
+}
+
 // Migración 2.26.0: desde cuándo cada usuario está asignado a cada panel comercial —
 // la constancia de carga (rojos/amarillos de la grilla, deudas, recordatorios) se mide desde ahí.
 db.exec(`CREATE TABLE IF NOT EXISTS panel_asignaciones (

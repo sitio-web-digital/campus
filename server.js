@@ -936,7 +936,7 @@ function panelSeries(slug, uid) {
   const cero = () => Object.fromEntries(keys.map((k) => [k, 0]));
   const add = (fecha, k, v) => { (sum[fecha] = sum[fecha] || cero())[k] += Number(v) || 0; };
   for (const r of db.prepare('SELECT fecha, valores FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(slug, uid, desde)) {
-    try { const v = JSON.parse(r.valores || '{}'); for (const c of campos) add(r.fecha, 'c' + c.id, v['c' + c.id]); } catch {}
+    const v = valoresDeFila(campos, r.valores); for (const c of campos) add(r.fecha, 'c' + c.id, v['c' + c.id]);
   }
   for (const w of db.prepare("SELECT fecha_cierre f, mrr FROM deals WHERE panel = ? AND user_id = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND fecha_cierre >= ?").all(slug, uid, desde)) {
     if (w.f) add(w.f, 'ingresos', w.mrr);
@@ -1004,7 +1004,7 @@ function reporteData(slug, desde, hasta) {
   const porVendedor = usuarios.map((u) => {
     const act = Object.fromEntries(keys.map((k) => [k, 0]));
     for (const r of db.prepare('SELECT valores FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha BETWEEN ? AND ?').all(slug, u.id, desde, hasta)) {
-      try { const v = JSON.parse(r.valores || '{}'); for (const k of keys) act[k] += Number(v[k]) || 0; } catch {}
+      const v = valoresDeFila(campos, r.valores); for (const k of keys) act[k] += Number(v[k]) || 0;
     }
     const creados = db.prepare('SELECT COUNT(*) n FROM deals WHERE panel = ? AND user_id = ? AND substr(created_at,1,10) BETWEEN ? AND ?').get(slug, u.id, desde, hasta).n;
     const g = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(mrr),0) m FROM deals WHERE panel = ? AND user_id = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND fecha_cierre BETWEEN ? AND ?").get(slug, u.id, desde, hasta);
@@ -1084,6 +1084,13 @@ app.get('/reportes.csv', requireAuth, requireAdmin, (req, res) => res.redirect('
 /* ---------------- paneles comerciales configurables (una empresa = un panel) ---------------- */
 
 const camposPanel = (slug) => db.prepare('SELECT * FROM panel_campos WHERE panel = ? ORDER BY orden').all(slug);
+// Campos calculados (Config): fórmula {op:'suma', campos:[ids]}. Se resuelven al leer cada fila de actividad.
+const formulaDe = (c) => { if (!c || !c.formula) return null; try { const f = JSON.parse(c.formula); return f && Array.isArray(f.campos) ? f : null; } catch { return null; } };
+function valoresDeFila(campos, json) {
+  let v = {}; try { v = JSON.parse(json || '{}'); } catch {}
+  for (const c of campos) { const f = formulaDe(c); if (f) v['c' + c.id] = f.campos.reduce((s, id) => s + (Number(v['c' + id]) || 0), 0); }
+  return v;
+}
 const etapasPanelCfg = (slug) => db.prepare('SELECT * FROM panel_etapas WHERE panel = ? ORDER BY orden').all(slug);
 
 // Opciones de vista compartidas por todas las pantallas de un panel configurable.
@@ -1115,9 +1122,10 @@ function panelPipelineData(req, slug) {
 // Sumas de un vendedor en el período: campos dinámicos (JSON) + ventas aprobadas del panel.
 function panelStats(slug, userId, desde) {
   const tot = { ganados: 0, ingresos: 0 };
-  for (const c of camposPanel(slug)) tot['c' + c.id] = 0;
+  const campos = camposPanel(slug);
+  for (const c of campos) tot['c' + c.id] = 0;
   for (const row of db.prepare('SELECT valores FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(slug, userId, desde)) {
-    try { const v = JSON.parse(row.valores || '{}'); for (const k of Object.keys(v)) if (k in tot) tot[k] += Number(v[k]) || 0; } catch {}
+    const v = valoresDeFila(campos, row.valores); for (const k of Object.keys(v)) if (k in tot) tot[k] += Number(v[k]) || 0;
   }
   const g = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(mrr),0) m FROM deals WHERE panel = ? AND user_id = ? AND etapa = 'Ganado' AND aprobacion = 'aprobado' AND fecha_cierre >= ?").get(slug, userId, desde);
   tot.ganados = g.n; tot.ingresos = g.m;
@@ -1183,7 +1191,7 @@ for (const PANEL of PANELES_COMERCIALES) {
   app.post(base + '/actividad', requireAuth, requireSistema(slug), (req, res) => {
     const { esAdmin, target, fecha } = targetActividad(req, req.body, slug);
     const valores = {};
-    for (const c of camposPanel(slug)) valores['c' + c.id] = cleanInt(req.body['c' + c.id]);
+    for (const c of camposPanel(slug)) if (!c.formula) valores['c' + c.id] = cleanInt(req.body['c' + c.id]);
     db.prepare(`INSERT INTO panel_activity (panel, user_id, fecha, valores, notas) VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(panel, user_id, fecha) DO UPDATE SET valores = excluded.valores, notas = excluded.notas`)
       .run(slug, target.id, fecha, JSON.stringify(valores), clean(req.body.notas));
@@ -1348,6 +1356,20 @@ for (const PANEL of PANELES_COMERCIALES) {
     res.redirect(base + '/config');
   });
 
+  // Campo calculado: suma de otros campos del panel (se ve en tablas, dashboard, ranking y objetivos; no se carga).
+  app.post(base + '/config/campos-calc', requireAuth, requireAdmin, (req, res) => {
+    const label = clean(req.body.label);
+    let ids = req.body.sumar || []; if (!Array.isArray(ids)) ids = [ids];
+    const validos = camposPanel(slug).filter((c) => !c.formula).map((c) => c.id);
+    ids = [...new Set(ids.map((x) => parseInt(x, 10)).filter((x) => validos.includes(x)))];
+    if (label && ids.length >= 2) {
+      const max = db.prepare('SELECT COALESCE(MAX(orden),0) m FROM panel_campos WHERE panel = ?').get(slug).m;
+      db.prepare('INSERT INTO panel_campos (panel, label, orden, formula) VALUES (?, ?, ?, ?)').run(slug, label, max + 1, JSON.stringify({ op: 'suma', campos: ids }));
+      return res.redirect(base + '/config');
+    }
+    res.redirect(base + '/config?err=calc');
+  });
+
   app.post(base + '/config/campos/:id', requireAuth, requireAdmin, (req, res) => {
     const campo = db.prepare('SELECT * FROM panel_campos WHERE id = ? AND panel = ?').get(req.params.id, slug);
     if (!campo) return res.redirect(base + '/config');
@@ -1355,7 +1377,17 @@ for (const PANEL of PANELES_COMERCIALES) {
       const label = clean(req.body.label);
       if (label) db.prepare('UPDATE panel_campos SET label = ? WHERE id = ?').run(label, campo.id);
     } else if (req.body.accion === 'borrar') {
-      db.prepare('DELETE FROM panel_campos WHERE id = ?').run(campo.id);
+      db.transaction(() => {
+        db.prepare('DELETE FROM panel_campos WHERE id = ?').run(campo.id);
+        // Si era parte de una fórmula, sale de la suma; una fórmula que queda con un solo campo se borra.
+        for (const c of camposPanel(slug)) {
+          const f = formulaDe(c);
+          if (!f || !f.campos.includes(campo.id)) continue;
+          const resto = f.campos.filter((id) => id !== campo.id);
+          if (resto.length >= 2) db.prepare('UPDATE panel_campos SET formula = ? WHERE id = ?').run(JSON.stringify({ ...f, campos: resto }), c.id);
+          else db.prepare('DELETE FROM panel_campos WHERE id = ?').run(c.id);
+        }
+      })();
     }
     res.redirect(base + '/config');
   });

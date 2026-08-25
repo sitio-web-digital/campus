@@ -731,6 +731,11 @@ html.dark .hc-chip.bien { color:#6FBF8F; }
 .sys-dot { width:.45rem; height:.45rem; border-radius:50%; background:#E05550; flex-shrink:0; animation: punto-late 2.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .hc-chip.mal, .hub-card .hc-ic.deuda, .sys-dot { animation:none; } }
 
+/* ---------- campos calculados ---------- */
+.calc-mark { font-size:.62rem; font-weight:700; color:var(--accent-ink); background:var(--accent-soft); border-radius:4px; padding:.05rem .3rem; vertical-align:middle; }
+.td-calc { font-weight:600; color:var(--accent-ink); }
+.chip-calc { background:var(--accent-soft); color:var(--accent-ink); font-weight:600; max-width:22rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
 /* ---------- burbuja de usuario (foto arriba a la derecha) ---------- */
 .umenu { position:relative; }
 .umenu summary { list-style:none; cursor:pointer; }
@@ -1485,6 +1490,13 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
 }
 
 // Grilla de constancia estilo GitHub: columnas = semanas, filas = Lun..Dom, intensidad por lo cargado.
+// Valor de un campo sobre los valores de un día: los calculados suman sus campos fuente.
+function valCampo(c, vv) {
+  if (!c.formula) return vv['c' + c.id] ?? 0;
+  try { const f = JSON.parse(c.formula); return (f.campos || []).reduce((s, id) => s + (Number(vv['c' + id]) || 0), 0); } catch { return 0; }
+}
+const fmtFormula = (c, campos) => { try { const f = JSON.parse(c.formula); return f.campos.map((id) => (campos.find((x) => x.id === id) || {}).label || '?').join(' + '); } catch { return ''; } };
+
 function heatmapHtml(heat, { nDias = 182, ventana = null, desde = null } = {}) {
   const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   const hoy = new Date(hoyISO() + 'T00:00:00Z');
@@ -2815,7 +2827,7 @@ function panelActividadPage({ user, campos, today, history, info, fecha: fechaSe
         <input type="hidden" name="fecha" value="${fechaSel}">
         ${otro ? `<input type="hidden" name="user_id" value="${target.id}">` : ''}
         <div class="grid2">
-          ${campos.map((c) => `<div><label>${esc(c.label)}</label><input name="c${c.id}" type="number" min="0" inputmode="numeric" value="${vals['c' + c.id] ?? ''}" placeholder="0"></div>`).join('')}
+          ${campos.filter((c) => !c.formula).map((c) => `<div><label>${esc(c.label)}</label><input name="c${c.id}" type="number" min="0" inputmode="numeric" value="${vals['c' + c.id] ?? ''}" placeholder="0"></div>`).join('')}
         </div>
         <label>Notas del día</label>
         <input name="notas" value="${esc(today?.notas)}" placeholder="Opcional">
@@ -2826,10 +2838,10 @@ function panelActividadPage({ user, campos, today, history, info, fecha: fechaSe
 
   <h2>${otro ? 'Sus últimos 14 días' : 'Mis últimos 14 días'}</h2>
   <div class="tablewrap"><table>
-    <thead><tr><th>Fecha</th>${campos.map((c) => `<th>${esc(c.label)}</th>`).join('')}<th>Notas</th></tr></thead>
+    <thead><tr><th>Fecha</th>${campos.map((c) => `<th${c.formula ? ` class="th-calc" title="Calculado: ${esc(fmtFormula(c, campos))}"` : ''}>${esc(c.label)}${c.formula ? ' <span class="calc-mark">Σ</span>' : ''}</th>`).join('')}<th>Notas</th></tr></thead>
     <tbody>${history.length ? history.map((r) => {
       let vv = {}; try { vv = JSON.parse(r.valores || '{}'); } catch {}
-      return `<tr><td>${fecha(r.fecha)}</td>${campos.map((c) => `<td>${vv['c' + c.id] ?? 0}</td>`).join('')}<td class="muted">${esc(r.notas || '')}</td></tr>`;
+      return `<tr><td>${fecha(r.fecha)}</td>${campos.map((c) => `<td${c.formula ? ' class="td-calc"' : ''}>${valCampo(c, vv)}</td>`).join('')}<td class="muted">${esc(r.notas || '')}</td></tr>`;
     }).join('') : `<tr><td colspan="${campos.length + 2}" class="muted">Todavía no cargó ningún día.</td></tr>`}</tbody>
   </table></div>`}`
   });
@@ -3025,11 +3037,27 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
         <input name="label" value="${esc(c.label)}">
         <button class="btn secondary small">Renombrar</button>
       </form>
-      <form method="post" action="${info.base}/config/campos/${c.id}" style="display:inline" onsubmit="return confirm('¿Borrar el campo ${esc(c.label)}? Los datos históricos dejan de mostrarse.')"><input type="hidden" name="accion" value="borrar"><button class="btn danger small">Borrar</button></form>
+      ${c.formula ? `<span class="chip chip-calc" title="Se calcula solo, no se carga">Σ ${esc(fmtFormula(c, campos))}</span>` : ''}
+      <form method="post" action="${info.base}/config/campos/${c.id}" style="display:inline" onsubmit="return confirm('¿Borrar el campo ${esc(c.label)}? ${c.formula ? 'Deja de calcularse.' : 'Los datos históricos dejan de mostrarse.'}')"><input type="hidden" name="accion" value="borrar"><button class="btn danger small">Borrar</button></form>
     </div>`).join('')}
     <form method="post" action="${info.base}/config/campos" class="cfg-inline" style="margin-top:.6rem">
       <input name="label" placeholder="Nuevo campo (ej: Presupuestos entregados)" required>
       <button class="btn small">Agregar campo</button>
+    </form>
+  </div>
+
+  <h3 style="margin:.9rem 0 .3rem">Campos calculados</h3>
+  <div class="card">
+    <p class="small muted">Un campo calculado es la <strong>suma de otros campos</strong> de la carga diaria. No se carga a mano: se calcula solo y aparece en la actividad, el dashboard, el ranking y los objetivos. Ej: "Leads tocadas en el día" = todo menos "Publicaciones en MKP".</p>
+    ${err === 'calc' ? '<div class="flash bad">Poné un nombre y marcá al menos dos campos para sumar.</div>' : ''}
+    <form method="post" action="${info.base}/config/campos-calc">
+      <label>Nombre del campo calculado</label>
+      <input name="label" placeholder="Ej: Leads tocadas en el día" required>
+      <label>Campos a sumar</label>
+      <div class="perm-row">
+        ${campos.filter((c) => !c.formula).map((c) => `<label class="perm" style="text-transform:none;letter-spacing:0"><input type="checkbox" name="sumar" value="${c.id}"> ${esc(c.label)}</label>`).join('') || '<span class="small muted">Primero agregá campos de carga.</span>'}
+      </div>
+      <div style="margin-top:.7rem"><button class="btn small">Crear campo calculado</button></div>
     </form>
   </div>
 
