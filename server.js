@@ -7,6 +7,7 @@ const { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIV
 const PANEL_SLUGS = PANELES_COMERCIALES.map((p) => p.slug);
 const V = require('./views');
 const C = require('./comisiones');
+const F = require('./formulas');
 const multer = require('multer');
 
 const INVOICE_DIR = path.join(__dirname, 'data', 'invoices');
@@ -1084,12 +1085,16 @@ app.get('/reportes.csv', requireAuth, requireAdmin, (req, res) => res.redirect('
 /* ---------------- paneles comerciales configurables (una empresa = un panel) ---------------- */
 
 const camposPanel = (slug) => db.prepare('SELECT * FROM panel_campos WHERE panel = ? ORDER BY orden').all(slug);
-// Campos calculados (Config): fórmula {op:'suma', campos:[ids]}. Se resuelven al leer cada fila de actividad.
-const formulaDe = (c) => { if (!c || !c.formula) return null; try { const f = JSON.parse(c.formula); return f && Array.isArray(f.campos) ? f : null; } catch { return null; } };
+// Campos calculados (Config): fórmula con {id} de otros campos (formulas.js). Se resuelven al leer cada fila.
 function valoresDeFila(campos, json) {
   let v = {}; try { v = JSON.parse(json || '{}'); } catch {}
-  for (const c of campos) { const f = formulaDe(c); if (f) v['c' + c.id] = f.campos.reduce((s, id) => s + (Number(v['c' + id]) || 0), 0); }
-  return v;
+  return F.resolverCalculados(campos, v);
+}
+// Convierte la fórmula escrita con etiquetas a ids validando sintaxis, campos y que use al menos un campo.
+function compilarFormula(texto, campos) {
+  const expr = F.labelsAIds(String(texto || '').trim(), campos);
+  if (!F.idsEn(expr).length) throw new Error('La fórmula tiene que usar al menos un campo');
+  return expr;
 }
 const etapasPanelCfg = (slug) => db.prepare('SELECT * FROM panel_etapas WHERE panel = ? ORDER BY orden').all(slug);
 
@@ -1286,7 +1291,8 @@ for (const PANEL of PANELES_COMERCIALES) {
   /* --- configuración del panel (solo admin) --- */
 
   app.get(base + '/config', requireAuth, requireAdmin, (req, res) => {
-    res.send(V.panelConfigPage({ user: req.user, etapas: etapasPanelCfg(slug), campos: camposPanel(slug), err: req.query.err, errEtapa: clean(req.query.etapa), errN: parseInt(req.query.n, 10) || 0, info, campanas: campanasDePanel(slug), robo: configRobo(slug), diasAtras: diasAtrasDe(slug) }));
+    res.send(V.panelConfigPage({ user: req.user, etapas: etapasPanelCfg(slug), campos: camposPanel(slug), err: req.query.err, errEtapa: clean(req.query.etapa), errN: parseInt(req.query.n, 10) || 0, info, campanas: campanasDePanel(slug), robo: configRobo(slug), diasAtras: diasAtrasDe(slug),
+      fx: { msg: clean(req.query.msg), label: clean(req.query.label), formula: String(req.query.formula || ''), campoId: parseInt(req.query.campo, 10) || 0, nombre: clean(req.query.nombre), por: clean(req.query.por) } }));
   });
 
   // Carga retroactiva de actividad: cuántos días para atrás puede cargar el vendedor.
@@ -1349,25 +1355,15 @@ for (const PANEL of PANELES_COMERCIALES) {
 
   app.post(base + '/config/campos', requireAuth, requireAdmin, (req, res) => {
     const label = clean(req.body.label);
-    if (label) {
-      const max = db.prepare('SELECT COALESCE(MAX(orden),0) m FROM panel_campos WHERE panel = ?').get(slug).m;
-      db.prepare('INSERT INTO panel_campos (panel, label, orden) VALUES (?, ?, ?)').run(slug, label, max + 1);
+    if (!label) return res.redirect(base + '/config');
+    let formula = null;
+    if (req.body.con_formula === '1') {
+      try { formula = JSON.stringify({ expr: compilarFormula(req.body.formula, camposPanel(slug)) }); }
+      catch (e) { return res.redirect(`${base}/config?err=formula&msg=${encodeURIComponent(e.message)}&label=${encodeURIComponent(label)}&formula=${encodeURIComponent(String(req.body.formula || ''))}`); }
     }
+    const max = db.prepare('SELECT COALESCE(MAX(orden),0) m FROM panel_campos WHERE panel = ?').get(slug).m;
+    db.prepare('INSERT INTO panel_campos (panel, label, orden, formula) VALUES (?, ?, ?, ?)').run(slug, label, max + 1, formula);
     res.redirect(base + '/config');
-  });
-
-  // Campo calculado: suma de otros campos del panel (se ve en tablas, dashboard, ranking y objetivos; no se carga).
-  app.post(base + '/config/campos-calc', requireAuth, requireAdmin, (req, res) => {
-    const label = clean(req.body.label);
-    let ids = req.body.sumar || []; if (!Array.isArray(ids)) ids = [ids];
-    const validos = camposPanel(slug).filter((c) => !c.formula).map((c) => c.id);
-    ids = [...new Set(ids.map((x) => parseInt(x, 10)).filter((x) => validos.includes(x)))];
-    if (label && ids.length >= 2) {
-      const max = db.prepare('SELECT COALESCE(MAX(orden),0) m FROM panel_campos WHERE panel = ?').get(slug).m;
-      db.prepare('INSERT INTO panel_campos (panel, label, orden, formula) VALUES (?, ?, ?, ?)').run(slug, label, max + 1, JSON.stringify({ op: 'suma', campos: ids }));
-      return res.redirect(base + '/config');
-    }
-    res.redirect(base + '/config?err=calc');
   });
 
   app.post(base + '/config/campos/:id', requireAuth, requireAdmin, (req, res) => {
@@ -1376,18 +1372,18 @@ for (const PANEL of PANELES_COMERCIALES) {
     if (req.body.accion === 'renombrar') {
       const label = clean(req.body.label);
       if (label) db.prepare('UPDATE panel_campos SET label = ? WHERE id = ?').run(label, campo.id);
+    } else if (req.body.accion === 'formula' && campo.formula) {
+      const campos = camposPanel(slug);
+      try {
+        const expr = compilarFormula(req.body.formula, campos);
+        if (F.generaCiclo(campo.id, expr, campos)) throw new Error('La fórmula se referencia a sí misma (directa o indirectamente)');
+        db.prepare('UPDATE panel_campos SET formula = ? WHERE id = ?').run(JSON.stringify({ expr }), campo.id);
+      } catch (e) { return res.redirect(`${base}/config?err=formula&msg=${encodeURIComponent(e.message)}&campo=${campo.id}&formula=${encodeURIComponent(String(req.body.formula || ''))}`); }
     } else if (req.body.accion === 'borrar') {
-      db.transaction(() => {
-        db.prepare('DELETE FROM panel_campos WHERE id = ?').run(campo.id);
-        // Si era parte de una fórmula, sale de la suma; una fórmula que queda con un solo campo se borra.
-        for (const c of camposPanel(slug)) {
-          const f = formulaDe(c);
-          if (!f || !f.campos.includes(campo.id)) continue;
-          const resto = f.campos.filter((id) => id !== campo.id);
-          if (resto.length >= 2) db.prepare('UPDATE panel_campos SET formula = ? WHERE id = ?').run(JSON.stringify({ ...f, campos: resto }), c.id);
-          else db.prepare('DELETE FROM panel_campos WHERE id = ?').run(c.id);
-        }
-      })();
+      // Si otro campo lo usa en su fórmula, no se borra: primero hay que corregir esa fórmula.
+      const usadoPor = camposPanel(slug).find((c) => c.id !== campo.id && F.idsEn(F.exprGuardada(c.formula) || '').includes(campo.id));
+      if (usadoPor) return res.redirect(`${base}/config?err=campo-en-formula&nombre=${encodeURIComponent(campo.label)}&por=${encodeURIComponent(usadoPor.label)}`);
+      db.prepare('DELETE FROM panel_campos WHERE id = ?').run(campo.id);
     }
     res.redirect(base + '/config');
   });

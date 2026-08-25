@@ -1,4 +1,5 @@
 const { ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, CALIFICACIONES, PANELES_COMERCIALES } = require('./db');
+const F = require('./formulas');
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = (n) => n == null ? '—' : '$' + Number(n).toLocaleString('es-AR', { maximumFractionDigits: 0 });
@@ -731,7 +732,21 @@ html.dark .hc-chip.bien { color:#6FBF8F; }
 .sys-dot { width:.45rem; height:.45rem; border-radius:50%; background:#E05550; flex-shrink:0; animation: punto-late 2.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .hc-chip.mal, .hub-card .hc-ic.deuda, .sys-dot { animation:none; } }
 
-/* ---------- campos calculados ---------- */
+/* ---------- campos calculados: editor de fórmulas ---------- */
+.fx-edit { display:flex; align-items:flex-start; gap:.5rem; margin:-.25rem 0 .75rem; flex-wrap:wrap; }
+.fx-wrap { position:relative; flex:1; min-width:16rem; }
+.fx-input { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; font-size:.84rem; }
+.fx-msg { font-size:.7rem; margin-top:.25rem; min-height:.9rem; font-weight:600; }
+.fx-msg.ok { color:#2E7D4F; } html.dark .fx-msg.ok { color:#6FBF8F; }
+.fx-msg.bad { color:#E05550; }
+.fx-sug { position:absolute; left:0; right:0; top:calc(100% - .9rem); z-index:30; background:var(--surface); border:1px solid var(--line); border-radius:8px; box-shadow:var(--sh-md); padding:.2rem; max-height:12rem; overflow:auto; }
+.fx-op { padding:.35rem .55rem; border-radius:5px; font-size:.82rem; cursor:pointer; }
+.fx-op.on, .fx-op:hover { background:var(--accent-soft); color:var(--accent-ink); }
+.fx-box { margin-top:.6rem; padding:.7rem .8rem; border:1px dashed var(--line2); border-radius:10px; }
+.fx-vars { display:flex; flex-wrap:wrap; gap:.3rem; margin-top:.5rem; }
+.fx-var { font:inherit; font-size:.7rem; font-weight:600; background:var(--surface2); color:var(--ink); border:1px solid var(--line); border-radius:99px; padding:.18rem .55rem; cursor:pointer; }
+.fx-var:hover { border-color:var(--accent); color:var(--accent-ink); }
+code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; font-size:.9em; background:var(--surface2); border-radius:4px; padding:.05rem .3rem; }
 .calc-mark { font-size:.62rem; font-weight:700; color:var(--accent-ink); background:var(--accent-soft); border-radius:4px; padding:.05rem .3rem; vertical-align:middle; }
 .td-calc { font-weight:600; color:var(--accent-ink); }
 .chip-calc { background:var(--accent-soft); color:var(--accent-ink); font-weight:600; max-width:22rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -1490,12 +1505,8 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
 }
 
 // Grilla de constancia estilo GitHub: columnas = semanas, filas = Lun..Dom, intensidad por lo cargado.
-// Valor de un campo sobre los valores de un día: los calculados suman sus campos fuente.
-function valCampo(c, vv) {
-  if (!c.formula) return vv['c' + c.id] ?? 0;
-  try { const f = JSON.parse(c.formula); return (f.campos || []).reduce((s, id) => s + (Number(vv['c' + id]) || 0), 0); } catch { return 0; }
-}
-const fmtFormula = (c, campos) => { try { const f = JSON.parse(c.formula); return f.campos.map((id) => (campos.find((x) => x.id === id) || {}).label || '?').join(' + '); } catch { return ''; } };
+// Fórmula de un campo calculado, escrita con etiquetas ({Seguimientos} + {Presupuestos enviados}).
+const fmtFormula = (c, campos) => F.idsALabels(F.exprGuardada(c.formula) || '', campos);
 
 function heatmapHtml(heat, { nDias = 182, ventana = null, desde = null } = {}) {
   const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -2840,8 +2851,8 @@ function panelActividadPage({ user, campos, today, history, info, fecha: fechaSe
   <div class="tablewrap"><table>
     <thead><tr><th>Fecha</th>${campos.map((c) => `<th${c.formula ? ` class="th-calc" title="Calculado: ${esc(fmtFormula(c, campos))}"` : ''}>${esc(c.label)}${c.formula ? ' <span class="calc-mark">Σ</span>' : ''}</th>`).join('')}<th>Notas</th></tr></thead>
     <tbody>${history.length ? history.map((r) => {
-      let vv = {}; try { vv = JSON.parse(r.valores || '{}'); } catch {}
-      return `<tr><td>${fecha(r.fecha)}</td>${campos.map((c) => `<td${c.formula ? ' class="td-calc"' : ''}>${valCampo(c, vv)}</td>`).join('')}<td class="muted">${esc(r.notas || '')}</td></tr>`;
+      let vv = {}; try { vv = F.resolverCalculados(campos, JSON.parse(r.valores || '{}')); } catch {}
+      return `<tr><td>${fecha(r.fecha)}</td>${campos.map((c) => `<td${c.formula ? ' class="td-calc"' : ''}>${vv['c' + c.id] ?? 0}</td>`).join('')}<td class="muted">${esc(r.notas || '')}</td></tr>`;
     }).join('') : `<tr><td colspan="${campos.length + 2}" class="muted">Todavía no cargó ningún día.</td></tr>`}</tbody>
   </table></div>`}`
   });
@@ -2992,7 +3003,7 @@ function panelDashboardPage({ user, k, campos, colores, etapas, info }) {
   });
 }
 
-function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, campanas = [], robo = null, diasAtras = 3 }) {
+function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, campanas = [], robo = null, diasAtras = 3, fx = {} }) {
   const ERRS = { 'ultima-etapa': 'Tiene que quedar al menos una etapa activa.' };
   // Etapa con leads adentro: cartel con la cantidad y acceso directo a esas leads (regla: primero verlas y moverlas, después borrar).
   const cartelEtapa = err === 'etapa-en-uso' ? `
@@ -3029,7 +3040,8 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
 
   <h2>Campos de la carga diaria</h2>
   <div class="card">
-    <p class="small muted">Cada campo aparece en la actividad diaria del vendedor y como métrica disponible en los objetivos.</p>
+    <p class="small muted">Cada campo aparece en la actividad diaria del vendedor y como métrica disponible en los objetivos. Un campo <strong>con fórmula</strong> no se carga a mano: se calcula a partir de otros campos y aparece marcado con <span class="calc-mark">Σ</span> en la actividad, el dashboard, el ranking y los objetivos.</p>
+    ${err === 'campo-en-formula' ? `<div class="flash bad">No se puede borrar «${esc(fx.nombre)}»: lo usa la fórmula de «${esc(fx.por)}». Corregí esa fórmula primero.</div>` : ''}
     ${campos.map((c) => `
     <div class="cfg-row">
       <form method="post" action="${info.base}/config/campos/${c.id}" class="cfg-inline">
@@ -3037,29 +3049,143 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
         <input name="label" value="${esc(c.label)}">
         <button class="btn secondary small">Renombrar</button>
       </form>
-      ${c.formula ? `<span class="chip chip-calc" title="Se calcula solo, no se carga">Σ ${esc(fmtFormula(c, campos))}</span>` : ''}
       <form method="post" action="${info.base}/config/campos/${c.id}" style="display:inline" onsubmit="return confirm('¿Borrar el campo ${esc(c.label)}? ${c.formula ? 'Deja de calcularse.' : 'Los datos históricos dejan de mostrarse.'}')"><input type="hidden" name="accion" value="borrar"><button class="btn danger small">Borrar</button></form>
-    </div>`).join('')}
-    <form method="post" action="${info.base}/config/campos" class="cfg-inline" style="margin-top:.6rem">
-      <input name="label" placeholder="Nuevo campo (ej: Presupuestos entregados)" required>
-      <button class="btn small">Agregar campo</button>
+    </div>
+    ${c.formula ? `
+    <form method="post" action="${info.base}/config/campos/${c.id}" class="fx-edit">
+      <input type="hidden" name="accion" value="formula">
+      <span class="calc-mark" title="Campo calculado" style="margin-top:.55rem">Σ</span>
+      <div class="fx-wrap"><input name="formula" class="fx-input" value="${esc(err === 'formula' && fx.campoId === c.id ? fx.formula : fmtFormula(c, campos))}" autocomplete="off" spellcheck="false"><div class="fx-msg"></div></div>
+      <button class="btn secondary small" style="margin-top:.2rem">Guardar fórmula</button>
     </form>
-  </div>
+    ${err === 'formula' && fx.campoId === c.id ? `<div class="flash bad" style="margin:0 0 .6rem">Fórmula inválida: ${esc(fx.msg)}</div>` : ''}` : ''}`).join('')}
 
-  <h3 style="margin:.9rem 0 .3rem">Campos calculados</h3>
-  <div class="card">
-    <p class="small muted">Un campo calculado es la <strong>suma de otros campos</strong> de la carga diaria. No se carga a mano: se calcula solo y aparece en la actividad, el dashboard, el ranking y los objetivos. Ej: "Leads tocadas en el día" = todo menos "Publicaciones en MKP".</p>
-    ${err === 'calc' ? '<div class="flash bad">Poné un nombre y marcá al menos dos campos para sumar.</div>' : ''}
-    <form method="post" action="${info.base}/config/campos-calc">
-      <label>Nombre del campo calculado</label>
-      <input name="label" placeholder="Ej: Leads tocadas en el día" required>
-      <label>Campos a sumar</label>
-      <div class="perm-row">
-        ${campos.filter((c) => !c.formula).map((c) => `<label class="perm" style="text-transform:none;letter-spacing:0"><input type="checkbox" name="sumar" value="${c.id}"> ${esc(c.label)}</label>`).join('') || '<span class="small muted">Primero agregá campos de carga.</span>'}
+    <form method="post" action="${info.base}/config/campos" style="margin-top:.8rem" id="formNuevoCampo">
+      <div class="cfg-inline">
+        <input name="label" placeholder="Nuevo campo (ej: Presupuestos entregados)" required value="${esc(err === 'formula' && !fx.campoId ? fx.label : '')}">
+        <label class="perm" style="text-transform:none;letter-spacing:0;white-space:nowrap"><input type="checkbox" name="con_formula" value="1" id="chkFormula" ${err === 'formula' && !fx.campoId ? 'checked' : ''}> Agregar fórmula</label>
+        <button class="btn small">Agregar campo</button>
       </div>
-      <div style="margin-top:.7rem"><button class="btn small">Crear campo calculado</button></div>
+      <div class="fx-box" id="fxBox" ${err === 'formula' && !fx.campoId ? '' : 'hidden'}>
+        ${err === 'formula' && !fx.campoId ? `<div class="flash bad" style="margin:0 0 .6rem">Fórmula inválida: ${esc(fx.msg)}</div>` : ''}
+        <label>Fórmula</label>
+        <div class="fx-wrap"><input name="formula" class="fx-input" placeholder="Ej: {Seguimientos} + {Presupuestos enviados}" value="${esc(err === 'formula' && !fx.campoId ? fx.formula : '')}" autocomplete="off" spellcheck="false"><div class="fx-msg"></div></div>
+        <p class="caption" style="margin:.35rem 0 0">Escribí <code>{</code> para elegir un campo (autocompleta mientras escribís) o tocá uno de abajo. Operaciones: <code>+ - * /</code>, paréntesis y números (ej: <code>({A} + {B}) / {C} * 100</code>).</p>
+        <div class="fx-vars">${campos.map((c) => `<button type="button" class="fx-var" data-var="${esc(c.label)}">${c.formula ? 'Σ ' : ''}${esc(c.label)}</button>`).join('')}</div>
+      </div>
     </form>
   </div>
+  <script>
+  (function () {
+    var VARS = ${JSON.stringify(campos.map((c) => c.label)).replace(/</g, '\\u003c')};
+    var NORM = function (s) { return String(s || '').split(' ').filter(Boolean).join(' ').trim().toLowerCase(); };
+    var VN = VARS.map(NORM);
+    // Misma gramática que formulas.js (server): números, {variables}, + - * / y paréntesis.
+    function tokenizar(s) {
+      var out = [], i = 0;
+      while (i < s.length) {
+        var ch = s[i];
+        if (ch.trim() === '') { i++; continue; }
+        if (ch === '{') { var j = s.indexOf('}', i); if (j < 0) throw 'Falta cerrar una llave "}"'; var nm = s.slice(i + 1, j).trim(); if (!nm) throw 'Hay una variable vacía "{}"'; out.push({ t: 'var', v: nm }); i = j + 1; continue; }
+        if (/[0-9.]/.test(ch)) { var m = s.slice(i).match(/^[0-9]*[.]?[0-9]+|^[0-9]+[.]?[0-9]*/); if (!m || isNaN(Number(m[0]))) throw 'Número inválido cerca de "' + s.slice(i, i + 6) + '"'; out.push({ t: 'num', v: Number(m[0]) }); i += m[0].length; continue; }
+        if ('+-*/'.indexOf(ch) >= 0) { out.push({ t: 'op', v: ch }); i++; continue; }
+        if (ch === '(' || ch === ')') { out.push({ t: ch }); i++; continue; }
+        throw 'Carácter no permitido: "' + ch + '"';
+      }
+      return out;
+    }
+    function parsear(tk) {
+      var p = 0;
+      function peek() { return tk[p]; }
+      function next() { return tk[p++]; }
+      function expr() { var n = term(); while (peek() && peek().t === 'op' && (peek().v === '+' || peek().v === '-')) { next(); n = { t: 'bin', a: n, b: term() }; } return n; }
+      function term() { var n = factor(); while (peek() && peek().t === 'op' && (peek().v === '*' || peek().v === '/')) { next(); n = { t: 'bin', a: n, b: factor() }; } return n; }
+      function factor() {
+        var x = next();
+        if (!x) throw 'La fórmula termina de golpe: falta un valor';
+        if (x.t === 'num' || x.t === 'var') return x;
+        if (x.t === 'op' && x.v === '-') return { t: 'neg', a: factor() };
+        if (x.t === '(') { var n = expr(); var c = next(); if (!c || c.t !== ')') throw 'Falta cerrar un paréntesis ")"'; return n; }
+        if (x.t === ')') throw 'Hay un paréntesis ")" de más';
+        throw 'Falta un valor antes de "' + x.v + '"';
+      }
+      if (!tk.length) throw 'La fórmula está vacía';
+      expr();
+      if (p < tk.length) { var r = tk[p]; throw r.t === ')' ? 'Hay un paréntesis ")" de más' : 'Sobra "' + (r.v != null ? r.v : r.t) + '" al final'; }
+    }
+    function validar(s) {
+      try {
+        var toks = tokenizar(s); parsear(toks);
+        var vars = toks.filter(function (t) { return t.t === 'var'; }).map(function (t) { return t.v; });
+        if (!vars.length) return { ok: false, msg: 'La fórmula tiene que usar al menos un campo' };
+        for (var i = 0; i < vars.length; i++) if (VN.indexOf(NORM(vars[i])) < 0) return { ok: false, msg: 'No existe el campo "' + vars[i] + '"' };
+        return { ok: true, msg: 'Fórmula válida' };
+      } catch (e) { return { ok: false, msg: String(e && e.message ? e.message : e) }; }
+    }
+    var activo = null;
+    function initFx(input) {
+      var wrap = input.parentNode, msg = wrap.querySelector('.fx-msg');
+      var sug = document.createElement('div'); sug.className = 'fx-sug'; sug.hidden = true; wrap.appendChild(sug);
+      var items = [], sel = 0, ctx = null;
+      function render() {
+        if (!items.length) { sug.hidden = true; return; }
+        sug.innerHTML = '';
+        items.forEach(function (v, i) { var d = document.createElement('div'); d.className = 'fx-op' + (i === sel ? ' on' : ''); d.textContent = v; d.addEventListener('mousedown', function (e) { e.preventDefault(); elegir(i); }); sug.appendChild(d); });
+        sug.hidden = false;
+      }
+      function buscar() {
+        var pos = input.selectionStart, s = input.value;
+        var a = s.lastIndexOf('{', pos - 1), b = s.lastIndexOf('}', pos - 1);
+        if (a < 0 || b > a) { items = []; ctx = null; render(); return; }
+        var q = NORM(s.slice(a + 1, pos)); ctx = { start: a, end: pos };
+        items = VARS.filter(function (v) { return NORM(v).indexOf(q) >= 0; }).slice(0, 8); sel = 0; render();
+      }
+      function elegir(i) {
+        if (!ctx || !items[i]) return;
+        var v = items[i], s = input.value, resto = s.slice(ctx.end);
+        if (resto.charAt(0) === '}') resto = resto.slice(1);
+        input.value = s.slice(0, ctx.start) + '{' + v + '}' + resto;
+        var pp = ctx.start + v.length + 2; items = []; ctx = null; render(); revisar(); input.focus(); input.setSelectionRange(pp, pp);
+      }
+      function revisar() {
+        var v = input.value.trim();
+        if (!v) { msg.textContent = ''; msg.className = 'fx-msg'; return; }
+        var r = validar(v); msg.textContent = (r.ok ? '✓ ' : '✗ ') + r.msg; msg.className = 'fx-msg ' + (r.ok ? 'ok' : 'bad');
+      }
+      input.addEventListener('input', function () { buscar(); revisar(); });
+      input.addEventListener('click', buscar);
+      input.addEventListener('focus', function () { activo = input; revisar(); });
+      input.addEventListener('blur', function () { setTimeout(function () { items = []; render(); }, 150); });
+      input.addEventListener('keydown', function (e) {
+        if (sug.hidden) return;
+        if (e.key === 'ArrowDown') { sel = (sel + 1) % items.length; render(); e.preventDefault(); }
+        else if (e.key === 'ArrowUp') { sel = (sel - 1 + items.length) % items.length; render(); e.preventDefault(); }
+        else if (e.key === 'Enter' || e.key === 'Tab') { elegir(sel); e.preventDefault(); }
+        else if (e.key === 'Escape') { items = []; render(); }
+      });
+      input.form.addEventListener('submit', function (e) {
+        var chk = input.form.querySelector('#chkFormula');
+        if (chk && !chk.checked) return;
+        var r = validar(input.value.trim());
+        if (!r.ok) { e.preventDefault(); revisar(); input.focus(); }
+      });
+      revisar();
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('.fx-input'), initFx);
+    var chk = document.getElementById('chkFormula'), box = document.getElementById('fxBox');
+    if (chk && box) chk.addEventListener('change', function () { box.hidden = !chk.checked; if (chk.checked) box.querySelector('.fx-input').focus(); });
+    Array.prototype.forEach.call(document.querySelectorAll('.fx-var'), function (b) {
+      b.addEventListener('click', function () {
+        var inp = activo || (box && box.querySelector('.fx-input')); if (!inp) return;
+        var s = inp.value, p = inp.selectionStart != null ? inp.selectionStart : s.length, ins = '{' + b.getAttribute('data-var') + '}';
+        var prev = s.slice(0, p).trim().slice(-1);
+        var sep = prev && '(+-*/'.indexOf(prev) < 0 ? ' + ' : '';
+        inp.value = s.slice(0, p) + sep + ins + s.slice(p); inp.focus(); inp.setSelectionRange(p + sep.length + ins.length, p + sep.length + ins.length);
+        inp.dispatchEvent(new Event('input'));
+      });
+    });
+  })();
+  </script>
 
   <h2>Carga de actividad</h2>
   <div class="card">

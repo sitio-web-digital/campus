@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.28.0',
+    fecha: '2026-08-25',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Editor de fórmulas en Config → Campos de la carga diaria: al crear un campo, tildá "Agregar fórmula" y escribila con variables entre llaves, ej: ({Seguimientos} + {Presupuestos enviados}) / {Llamadas realizadas} * 100. Soporta + - * /, paréntesis y números.' },
+      { tipo: 'nuevo', texto: 'Autocompletado de campos al escribir "{" (o tocando los campos listados), validación en vivo (✓ / ✗ con el motivo) y bloqueo del guardado si la fórmula está mal. Las fórmulas pueden usar otros campos calculados; se rechazan las que se referencian a sí mismas.' },
+      { tipo: 'mejora', texto: 'La fórmula de un campo calculado se edita en la misma lista. Un campo usado en una fórmula no se puede borrar hasta corregirla. Las fórmulas se guardan por id, así renombrar un campo no las rompe.' },
+    ],
+  },
+  {
     version: '2.27.0',
     fecha: '2026-08-25',
     cambios: [

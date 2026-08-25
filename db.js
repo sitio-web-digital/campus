@@ -307,6 +307,13 @@ const PANELES_COMERCIALES = [
 if (!db.prepare('PRAGMA table_info(panel_campos)').all().some((c) => c.name === 'formula')) {
   db.exec('ALTER TABLE panel_campos ADD COLUMN formula TEXT');
 }
+// 2.28.0: las fórmulas son expresiones ({5} + {7} * 2); las sumas de 2.27.0 se convierten.
+for (const c of db.prepare('SELECT id, formula FROM panel_campos WHERE formula IS NOT NULL').all()) {
+  try {
+    const f = JSON.parse(c.formula);
+    if (f && Array.isArray(f.campos)) db.prepare('UPDATE panel_campos SET formula = ? WHERE id = ?').run(JSON.stringify({ expr: f.campos.map((id) => `{${id}}`).join(' + ') }), c.id);
+  } catch {}
+}
 
 // Migración 2.26.0: desde cuándo cada usuario está asignado a cada panel comercial —
 // la constancia de carga (rojos/amarillos de la grilla, deudas, recordatorios) se mide desde ahí.
