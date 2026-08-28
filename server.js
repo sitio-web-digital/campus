@@ -490,6 +490,20 @@ app.post('/deals/:id', requireAuth, (req, res) => {
   res.redirect(home);
 });
 
+// Estrella: marcar / desmarcar una lead como destacada. La puede tocar el dueño o un admin.
+// No cuenta como "trabajo" sobre la lead (no mueve el reloj de inactividad) pero sí queda en el historial.
+app.post('/deals/:id/destacar', requireAuth, (req, res) => {
+  const deal = db.prepare('SELECT id, panel, user_id, destacada FROM deals WHERE id = ?').get(req.params.id);
+  if (!deal) return res.status(404).end();
+  if (!puede(req.user, deal.panel)) return res.status(403).end();
+  if (req.user.role !== 'admin' && deal.user_id !== req.user.id) return res.status(403).end();
+  const nueva = deal.destacada ? 0 : 1;
+  db.prepare('UPDATE deals SET destacada = ? WHERE id = ?').run(nueva, deal.id);
+  logDealEvent(deal.id, req.user.id, 'edicion', nueva ? 'Marcó la lead con estrella (destacada)' : 'Quitó la estrella');
+  const volver = typeof req.body.volver === 'string' && req.body.volver.startsWith('/') && !req.body.volver.startsWith('//') ? req.body.volver : homeDePanel(deal.panel);
+  res.redirect(volver);
+});
+
 // Cambio de etapa desde el tablero (drag & drop).
 app.post('/deals/:id/etapa', requireAuth, (req, res) => {
   const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(req.params.id);
@@ -1189,7 +1203,7 @@ function panelPipelineData(req, slug) {
   else { where.push("(d.etapa NOT IN ('Ganado','Perdido') OR d.fecha_cierre >= ?)"); params.push(inicioMes()); }
   if (scope === 'mios') { where.push('d.user_id = ?'); params.push(req.user.id); }
   const deals = db.prepare(`SELECT d.*, u.name AS vendedor_name FROM deals d JOIN users u ON u.id = d.user_id
-    WHERE ${where.join(' AND ')} ORDER BY d.fecha_proximo_paso IS NULL DESC, d.fecha_proximo_paso ASC, d.updated_at DESC`).all(...params);
+    WHERE ${where.join(' AND ')} ORDER BY d.destacada DESC, d.fecha_proximo_paso IS NULL DESC, d.fecha_proximo_paso ASC, d.updated_at DESC`).all(...params);
   const robo = configRobo(slug);
   for (const d of deals) d.disponible = leadDisponible(d, robo) && d.user_id !== req.user.id;
   return { scope, closed, robo, ...filtrarPipeline(req, deals) };

@@ -220,6 +220,10 @@ if (!dealCols.includes('etapa_movida_at')) {
   db.exec('ALTER TABLE deals ADD COLUMN etapa_movida_at TEXT');
   db.exec('UPDATE deals SET etapa_movida_at = updated_at WHERE etapa_movida_at IS NULL');
 }
+// Migración 2.32.0: estrella para destacar leads (importantes a cerrar / mejor seguimiento).
+if (!dealCols.includes('destacada')) {
+  db.exec('ALTER TABLE deals ADD COLUMN destacada INTEGER NOT NULL DEFAULT 0');
+}
 db.exec(`CREATE TABLE IF NOT EXISTS panel_config (
   panel TEXT NOT NULL,
   clave TEXT NOT NULL,

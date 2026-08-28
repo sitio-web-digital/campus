@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.32.0',
+    fecha: '2026-08-25',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Estrella en las leads: tocá la ★ de la tarjeta (o del título de la ficha) para destacar una lead importante a cerrar o a la que hay que darle mejor seguimiento. La tarjeta se remarca en dorado y sube primera en su columna. La marcan el dueño de la lead o un admin; los demás la ven destacada.' },
+    ],
+  },
+  {
     version: '2.31.0',
     fecha: '2026-08-25',
     cambios: [

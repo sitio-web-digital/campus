@@ -781,6 +781,18 @@ html.dark .chip-pend { background:#8A6D1F; color:#FFF3C9; }
 .men-op.on, .men-op:hover { background:var(--accent-soft); color:var(--accent-ink); }
 .mencion { color:var(--accent-ink); background:var(--accent-soft); border-radius:4px; padding:0 .25rem; font-weight:600; }
 
+/* ---------- estrella: leads destacadas ---------- */
+.star-f { display:inline; margin:0; }
+.star { background:none; border:none; cursor:pointer; font:inherit; font-size:1.05rem; line-height:1; color:var(--faint); padding:0 .15rem; transition:color .12s, transform .12s; }
+.star:hover { color:#E0A800; transform:scale(1.15); }
+.star.on { color:#F5B82E; text-shadow:0 0 6px rgba(245,184,46,.45); }
+.star-fija { cursor:default; }
+.kcard { position:relative; }
+.kcard .star-f, .kcard .star-fija { position:absolute; top:.3rem; right:.35rem; }
+.kcard .kcard-t { padding-right:1.5rem; }
+.kcard-star { border-color:rgba(245,184,46,.75); box-shadow:inset 3px 0 0 #F5B82E, var(--sh); background:linear-gradient(0deg, rgba(245,184,46,.07), rgba(245,184,46,.07)), var(--surface); }
+html.dark .kcard-star { background:linear-gradient(0deg, rgba(245,184,46,.10), rgba(245,184,46,.10)), var(--surface); }
+
 /* ---------- campos calculados: editor de fórmulas ---------- */
 .fx-edit { display:flex; align-items:flex-start; gap:.5rem; margin:-.25rem 0 .75rem; flex-wrap:wrap; }
 .fx-wrap { position:relative; flex:1; min-width:16rem; }
@@ -1294,7 +1306,8 @@ function pipelinePage({ user, deals, scope, closed, modal, err = null, robo = nu
       : d.etapa === 'Ganado' && d.aprobacion !== 'aprobado' ? `<div class="kcard-w aprob">Por aprobar</div>`
       : d.etapa === 'Ganado' && d.fecha_cierre ? `<div class="kcard-w ok">Cerrado ${fecha(d.fecha_cierre)}</div>` : '';
     return `
-    <div class="kcard ${d.disponible ? 'kcard-libre' : ''}" ${puedeMover(d) ? 'draggable="true"' : ''} data-id="${d.id}">
+    <div class="kcard ${d.disponible ? 'kcard-libre' : ''} ${d.destacada ? 'kcard-star' : ''}" ${puedeMover(d) ? 'draggable="true"' : ''} data-id="${d.id}">
+      ${puedeMover(d) ? `<form method="post" action="/deals/${d.id}/destacar" class="star-f" onsubmit="this.volver.value = location.pathname + location.search"><input type="hidden" name="volver" value=""><button type="submit" class="star ${d.destacada ? 'on' : ''}" title="${d.destacada ? 'Quitar estrella' : 'Marcar con estrella: importante a cerrar / mejor seguimiento'}" aria-label="Destacar">★</button></form>` : (d.destacada ? '<span class="star on star-fija" title="Lead destacada">★</span>' : '')}
       <a class="kcard-t" href="/deals/${d.id}">${esc(d.empresa)}</a>
       <div class="kcard-m"><span class="mrr">${money(d.mrr)}${d.tipo_venta === 'Suscripción mensual' ? '<span style="font-weight:400">/mes</span>' : ''}</span><span>${d.ciudad ? esc(d.ciudad) + ' · ' : ''}${esc(d.vendedor_name.split(' ')[0])}</span></div>
       ${pie}
@@ -1419,7 +1432,7 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
   return `
   <div class="modal-back" id="modalBack">
   <div class="modal">
-  <div class="modal-h"><h2>${isNew ? 'Nuevo deal' : esc(d.empresa)}</h2><a class="modal-x" href="${backHref}" aria-label="Cerrar">&times;</a></div>
+  <div class="modal-h"><h2 style="display:flex; align-items:center; gap:.4rem">${isNew ? 'Nuevo deal' : `${esc(d.empresa)}${isAdmin || d.user_id === user.id ? `<form method="post" action="/deals/${d.id}/destacar" class="star-f"><input type="hidden" name="volver" value="/deals/${d.id}"><button type="submit" class="star ${d.destacada ? 'on' : ''}" title="${d.destacada ? 'Quitar estrella' : 'Marcar con estrella: importante a cerrar / mejor seguimiento'}" aria-label="Destacar">★</button></form>` : (d.destacada ? '<span class="star on star-fija" title="Lead destacada">★</span>' : '')}`}</h2><a class="modal-x" href="${backHref}" aria-label="Cerrar">&times;</a></div>
   ${!isNew && ultimaEd ? `<p class="small muted" style="margin:-.3rem 0 .7rem">Última edición: <strong>${esc(ultimaEd.nombre)}</strong> · ${fechaHora(ultimaEd.fecha)}${tiempos ? ` &nbsp;·&nbsp; Último movimiento de etapa: <strong>${tiempoRel(tiempos.ultima)}</strong> &nbsp;·&nbsp; Promedio entre etapas: <strong>${tiempos.promedio != null ? durLegible(tiempos.promedio) : '—'}</strong>` : ''}</p>` : ''}
   ${errAprob ? `<div class="flash bad">No se pudo aprobar: falta cargar el <strong>valor del deal</strong>, que es la base para calcular la comisión del vendedor. Completalo, guardá y volvé a aprobar.</div>` : ''}
   ${errCalif ? `<div class="flash bad">No se pudo aprobar: falta la <strong>calificación del cliente</strong> (Calificado / Descalificado / Cliente / Cliente de Alto Valor). Elegila abajo, guardá y volvé a aprobar.</div>` : ''}
