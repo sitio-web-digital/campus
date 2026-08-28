@@ -96,6 +96,8 @@ function sysSwitch(sistema, user) {
   <details class="sys">
     <summary><span class="brand-txt">${SISTEMA_NOMBRE[sistema] || 'Panel Comercial'}<span class="sub">Cloud For Deploy ▾</span></span></summary>
     <div class="sys-menu">
+      <div class="sys-col sys-col-int">
+      <div class="sys-h">Paneles y herramientas</div>
       <a href="/hub">Campus (inicio)</a>
       ${tieneSistema(user, 'cfd') ? `<a href="/pipeline"><span>Comercial Cloud For Deploy</span>${infoPanel('cfd')}</a>` : ''}
       ${tieneSistema(user, 'gondolas') ? `<a href="/gondolas/pipeline"><span>Comercial Góndolas</span>${infoPanel('gondolas')}</a>` : ''}
@@ -105,8 +107,11 @@ function sysSwitch(sistema, user) {
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
       <span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>
       <a href="/campus">Campus de formación</a>
-      <div class="sys-sep"></div>
-      ${sitiosMenu()}
+      </div>
+      <div class="sys-col sys-col-ext">
+      <div class="sys-h">Sitios del grupo</div>
+      <div class="sys-grid">${sitiosMenu()}</div>
+      </div>
     </div>
   </details>`;
 }
@@ -534,9 +539,22 @@ a:hover { color:var(--accent-ink); text-decoration:underline; }
 .sys summary::-webkit-details-marker { display:none; }
 .sys summary:hover { background:rgba(255,255,255,.09); }
 .sys[open] summary { background:rgba(255,255,255,.12); }
-.sys-menu { position:absolute; top:calc(100% + .45rem); left:0; z-index:80; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--sh-lg); min-width:17rem; padding:.3rem; display:grid; gap:.1rem; }
-.sys-menu > a { text-decoration:none; color:var(--ink); font-size:.84rem; font-weight:500; padding:.45rem .6rem; border-radius:6px; }
-.sys-menu > a:hover { background:var(--surface2); color:var(--accent-ink); text-decoration:none; }
+.sys-menu { position:absolute; top:calc(100% + .45rem); left:0; z-index:80; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--sh-lg); padding:.5rem; display:grid; grid-template-columns:17.5rem 25rem; gap:.7rem; width:max-content; max-width:calc(100vw - 1.5rem); max-height:calc(100vh - 4.5rem); overflow:auto; }
+.sys-col { display:grid; gap:.1rem; align-content:start; }
+.sys-col-ext { border-left:1px solid var(--line); padding-left:.7rem; }
+.sys-h { font-size:.62rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--faint); padding:.3rem .6rem .4rem; }
+.sys-grid { display:grid; grid-template-columns:1fr 1fr; gap:.35rem; }
+.sys-grid .sys-ext { padding:.55rem .6rem; }
+.sys-col > a { text-decoration:none; color:var(--ink); font-size:.84rem; font-weight:500; padding:.45rem .6rem; border-radius:6px; }
+.sys-col > a:hover { background:var(--surface2); color:var(--accent-ink); text-decoration:none; }
+@media (max-width:820px) {
+  .sys-menu { grid-template-columns:1fr; }
+  .sys-col-ext { border-left:none; padding-left:0; border-top:1px solid var(--line); padding-top:.4rem; }
+}
+@media (max-width:640px) {
+  .sys-menu { position:fixed; left:.5rem; right:.5rem; top:3.3rem; width:auto; max-width:none; max-height:calc(100vh - 7.5rem); }
+  .sys-grid { grid-template-columns:1fr; }
+}
 .sys-sep { border-top:1px solid var(--line); margin:.25rem .3rem; }
 .sys-menu .soon { display:flex; align-items:center; justify-content:space-between; gap:.6rem; font-size:.84rem; font-weight:500; padding:.45rem .6rem; border-radius:6px; color:var(--faint); cursor:default; }
 .soon-chip { font-size:.55rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; background:var(--surface2); color:var(--muted); border:1px solid var(--line); border-radius:4px; padding:.14rem .4rem; white-space:nowrap; }
@@ -749,7 +767,7 @@ tr.inactivo td { opacity:.5; }
 .hc-chip.bien { color:#2E7D4F; border-color:rgba(46,125,79,.4); background:transparent; }
 html.dark .hc-chip.bien { color:#6FBF8F; }
 .hub-card .hc-ic.deuda { color:#E05550; background:rgba(224,85,80,.12); animation: icono-deuda 1.8s ease-in-out infinite; }
-.sys-menu > a { display:flex; align-items:center; gap:.5rem; }
+.sys-col > a { display:flex; align-items:center; gap:.5rem; }
 .sys-info { margin-left:auto; font-size:.66rem; font-weight:600; color:var(--faint); white-space:nowrap; }
 .sys-dot { width:.45rem; height:.45rem; border-radius:50%; background:#E05550; flex-shrink:0; animation: punto-late 2.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .hc-chip.mal, .hub-card .hc-ic.deuda, .sys-dot { animation:none; } }

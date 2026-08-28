@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.29.1',
+    fecha: '2026-08-25',
+    cambios: [
+      { tipo: 'mejora', texto: 'El menú de sistemas ya no se sale de la pantalla en computadora: ahora es un panel ancho a dos columnas — Paneles y herramientas a la izquierda, Sitios del grupo en una grilla a la derecha — con scroll interno si hiciera falta. En celular sigue en una columna.' },
+    ],
+  },
+  {
     version: '2.29.0',
     fecha: '2026-08-25',
     cambios: [
