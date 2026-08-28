@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.32.1',
+    fecha: '2026-08-25',
+    cambios: [
+      { tipo: 'mejora', texto: 'La estrella de las leads ahora es chiquita, en contorno (sin relleno) y aparece solo al pasar el mouse por la tarjeta; si la lead está destacada queda siempre visible en dorado. En celular se ve siempre.' },
+    ],
+  },
+  {
     version: '2.32.0',
     fecha: '2026-08-25',
     cambios: [
