@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.30.0',
+    fecha: '2026-08-25',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Administración → ficha de usuario: nueva sección "Actividad por panel". Por cada panel comercial al que tiene acceso, el admin ve si cargó hoy, los días pendientes, cuántos días cargó de los últimos 30, la última carga, sus leads abiertas y ventas del mes, los totales de cada campo de los últimos 30 días y la grilla estilo GitHub (verde / amarillo a tiempo / rojo vencido), con acceso directo a su actividad.' },
+    ],
+  },
+  {
     version: '2.29.1',
     fecha: '2026-08-25',
     cambios: [

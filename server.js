@@ -729,11 +729,49 @@ app.get('/admin/preferencias', requireAuth, requireAdmin, (req, res) => {
   res.send(V.adminPreferenciasPage({ user: req.user, prefs }));
 });
 
-// Ficha del usuario: datos, permisos y su historial de acciones.
+// Grilla de constancia de un usuario en un panel: suma de lo cargado por día (clave = fecha).
+// Un día cargado con todo en cero también figura (clave presente con 0): se cargó, aunque no hubo movimiento.
+function heatDe(slug, uid, desdeHeat) {
+  const heat = {};
+  for (const r of db.prepare('SELECT fecha, valores FROM panel_activity WHERE panel = ? AND user_id = ? AND fecha >= ?').all(slug, uid, desdeHeat)) {
+    try { heat[r.fecha] = (heat[r.fecha] || 0) + Object.values(JSON.parse(r.valores || '{}')).reduce((acu, x) => acu + (Number(x) || 0), 0); } catch { heat[r.fecha] = heat[r.fecha] || 0; }
+  }
+  return heat;
+}
+
+// Actividad de un usuario por panel comercial (ficha del admin): grilla, constancia y números clave.
+function actividadDeUsuario(u) {
+  const dHeat = new Date(hoyAR() + 'T00:00:00Z'); dHeat.setUTCDate(dHeat.getUTCDate() - 181);
+  const desdeHeat = dHeat.toISOString().slice(0, 10);
+  const ultimos30 = ventanaFechas(29);
+  const paneles = PANELES_COMERCIALES.filter((P) => u.role === 'admin' || (u.permisos || []).includes(P.slug));
+  return paneles.map((P) => {
+    const slug = P.slug;
+    const inicio = inicioPanelDe(u.id, slug);
+    const heat = heatDe(slug, u.id, desdeHeat);
+    const ventana = ventanaFechas(diasAtrasDe(slug)).filter((f, i) => i === 0 || !inicio || f >= inicio);
+    const dias30 = ultimos30.filter((f) => !inicio || f >= inicio);
+    const cargados30 = dias30.filter((f) => f in heat).length;
+    const desde30 = dias30[dias30.length - 1] || hoyAR();
+    const campos = camposPanel(slug);
+    return {
+      slug, nombre: P.nombre, base: baseDePanel(slug), heat, ventana, inicio, campos,
+      hoyCargado: ventana[0] in heat,
+      pendientes: ventana.filter((f, i) => i > 0 && !(f in heat)).length,
+      cargados30, esperados30: dias30.length,
+      ultima: db.prepare('SELECT MAX(fecha) AS f FROM panel_activity WHERE panel = ? AND user_id = ?').get(slug, u.id).f,
+      abiertas: db.prepare("SELECT COUNT(*) AS c FROM deals WHERE panel = ? AND user_id = ? AND etapa NOT IN ('Ganado','Perdido')").get(slug, u.id).c,
+      mes: panelStats(slug, u.id, inicioMes()),
+      tot30: panelStats(slug, u.id, desde30),
+    };
+  });
+}
+
+// Ficha del usuario: datos, permisos, actividad por panel y su historial de acciones.
 app.get('/admin/usuarios/:id', requireAuth, requireAdmin, (req, res) => {
   const target = usuariosAdmin().find((u) => u.id === parseInt(req.params.id, 10));
   if (!target) return res.redirect('/admin');
-  res.send(V.adminUserPage({ user: req.user, target, sistemas: SISTEMAS, historial: historialUsuario(target.id) }));
+  res.send(V.adminUserPage({ user: req.user, target, sistemas: SISTEMAS, historial: historialUsuario(target.id), actividad: actividadDeUsuario(target) }));
 });
 
 app.post('/admin/usuarios', requireAuth, requireAdmin, (req, res) => {

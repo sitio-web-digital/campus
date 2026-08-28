@@ -771,6 +771,9 @@ html.dark .hc-chip.bien { color:#6FBF8F; }
 .sys-dot { width:.45rem; height:.45rem; border-radius:50%; background:#E05550; flex-shrink:0; animation: punto-late 2.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .hc-chip.mal, .hub-card .hc-ic.deuda, .sys-dot { animation:none; } }
 
+.chip-pend { background:#E9C46A; color:#3A2E05; }
+html.dark .chip-pend { background:#8A6D1F; color:#FFF3C9; }
+
 /* ---------- campos calculados: editor de fórmulas ---------- */
 .fx-edit { display:flex; align-items:flex-start; gap:.5rem; margin:-.25rem 0 .75rem; flex-wrap:wrap; }
 .fx-wrap { position:relative; flex:1; min-width:16rem; }
@@ -1959,7 +1962,7 @@ const UEVENTO_TIPO = {
   login: ['Sesión', '#1D6FB8'], actividad: ['Actividad', '#C08A2E'], cuenta: ['Cuenta', '#54657A'],
 };
 
-function adminUserPage({ user, target, sistemas, historial = [], resetInfo }) {
+function adminUserPage({ user, target, sistemas, historial = [], resetInfo, actividad = [] }) {
   const esYo = target.id === user.id;
   return layout({
     title: `Usuario · ${target.name}`, user, active: 'admin', sistema: 'admin',
@@ -1990,6 +1993,28 @@ function adminUserPage({ user, target, sistemas, historial = [], resetInfo }) {
       <form method="post" action="/admin/usuarios/${target.id}/reset" style="display:inline" onsubmit="return confirm('¿Generar una clave nueva para ${esc(target.name)}?')"><button class="btn secondary small">Resetear clave</button></form>
     </div>
   </div>`}
+
+  ${actividad.length ? `
+  <h2>Actividad por panel</h2>
+  <p class="small muted">Constancia de carga y números clave de ${esc(target.name.split(' ')[0])} en cada panel comercial al que tiene acceso. En la grilla: verde cargado, amarillo sin cargar pero todavía a tiempo, rojo vencido.</p>
+  ${actividad.map((a) => `
+  <div class="card">
+    <div class="toolbar" style="margin-bottom:.6rem">
+      <h3 style="margin:0">${esc(a.nombre)}</h3>
+      <span class="chip ${a.hoyCargado ? 'chip--estado-pagado' : 'chip--estado-cancelado'}">${a.hoyCargado ? 'Hoy cargado' : 'Hoy sin cargar'}</span>
+      ${a.pendientes ? `<span class="chip chip-pend">${a.pendientes} día${a.pendientes === 1 ? '' : 's'} pendiente${a.pendientes === 1 ? '' : 's'}</span>` : ''}
+      <div class="sp"></div>
+      <a class="btn secondary small" href="${a.base}/actividad?vendedor=${target.id}">Ver su actividad</a>
+    </div>
+    <div class="tiles" style="margin-bottom:.7rem">
+      <div class="tile"><div class="v">${a.cargados30}<span class="muted" style="font-size:.9rem; font-weight:500"> / ${a.esperados30}</span></div><div class="l">días cargados en los últimos 30</div></div>
+      <div class="tile"><div class="v" style="font-size:1.05rem; padding-top:.2rem">${a.ultima ? fecha(a.ultima) : '—'}</div><div class="l">última carga</div></div>
+      <div class="tile"><div class="v">${a.abiertas}</div><div class="l">leads abiertas</div></div>
+      <div class="tile"><div class="v">${a.mes.ganados}</div><div class="l">ventas aprobadas este mes · ${money(a.mes.ingresos)}</div></div>
+    </div>
+    ${a.campos.length ? `<p class="small muted" style="margin:0 0 .5rem">Últimos 30 días: ${a.campos.map((c) => `<strong>${a.tot30['c' + c.id] || 0}</strong> ${esc(c.label)}${c.formula ? ' <span class="calc-mark">Σ</span>' : ''}`).join(' · ')}</p>` : ''}
+    ${heatmapHtml(a.heat, { ventana: a.ventana, desde: a.inicio })}
+  </div>`).join('')}` : ''}
 
   <h2>Historial de acciones</h2>
   <div class="card hist">
