@@ -380,7 +380,7 @@ app.get('/deals/new', requireAuth, (req, res) => {
   if (!puede(req.user, panel)) return res.status(403).send('Sin acceso a este panel.');
   const vendedores = db.prepare('SELECT id, name FROM users WHERE active = 1 ORDER BY name').all();
   const modal = V.dealFormModal({
-    user: req.user, deal: null, vendedores, isAdmin: req.user.role === 'admin',
+    user: req.user, deal: null, vendedores, isAdmin: req.user.role === 'admin', mencionables: mencionablesDe(panel),
     panel, etapas: etapasDePanel(panel), backHref: homeDePanel(panel),
     campanas: db.prepare('SELECT id, nombre FROM campanas WHERE panel = ? AND activa = 1 ORDER BY nombre').all(panel),
   });
@@ -402,6 +402,8 @@ app.post('/deals', requireAuth, (req, res) => {
   if (d.nota) logDealEvent(r.lastInsertRowid, req.user.id, 'edicion', `Nota: ${d.nota}`);
   // Lead creada a nombre de otra persona: que se entere de que la tiene en su pipeline.
   if (d.user_id && d.user_id !== req.user.id) notifyUser(d.user_id, `Te asignó la lead «${d.empresa}» en ${d.etapa}${d.nota ? ` · nota: «${d.nota}»` : ''}`.slice(0, 400), `/deals/${r.lastInsertRowid}`, null, req.user.id);
+  // @menciones en la nota inicial: solo personas del panel, nunca uno mismo.
+  for (const uid of mencionadosEn(d.nota, d.panel)) if (uid !== req.user.id) notifyUser(uid, `Te mencionó en una nota de la lead «${d.empresa}»: «${d.nota}»`.slice(0, 400), `/deals/${r.lastInsertRowid}`, null, req.user.id);
   notifyAdmins(req.user.id, `Creó el deal «${d.empresa}» en ${d.etapa}${d.aprobacion === 'pendiente' ? ' — requiere tu aprobación' : ''}`, `/deals/${r.lastInsertRowid}`, d.etapa === 'Ganado' ? 'ganado' : 'deal_nuevo');
   if (d.aprobacion === 'aprobado') C.generarComisiones({ ...d, id: r.lastInsertRowid, fecha_cierre: d.fecha_cierre || new Date().toISOString().slice(0, 10) });
   res.redirect(home);
@@ -418,7 +420,7 @@ app.get('/deals/:id', requireAuth, (req, res) => {
   const modal = V.dealFormModal({
     user: req.user, deal, vendedores, isAdmin: req.user.role === 'admin', eventos, ultimaEd,
     errAprob: req.query.err === 'valor', errCalif: req.query.err === 'calificacion', errMigrar: req.query.err === 'migrar-ganado',
-    tiempos: tiemposDeLead(deal), companeros: companerosDe(deal, req.user),
+    tiempos: tiemposDeLead(deal), companeros: companerosDe(deal, req.user), mencionables: mencionablesDe(deal.panel),
     tomar: (() => { const robo = configRobo(deal.panel); return leadDisponible(deal, robo) && deal.user_id !== req.user.id ? { horas: robo.horas } : null; })(),
     panel: deal.panel, etapas: etapasDePanel(deal.panel), backHref: homeDePanel(deal.panel),
     campanas: db.prepare('SELECT id, nombre FROM campanas WHERE panel = ? AND (activa = 1 OR id = ?) ORDER BY nombre').all(deal.panel, deal.campana_id || 0),
@@ -468,6 +470,8 @@ app.post('/deals/:id', requireAuth, (req, res) => {
   }
   // Si la lead la tocó otra persona (un admin o un compañero), el dueño se entera de QUÉ le cambiaron:
   // la nota completa, los campos editados y/o el cambio de etapa. La notificación lleva la foto de quien editó.
+  const mencionados = d.nota ? mencionadosEn(d.nota, deal.panel).filter((id) => id !== req.user.id) : [];
+  const soloNota = !cambioEtapa && !otros.length && !!d.nota;
   const reasignada = deal.user_id !== d.user_id;
   if (cambioEtapa || otros.length || d.nota) {
     const partes = [];
@@ -478,10 +482,11 @@ app.post('/deals/:id', requireAuth, (req, res) => {
     if (reasignada) {
       if (deal.user_id && deal.user_id !== req.user.id) notifyUser(deal.user_id, `Reasignó tu lead «${d.empresa}» a ${nombreUsuario(d.user_id)}${partes.length > 1 || !otros.length ? ` · ${detalle}` : ''}`, `/deals/${deal.id}`, null, req.user.id);
       if (d.user_id !== req.user.id) notifyUser(d.user_id, `Te asignó la lead «${d.empresa}»${d.nota ? ` · nota: «${d.nota}»` : ''}`.slice(0, 400), `/deals/${deal.id}`, null, req.user.id);
-    } else if (d.user_id && req.user.id !== d.user_id) {
+    } else if (d.user_id && req.user.id !== d.user_id && !(soloNota && mencionados.includes(d.user_id))) {
       notifyUser(d.user_id, `Modificó tu lead «${d.empresa}»: ${detalle}`, `/deals/${deal.id}`, null, req.user.id);
     }
   }
+  for (const uid of mencionados) notifyUser(uid, `Te mencionó en una nota de la lead «${d.empresa}»: «${d.nota}»`.slice(0, 400), `/deals/${deal.id}`, null, req.user.id);
   res.redirect(home);
 });
 
@@ -541,6 +546,19 @@ function tiemposDeLead(deal) {
 }
 
 // Compañeros a los que el dueño puede traspasar la lead (activos, con permiso al panel).
+// Personas mencionables con @ en las notas de una lead: las que pertenecen a ese panel (admins incluidos), activas.
+function mencionablesDe(slug) {
+  return db.prepare("SELECT id, name, role, permisos, avatar FROM users WHERE active = 1 AND role != 'developer' ORDER BY name").all()
+    .filter((u) => u.role === 'admin' || (() => { try { return JSON.parse(u.permisos || '[]').includes(slug); } catch { return false; } })())
+    .map((u) => ({ id: u.id, name: u.name, avatar: u.avatar || null }));
+}
+// Ids mencionados en un texto (@Nombre Apellido), solo entre las personas del panel; sin distinguir mayúsculas.
+function mencionadosEn(texto, slug) {
+  if (!texto || !String(texto).includes('@')) return [];
+  const t = String(texto).toLowerCase();
+  return mencionablesDe(slug).filter((u) => t.includes('@' + u.name.toLowerCase())).map((u) => u.id);
+}
+
 function companerosDe(deal, user) {
   if (deal == null || (deal.user_id !== user.id && user.role !== 'admin')) return [];
   return db.prepare("SELECT id, name, role, permisos FROM users WHERE active = 1 AND role != 'developer' AND id != ? ORDER BY name").all(deal.user_id)

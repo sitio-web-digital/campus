@@ -774,6 +774,13 @@ html.dark .hc-chip.bien { color:#6FBF8F; }
 .chip-pend { background:#E9C46A; color:#3A2E05; }
 html.dark .chip-pend { background:#8A6D1F; color:#FFF3C9; }
 
+.men-wrap { position:relative; }
+.men-sug { position:absolute; left:0; right:0; z-index:40; margin-top:.15rem; background:var(--surface); border:1px solid var(--line); border-radius:8px; box-shadow:var(--sh-md); padding:.2rem; max-height:13rem; overflow:auto; }
+.men-op { display:flex; align-items:center; gap:.5rem; padding:.35rem .5rem; border-radius:6px; font-size:.84rem; cursor:pointer; }
+.men-op .avatar { width:1.55rem; height:1.55rem; font-size:.58rem; flex-shrink:0; }
+.men-op.on, .men-op:hover { background:var(--accent-soft); color:var(--accent-ink); }
+.mencion { color:var(--accent-ink); background:var(--accent-soft); border-radius:4px; padding:0 .25rem; font-weight:600; }
+
 /* ---------- campos calculados: editor de fórmulas ---------- */
 .fx-edit { display:flex; align-items:flex-start; gap:.5rem; margin:-.25rem 0 .75rem; flex-wrap:wrap; }
 .fx-wrap { position:relative; flex:1; min-width:16rem; }
@@ -1384,7 +1391,26 @@ const PROVINCIAS_AR = ['Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', '
 // Orígenes de lead para los paneles comerciales configurables (los de CFD son de venta de software).
 const ORIGENES_PANEL = ['MarketPlace', 'Ads', 'WhatsApp', 'Instagram', 'Referido', 'Cliente anterior', 'Propio', 'Otro'];
 
-function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, errCalif, errMigrar, tiempos, companeros = [], tomar = null, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
+// Resalta las @menciones (personas del panel) dentro de un texto; el resto queda escapado como siempre.
+function conMenciones(texto, personas) {
+  const t = String(texto || '');
+  const lower = t.toLowerCase();
+  const marcas = [];
+  for (const p of [...personas].sort((a, b) => b.name.length - a.name.length)) {
+    const tok = '@' + p.name.toLowerCase();
+    let i = lower.indexOf(tok);
+    while (i >= 0) {
+      if (!marcas.some(([ini, fin]) => i < fin && i + tok.length > ini)) marcas.push([i, i + tok.length]);
+      i = lower.indexOf(tok, i + 1);
+    }
+  }
+  marcas.sort((a, b) => a[0] - b[0]);
+  let out = '', pos = 0;
+  for (const [ini, fin] of marcas) { out += esc(t.slice(pos, ini)) + `<span class="mencion">${esc(t.slice(ini, fin))}</span>`; pos = fin; }
+  return out + esc(t.slice(pos));
+}
+
+function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, errCalif, errMigrar, tiempos, companeros = [], tomar = null, mencionables = [], panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
   const d = deal || {};
   const isNew = !deal;
   const opt = (list, sel) => list.map((o) => `<option value="${esc(o)}" ${o === sel ? 'selected' : ''}>${esc(o)}</option>`).join('');
@@ -1492,8 +1518,53 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
         <select name="motivo_perdida"><option value="">—</option>${opt(MOTIVOS, d.motivo_perdida)}</select>
       </div>
     </div>
-    <label>Agregar nota al historial</label>
-    <textarea name="notas" rows="3" placeholder="Contexto, objeciones, acuerdos… Al guardar, la nota queda registrada en el historial con tu nombre y fecha, y este campo vuelve a quedar libre."></textarea>
+    <label>Agregar nota al historial <span class="muted" style="font-weight:400">· escribí <code>@</code> para mencionar a alguien del panel</span></label>
+    <div class="men-wrap"><textarea name="notas" rows="3" data-menciones="${esc(JSON.stringify(mencionables))}" placeholder="Contexto, objeciones, acuerdos… Al guardar, la nota queda registrada en el historial con tu nombre y fecha, y este campo vuelve a quedar libre."></textarea></div>
+    <script>
+    (function () {
+      var ta = document.querySelector('textarea[name="notas"][data-menciones]'); if (!ta) return;
+      var GENTE = JSON.parse(ta.getAttribute('data-menciones') || '[]');
+      var wrap = ta.parentNode, sug = document.createElement('div'); sug.className = 'men-sug'; sug.hidden = true; wrap.appendChild(sug);
+      var items = [], sel = 0, ctx = null;
+      function ini(n) { return n.trim().split(' ').filter(Boolean).map(function (p) { return p[0]; }).slice(0, 2).join('').toUpperCase(); }
+      function render() {
+        if (!items.length) { sug.hidden = true; return; }
+        sug.innerHTML = '';
+        items.forEach(function (u, i) {
+          var d = document.createElement('div'); d.className = 'men-op' + (i === sel ? ' on' : '');
+          var av; if (u.avatar) { av = document.createElement('img'); av.className = 'avatar'; av.alt = ''; av.src = '/avatars/' + u.id + '?v=' + encodeURIComponent(u.avatar); } else { av = document.createElement('span'); av.className = 'avatar avatar-ini'; av.textContent = ini(u.name); }
+          var nm = document.createElement('span'); nm.textContent = u.name;
+          d.appendChild(av); d.appendChild(nm);
+          d.addEventListener('mousedown', function (e) { e.preventDefault(); elegir(i); });
+          sug.appendChild(d);
+        });
+        sug.hidden = false;
+      }
+      function buscar() {
+        var pos = ta.selectionStart, s = ta.value, a = s.lastIndexOf('@', pos - 1);
+        if (a < 0) { items = []; ctx = null; render(); return; }
+        var q = s.slice(a + 1, pos);
+        if (q.length > 40 || q.indexOf(String.fromCharCode(10)) >= 0) { items = []; ctx = null; render(); return; }
+        var ql = q.toLowerCase().trim(); ctx = { start: a, end: pos };
+        items = GENTE.filter(function (u) { return !ql || u.name.toLowerCase().indexOf(ql) >= 0; }).slice(0, 6); sel = 0; render();
+      }
+      function elegir(i) {
+        if (!ctx || !items[i]) return;
+        var u = items[i], s = ta.value;
+        ta.value = s.slice(0, ctx.start) + '@' + u.name + ' ' + s.slice(ctx.end);
+        var p = ctx.start + u.name.length + 2; items = []; ctx = null; render(); ta.focus(); ta.setSelectionRange(p, p);
+      }
+      ta.addEventListener('input', buscar); ta.addEventListener('click', buscar);
+      ta.addEventListener('blur', function () { setTimeout(function () { items = []; render(); }, 150); });
+      ta.addEventListener('keydown', function (e) {
+        if (sug.hidden) return;
+        if (e.key === 'ArrowDown') { sel = (sel + 1) % items.length; render(); e.preventDefault(); }
+        else if (e.key === 'ArrowUp') { sel = (sel - 1 + items.length) % items.length; render(); e.preventDefault(); }
+        else if (e.key === 'Enter' || e.key === 'Tab') { elegir(sel); e.preventDefault(); }
+        else if (e.key === 'Escape') { items = []; render(); }
+      });
+    })();
+    </script>
     <div style="margin-top:1.2rem; display:flex; gap:.6rem; flex-wrap:wrap">
       <button class="btn">${isNew ? 'Crear deal' : 'Guardar cambios'}</button>
       <a class="btn secondary" href="${backHref}">Cancelar</a>
@@ -1534,7 +1605,7 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
   <div class="card hist">
     ${eventos.length ? eventos.map((e) => {
       const [label, color] = EVENTO_TIPO[e.tipo] || ['Cambio', '#54657A'];
-      return `<div class="hist-item"><span class="chip" style="background:${color}">${label}</span><span>${esc(e.detalle || '')} <span class="muted">— ${esc(e.user_name)}</span></span><span class="cuando" style="margin-left:auto">${fechaHora(e.created_at)}</span></div>`;
+      return `<div class="hist-item"><span class="chip" style="background:${color}">${label}</span><span>${conMenciones(e.detalle || '', mencionables)} <span class="muted">— ${esc(e.user_name)}</span></span><span class="cuando" style="margin-left:auto">${fechaHora(e.created_at)}</span></div>`;
     }).join('') : '<p class="muted small" style="margin:0">Sin movimientos registrados todavía. Desde ahora, cada creación, cambio de etapa o edición queda registrado acá.</p>'}
   </div>` : ''}
   ${!isNew && isAdmin ? `

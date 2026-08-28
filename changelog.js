@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.31.0',
+    fecha: '2026-08-25',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Menciones con @ en las notas de una lead: escribí @ y aparece la lista de personas del panel con su foto y nombre — elegís con flechas + Enter o con el mouse. Al guardar, cada persona mencionada recibe una notificación con la nota y el link a la lead.' },
+      { tipo: 'mejora', texto: 'Solo se puede mencionar (y solo se resalta) a quienes pertenecen a ese panel comercial. Las @menciones quedan resaltadas en el historial de la lead. Si mencionás al dueño de la lead, le llega un único aviso (no el de "modificó tu lead" además).' },
+    ],
+  },
+  {
     version: '2.30.1',
     fecha: '2026-08-25',
     cambios: [
