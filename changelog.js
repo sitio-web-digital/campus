@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.29.0',
+    fecha: '2026-08-25',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Stock (stock.cloudfordeploy.com), nuestro sistema de gestión de stock, ya está en el inicio del Campus y en el menú de sistemas para todos los usuarios.' },
+      { tipo: 'mejora', texto: 'Cada sistema nuevo que se suma al Campus aparece primero y con un cartel "Nuevo" durante sus primeros 30 días, tanto en el inicio como en el menú.' },
+    ],
+  },
+  {
     version: '2.28.0',
     fecha: '2026-08-25',
     cambios: [

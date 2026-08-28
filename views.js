@@ -46,6 +46,39 @@ const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permis
 // Ícono hoja para PuntoCO2 (plataforma de huella de carbono).
 const ICON_PCO2 = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16.5 3.5C9 4 4.5 8 4.5 13.5c0 1.6.5 2.6 1 3 .5-4.5 3-8 7-10-3 2.5-5.5 6-5.7 10.2 1 .5 2.2.8 3.2.8 5 0 7-5.5 6.5-14z"/></svg>`;
 
+// Sitios y sistemas externos del grupo: una sola lista alimenta el inicio (cards) y el menú de sistemas.
+// Agregar un sistema nuevo = una entrada acá con su fecha de alta; el cartel "Nuevo" sale solo por 30 días.
+const SITIOS_EXTERNOS = [
+  { slug: 'stock', nombre: 'Stock', url: 'https://stock.cloudfordeploy.com/', host: 'stock.cloudfordeploy.com', desc: 'Nuestro sistema de gestión de stock.', corto: 'Gestión de stock', nuevoDesde: '2026-08-25',
+    icon: IC('<path d="M3 6.5L10 3l7 3.5v7L10 17l-7-3.5z"/><path d="M3 6.5l7 3.5 7-3.5M10 10v7"/>') },
+  { slug: 'pco2', nombre: 'PuntoCO2', url: 'https://puntoco2.com/home', host: 'puntoco2.com', desc: 'Nuestra plataforma SaaS de huella de carbono.', corto: 'Plataforma de huella de carbono', icon: ICON_PCO2 },
+  { slug: 'cfd', nombre: 'Cloud For Deploy', url: 'https://cloudfordeploy.com/', host: 'cloudfordeploy.com', desc: 'El sitio web de la empresa.', corto: 'Sitio web de la empresa',
+    icon: IC('<path d="M6 15.5a3.5 3.5 0 01-.4-7A4.8 4.8 0 0115 7.6a3.2 3.2 0 01-.6 7.9z"/>'),
+    logoHub: '<img class="hc-logo" src="/logo.png" alt="Cloud For Deploy" width="92" height="51">' },
+  { slug: 'est', nombre: 'Estanterías Reforzadas', url: 'https://estanteriasreforzadas.com/', host: 'estanteriasreforzadas.com', desc: 'La tienda de estanterías y góndolas.', corto: 'Estanterías y góndolas', icon: IC('<path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/>') },
+  { slug: 'sw', nombre: 'SitioWeb Digital', url: 'https://app.sitioweb.digital/', host: 'app.sitioweb.digital', desc: 'Tu página propia en minutos.', corto: 'Tu página propia en minutos',
+    logoHub: '<img class="hc-logo" src="/logo-sitioweb.svg" alt="SitioWeb Digital" width="44" height="44">',
+    logoMenu: '<img src="/logo-sitioweb.svg" alt="" width="30" height="30" style="border-radius:8px">' },
+  { slug: 'gon', nombre: 'Gondola', url: 'https://gondola.com.ar/', host: 'gondola.com.ar', desc: 'La tienda online de góndolas.', corto: 'gondola.com.ar', icon: IC('<path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/><path d="M6 8V5.5h3V8"/>') },
+  { slug: 'eol', nombre: 'Estanterías Online', url: 'https://estanterias.online/', host: 'estanterias.online', desc: 'La tienda online de estanterías.', corto: 'estanterias.online',
+    icon: IC('<path d="M3 5h2l1.6 8.5a1.5 1.5 0 001.5 1.2h6.3a1.5 1.5 0 001.5-1.2L17.5 7H6"/><circle cx="8.5" cy="17" r="1.1"/><circle cx="14.5" cy="17" r="1.1"/>') },
+];
+const esNuevo = (st) => !!st.nuevoDesde && Date.now() - new Date(st.nuevoDesde + 'T00:00:00Z').getTime() < 30 * 864e5;
+const sitiosOrdenados = () => [...SITIOS_EXTERNOS].sort((a, b) => (esNuevo(b) ? 1 : 0) - (esNuevo(a) ? 1 : 0));
+const sitiosMenu = () => sitiosOrdenados().map((st) => `
+      <a class="sys-ext sys-${st.slug}" href="${st.url}" target="_blank" rel="noopener">
+        ${st.logoMenu || `<span class="se-ic">${st.icon}</span>`}
+        <span class="se-txt"><span>${st.nombre}${esNuevo(st) ? ' <span class="nuevo-chip">Nuevo</span>' : ''}</span><small>${st.corto} ↗</small></span>
+      </a>`).join('');
+const sitiosHub = () => sitiosOrdenados().map((st) => `
+      <a class="hub-card hub-ext hub-${st.slug}" href="${st.url}" target="_blank" rel="noopener">
+        ${esNuevo(st) ? '<span class="soon-chip hc-soon hc-nuevo">Nuevo</span>' : ''}
+        ${st.logoHub || `<span class="hc-ic">${st.icon}</span>`}
+        <h3>${st.nombre}</h3>
+        <p>${st.desc}</p>
+        <span class="hc-ext">${st.host} ↗</span>
+      </a>`).join('');
+
 // Selector de sistemas (arriba a la izquierda): permite saltar entre paneles y sitios.
 function sysSwitch(sistema, user) {
   const R = (user && user.resumen) || {};
@@ -73,30 +106,7 @@ function sysSwitch(sistema, user) {
       <span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>
       <a href="/campus">Campus de formación</a>
       <div class="sys-sep"></div>
-      <a class="sys-ext sys-est" href="https://estanteriasreforzadas.com/" target="_blank" rel="noopener">
-        <span class="se-ic"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/></svg></span>
-        <span class="se-txt">Estanterías Reforzadas<small>Estanterías y góndolas ↗</small></span>
-      </a>
-      <a class="sys-ext sys-sw" href="https://app.sitioweb.digital/" target="_blank" rel="noopener">
-        <img src="/logo-sitioweb.svg" alt="" width="30" height="30" style="border-radius:8px">
-        <span class="se-txt">SitioWeb Digital<small>Tu página propia en minutos ↗</small></span>
-      </a>
-      <a class="sys-ext sys-gon" href="https://gondola.com.ar/" target="_blank" rel="noopener">
-        <span class="se-ic"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/><path d="M6 8V5.5h3V8"/></svg></span>
-        <span class="se-txt">Gondola<small>gondola.com.ar ↗</small></span>
-      </a>
-      <a class="sys-ext sys-eol" href="https://estanterias.online/" target="_blank" rel="noopener">
-        <span class="se-ic"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2l1.6 8.5a1.5 1.5 0 001.5 1.2h6.3a1.5 1.5 0 001.5-1.2L17.5 7H6"/><circle cx="8.5" cy="17" r="1.1"/><circle cx="14.5" cy="17" r="1.1"/></svg></span>
-        <span class="se-txt">Estanterías Online<small>estanterias.online ↗</small></span>
-      </a>
-      <a class="sys-ext sys-pco2" href="https://puntoco2.com/home" target="_blank" rel="noopener">
-        <span class="se-ic">${ICON_PCO2}</span>
-        <span class="se-txt">PuntoCO2<small>Plataforma de huella de carbono ↗</small></span>
-      </a>
-      <a class="sys-ext sys-cfd" href="https://cloudfordeploy.com/" target="_blank" rel="noopener">
-        <span class="se-ic"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15.5a3.5 3.5 0 01-.4-7A4.8 4.8 0 0115 7.6a3.2 3.2 0 01-.6 7.9z"/></svg></span>
-        <span class="se-txt">Cloud For Deploy<small>Sitio web de la empresa ↗</small></span>
-      </a>
+      ${sitiosMenu()}
     </div>
   </details>`;
 }
@@ -713,6 +723,18 @@ tr.inactivo td { opacity:.5; }
 .hub-card.hub-sw { background:#0B1120; border-color:#060A14; }
 .hub-card.hub-gon { background:#1A6B3F; border-color:#145532; }
 .hub-card.hub-eol { background:#563F87; border-color:#46326E; }
+.hub-card.hub-stock { background:#1E4E8C; border-color:#173E70; }
+.sys-stock { background:#1E4E8C; }
+.hub-card.hub-ext { position:relative; }
+.hub-card.hub-ext h3 { color:#fff; }
+.hub-card.hub-ext p { color:rgba(255,255,255,.82); }
+.hub-card.hub-ext .hc-ext { color:rgba(255,255,255,.65); }
+.hub-card.hub-ext .hc-ic { background:rgba(255,255,255,.18); color:#fff; }
+.hc-nuevo, .nuevo-chip { background:#F5B82E; color:#1B2430; border-color:transparent; }
+.nuevo-chip { font-size:.55rem; font-weight:800; letter-spacing:.09em; text-transform:uppercase; border-radius:4px; padding:.1rem .35rem; vertical-align:middle; margin-left:.15rem; }
+@keyframes nuevo-pop { 0%, 100% { box-shadow:0 0 0 0 rgba(245,184,46,.55); } 50% { box-shadow:0 0 0 5px rgba(245,184,46,0); } }
+.hc-nuevo { animation: nuevo-pop 2.2s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .hc-nuevo { animation:none; } }
 .hub-card.hub-pco2 h3, .hub-card.hub-cfd h3, .hub-card.hub-est h3, .hub-card.hub-sw h3, .hub-card.hub-gon h3, .hub-card.hub-eol h3 { color:#fff; }
 .hub-card.hub-pco2 p, .hub-card.hub-cfd p, .hub-card.hub-est p, .hub-card.hub-sw p, .hub-card.hub-gon p, .hub-card.hub-eol p { color:rgba(255,255,255,.82); }
 .hub-card.hub-pco2 .hc-ext, .hub-card.hub-cfd .hc-ext, .hub-card.hub-est .hc-ext, .hub-card.hub-gon .hc-ext, .hub-card.hub-eol .hc-ext { color:rgba(255,255,255,.65); }
@@ -2517,42 +2539,7 @@ function hubPage({ user }) {
         <h3>Campus de formación</h3>
         <p>Documentación y videos de capacitación por empresa, subidos por administración.</p>
       </a>
-      <a class="hub-card hub-pco2" href="https://puntoco2.com/home" target="_blank" rel="noopener">
-        <span class="hc-ic">${ICON_PCO2}</span>
-        <h3>PuntoCO2</h3>
-        <p>Nuestra plataforma SaaS de huella de carbono.</p>
-        <span class="hc-ext">puntoco2.com ↗</span>
-      </a>
-      <a class="hub-card hub-cfd" href="https://cloudfordeploy.com/" target="_blank" rel="noopener">
-        <img class="hc-logo" src="/logo.png" alt="Cloud For Deploy" width="92" height="51">
-        <h3>Cloud For Deploy</h3>
-        <p>El sitio web de la empresa.</p>
-        <span class="hc-ext">cloudfordeploy.com ↗</span>
-      </a>
-      <a class="hub-card hub-est" href="https://estanteriasreforzadas.com/" target="_blank" rel="noopener">
-        <span class="hc-ic">${IC('<path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/>')}</span>
-        <h3>Estanterías Reforzadas</h3>
-        <p>La tienda de estanterías y góndolas.</p>
-        <span class="hc-ext">estanteriasreforzadas.com ↗</span>
-      </a>
-      <a class="hub-card hub-sw" href="https://app.sitioweb.digital/" target="_blank" rel="noopener">
-        <img class="hc-logo" src="/logo-sitioweb.svg" alt="SitioWeb Digital" width="44" height="44">
-        <h3>SitioWeb Digital</h3>
-        <p>Tu página propia en minutos.</p>
-        <span class="hc-ext">app.sitioweb.digital ↗</span>
-      </a>
-      <a class="hub-card hub-gon" href="https://gondola.com.ar/" target="_blank" rel="noopener">
-        <span class="hc-ic">${IC('<path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/><path d="M6 8V5.5h3V8"/>')}</span>
-        <h3>Gondola</h3>
-        <p>La tienda online de góndolas.</p>
-        <span class="hc-ext">gondola.com.ar ↗</span>
-      </a>
-      <a class="hub-card hub-eol" href="https://estanterias.online/" target="_blank" rel="noopener">
-        <span class="hc-ic">${IC('<path d="M3 5h2l1.6 8.5a1.5 1.5 0 001.5 1.2h6.3a1.5 1.5 0 001.5-1.2L17.5 7H6"/><circle cx="8.5" cy="17" r="1.1"/><circle cx="14.5" cy="17" r="1.1"/>')}</span>
-        <h3>Estanterías Online</h3>
-        <p>La tienda online de estanterías.</p>
-        <span class="hc-ext">estanterias.online ↗</span>
-      </a>
+      ${sitiosHub()}
     </div>
   </div>`
   });
