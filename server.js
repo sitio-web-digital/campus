@@ -180,6 +180,8 @@ const logUserEvent = (userId, tipo, detalle) =>
 
 /* --- historial de deals y notificaciones --- */
 
+const nombreUsuario = (id) => (db.prepare('SELECT name FROM users WHERE id = ?').get(id) || {}).name || 'otro vendedor';
+
 function logDealEvent(dealId, userId, tipo, detalle) {
   db.prepare('INSERT INTO deal_events (deal_id, user_id, tipo, detalle) VALUES (?, ?, ?, ?)').run(dealId, userId, tipo, detalle);
 }
@@ -398,6 +400,8 @@ app.post('/deals', requireAuth, (req, res) => {
     VALUES (@empresa, @user_id, @panel, @etapa, @tipo_venta, @mrr, @telefono, @calificacion, @decisor, @origen, @proximo_paso, @fecha_proximo_paso, @fecha_primera_reunion, @fecha_cierre, @motivo_perdida, @campana_id, @pais, @provincia, @ciudad, @notas, @aprobacion, datetime('now'))`).run(dInsert);
   logDealEvent(r.lastInsertRowid, req.user.id, 'creado', `Deal creado en etapa ${d.etapa}`);
   if (d.nota) logDealEvent(r.lastInsertRowid, req.user.id, 'edicion', `Nota: ${d.nota}`);
+  // Lead creada a nombre de otra persona: que se entere de que la tiene en su pipeline.
+  if (d.user_id && d.user_id !== req.user.id) notifyUser(d.user_id, `Te asignó la lead «${d.empresa}» en ${d.etapa}${d.nota ? ` · nota: «${d.nota}»` : ''}`.slice(0, 400), `/deals/${r.lastInsertRowid}`, null, req.user.id);
   notifyAdmins(req.user.id, `Creó el deal «${d.empresa}» en ${d.etapa}${d.aprobacion === 'pendiente' ? ' — requiere tu aprobación' : ''}`, `/deals/${r.lastInsertRowid}`, d.etapa === 'Ganado' ? 'ganado' : 'deal_nuevo');
   if (d.aprobacion === 'aprobado') C.generarComisiones({ ...d, id: r.lastInsertRowid, fecha_cierre: d.fecha_cierre || new Date().toISOString().slice(0, 10) });
   res.redirect(home);
@@ -462,10 +466,21 @@ app.post('/deals/:id', requireAuth, (req, res) => {
   if (!cambioEtapa && (otros.length || d.nota)) {
     db.prepare("UPDATE deals SET etapa_movida_at = datetime('now') WHERE id = ?").run(deal.id);
   }
-  // Si la lead la modificó otra persona (típicamente el admin), el vendedor dueño se entera.
-  if (req.user.id !== d.user_id && (cambioEtapa || otros.length || d.nota)) {
-    const resumen = cambioEtapa ? `${deal.etapa} → ${d.etapa}` : (otros.length ? otros.slice(0, 2).join(' · ') : 'nueva nota');
-    notifyUser(d.user_id, `Modificó tu lead «${d.empresa}»: ${resumen}`, `/deals/${deal.id}`, null, req.user.id);
+  // Si la lead la tocó otra persona (un admin o un compañero), el dueño se entera de QUÉ le cambiaron:
+  // la nota completa, los campos editados y/o el cambio de etapa. La notificación lleva la foto de quien editó.
+  const reasignada = deal.user_id !== d.user_id;
+  if (cambioEtapa || otros.length || d.nota) {
+    const partes = [];
+    if (cambioEtapa) partes.push(`etapa ${deal.etapa} → ${d.etapa}`);
+    if (otros.length) partes.push(otros.join(' · '));
+    if (d.nota) partes.push(`nota: «${d.nota}»`);
+    const detalle = partes.join(' · ').slice(0, 400);
+    if (reasignada) {
+      if (deal.user_id && deal.user_id !== req.user.id) notifyUser(deal.user_id, `Reasignó tu lead «${d.empresa}» a ${nombreUsuario(d.user_id)}${partes.length > 1 || !otros.length ? ` · ${detalle}` : ''}`, `/deals/${deal.id}`, null, req.user.id);
+      if (d.user_id !== req.user.id) notifyUser(d.user_id, `Te asignó la lead «${d.empresa}»${d.nota ? ` · nota: «${d.nota}»` : ''}`.slice(0, 400), `/deals/${deal.id}`, null, req.user.id);
+    } else if (d.user_id && req.user.id !== d.user_id) {
+      notifyUser(d.user_id, `Modificó tu lead «${d.empresa}»: ${detalle}`, `/deals/${deal.id}`, null, req.user.id);
+    }
   }
   res.redirect(home);
 });

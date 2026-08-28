@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.30.1',
+    fecha: '2026-08-25',
+    cambios: [
+      { tipo: 'mejora', texto: 'Cuando otra persona (un admin o un compañero) toca una lead tuya, la notificación ahora cuenta exactamente qué cambió: la nota completa que te dejó, cada campo editado y/o el cambio de etapa, con la foto de quien lo hizo.' },
+      { tipo: 'nuevo', texto: 'Si alguien crea una lead a tu nombre te avisa ("Te asignó la lead…", con la nota si la hay); y si te reasignan una lead a otra persona, se les avisa a los dos.' },
+    ],
+  },
+  {
     version: '2.30.0',
     fecha: '2026-08-25',
     cambios: [
