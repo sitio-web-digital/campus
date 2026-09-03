@@ -3,7 +3,7 @@ const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
-const { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, CALIFICACIONES, SISTEMAS, PANELES_COMERCIALES, CAMPUS_EMPRESAS } = require('./db');
+const { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, CALIFICACIONES, SISTEMAS, PANELES_COMERCIALES, CAMPUS_EMPRESAS, ETAPAS_DEV } = require('./db');
 const PANEL_SLUGS = PANELES_COMERCIALES.map((p) => p.slug);
 const V = require('./views');
 const C = require('./comisiones');
@@ -181,6 +181,21 @@ const logUserEvent = (userId, tipo, detalle) =>
 /* --- historial de deals y notificaciones --- */
 
 const nombreUsuario = (id) => (db.prepare('SELECT name FROM users WHERE id = ?').get(id) || {}).name || 'otro vendedor';
+
+// Venta de CFD (software) ganada y aprobada → proyecto en el Panel de Developers. Idempotente:
+// si el proyecto ya existía (venta reabierta y re-aprobada), no se duplica ni pierde su avance.
+function crearProyectoSi(dealId) {
+  const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(dealId);
+  if (!deal || deal.panel !== 'cfd') return;
+  const r = db.prepare('INSERT OR IGNORE INTO proyectos (deal_id) VALUES (?)').run(deal.id);
+  if (r.changes > 0) {
+    logDealEvent(deal.id, deal.user_id, 'edicion', 'La venta pasó al Panel de Developers como proyecto');
+    for (const u of db.prepare("SELECT id, permisos FROM users WHERE active = 1 AND role = 'developer'").all()) {
+      let perms = []; try { perms = JSON.parse(u.permisos || '[]'); } catch {}
+      if (perms.includes('developers')) notifyUser(u.id, `Nuevo proyecto para desarrollar: «${deal.empresa}» (${deal.tipo_venta || 'venta de software'})`, '/developers');
+    }
+  }
+}
 
 function logDealEvent(dealId, userId, tipo, detalle) {
   db.prepare('INSERT INTO deal_events (deal_id, user_id, tipo, detalle) VALUES (?, ?, ?, ?)').run(dealId, userId, tipo, detalle);
@@ -405,7 +420,7 @@ app.post('/deals', requireAuth, (req, res) => {
   // @menciones en la nota inicial: solo personas del panel, nunca uno mismo.
   for (const uid of mencionadosEn(d.nota, d.panel)) if (uid !== req.user.id) notifyUser(uid, `Te mencionó en una nota de la lead «${d.empresa}»: «${d.nota}»`.slice(0, 400), `/deals/${r.lastInsertRowid}`, null, req.user.id);
   notifyAdmins(req.user.id, `Creó el deal «${d.empresa}» en ${d.etapa}${d.aprobacion === 'pendiente' ? ' — requiere tu aprobación' : ''}`, `/deals/${r.lastInsertRowid}`, d.etapa === 'Ganado' ? 'ganado' : 'deal_nuevo');
-  if (d.aprobacion === 'aprobado') C.generarComisiones({ ...d, id: r.lastInsertRowid, fecha_cierre: d.fecha_cierre || new Date().toISOString().slice(0, 10) });
+  if (d.aprobacion === 'aprobado') { C.generarComisiones({ ...d, id: r.lastInsertRowid, fecha_cierre: d.fecha_cierre || new Date().toISOString().slice(0, 10) }); crearProyectoSi(r.lastInsertRowid); }
   res.redirect(home);
 });
 
@@ -457,7 +472,7 @@ app.post('/deals/:id', requireAuth, (req, res) => {
     const det = [`${deal.etapa} → ${d.etapa}`, ...otros].join(' · ');
     logDealEvent(deal.id, req.user.id, 'etapa', det);
     notifyAdmins(req.user.id, `Movió «${d.empresa}» de ${deal.etapa} a ${d.etapa}${d.aprobacion === 'pendiente' ? ' — requiere tu aprobación' : ''}`, `/deals/${deal.id}`, d.etapa === 'Ganado' ? 'ganado' : 'cambio_etapa');
-    if (d.etapa === 'Ganado' && d.aprobacion === 'aprobado') C.generarComisiones({ ...d, id: deal.id });
+    if (d.etapa === 'Ganado' && d.aprobacion === 'aprobado') { C.generarComisiones({ ...d, id: deal.id }); crearProyectoSi(deal.id); }
     if (deal.etapa === 'Ganado' && d.etapa !== 'Ganado') C.cancelarPendientes(deal.id);
   } else if (otros.length) {
     logDealEvent(deal.id, req.user.id, 'edicion', otros.join(' · '));
@@ -539,6 +554,7 @@ app.post('/deals/:id/aprobar', requireAuth, requireAdmin, (req, res) => {
     db.prepare("UPDATE deals SET aprobacion = 'aprobado', updated_at = datetime('now') WHERE id = ?").run(deal.id);
     logDealEvent(deal.id, req.user.id, 'etapa', 'Venta aprobada — impacta en métricas y cobranza');
     C.generarComisiones({ ...deal, aprobacion: 'aprobado' });
+    crearProyectoSi(deal.id);
     if (deal.user_id !== req.user.id) {
       notifyUser(deal.user_id, `Aprobó tu venta «${deal.empresa}» (${money2(deal.mrr)}) — tu comisión ya está en Cobranza`, `/cobranza/vendedor/${deal.user_id}`, null, req.user.id);
     }
@@ -1473,6 +1489,55 @@ for (const PANEL of PANELES_COMERCIALES) {
     res.redirect(base + '/config');
   });
 }
+
+/* ---------------- panel de developers ---------------- */
+
+const proyectoFull = (id) => db.prepare(`SELECT p.*, d.empresa, d.tipo_venta, d.mrr, d.telefono, d.decisor, d.origen,
+    d.pais, d.provincia, d.ciudad, d.calificacion, d.fecha_cierre, d.user_id AS vendedor_id, u.name AS vendedor
+  FROM proyectos p JOIN deals d ON d.id = p.deal_id JOIN users u ON u.id = d.user_id WHERE p.id = ?`).get(id);
+
+app.get('/developers', requireAuth, requireSistema('developers'), (req, res) => {
+  const proyectos = db.prepare(`SELECT p.*, d.empresa, d.tipo_venta, d.mrr, d.ciudad, d.fecha_cierre, u.name AS vendedor, dev.name AS dev_nombre
+    FROM proyectos p JOIN deals d ON d.id = p.deal_id JOIN users u ON u.id = d.user_id LEFT JOIN users dev ON dev.id = p.dev_id
+    ORDER BY p.updated_at DESC`).all();
+  const abierto = req.query.p ? proyectoFull(parseInt(req.query.p, 10)) : null;
+  const devs = db.prepare("SELECT id, name FROM users WHERE active = 1 AND role IN ('developer', 'admin') ORDER BY role = 'admin', name").all();
+  res.send(V.devBoardPage({ user: req.user, proyectos, abierto, devs, etapas: ETAPAS_DEV }));
+});
+
+// Arrastre de tarjeta entre columnas del tablero de proyectos.
+app.post('/developers/proyectos/:id/etapa', requireAuth, requireSistema('developers'), (req, res) => {
+  const p = db.prepare('SELECT p.*, d.empresa, d.user_id AS vendedor_id FROM proyectos p JOIN deals d ON d.id = p.deal_id WHERE p.id = ?').get(req.params.id);
+  const etapa = ETAPAS_DEV.includes(req.body.etapa) ? req.body.etapa : null;
+  if (!p || !etapa || etapa === p.etapa) return res.redirect('/developers');
+  db.prepare("UPDATE proyectos SET etapa = ?, updated_at = datetime('now') WHERE id = ?").run(etapa, p.id);
+  logDealEvent(p.deal_id, req.user.id, 'edicion', `Proyecto (developers): ${p.etapa} → ${etapa}`);
+  if (etapa === 'Entregado') {
+    notifyAdmins(req.user.id, `Entregó el proyecto «${p.empresa}»`, `/developers?p=${p.id}`);
+    if (p.vendedor_id !== req.user.id) notifyUser(p.vendedor_id, `El proyecto de tu venta «${p.empresa}» fue entregado 🎉`, `/deals/${p.deal_id}`, null, req.user.id);
+  }
+  res.redirect('/developers');
+});
+
+// Ficha del proyecto: etapa, developer asignado y notas.
+app.post('/developers/proyectos/:id', requireAuth, requireSistema('developers'), (req, res) => {
+  const p = db.prepare('SELECT p.*, d.empresa, d.user_id AS vendedor_id FROM proyectos p JOIN deals d ON d.id = p.deal_id WHERE p.id = ?').get(req.params.id);
+  if (!p) return res.redirect('/developers');
+  const devId = parseInt(req.body.dev_id, 10) || null;
+  const etapa = ETAPAS_DEV.includes(req.body.etapa) ? req.body.etapa : p.etapa;
+  const notas = String(req.body.notas || '').slice(0, 4000);
+  db.prepare("UPDATE proyectos SET etapa = ?, dev_id = ?, notas = ?, updated_at = datetime('now') WHERE id = ?").run(etapa, devId, notas, p.id);
+  if (etapa !== p.etapa) logDealEvent(p.deal_id, req.user.id, 'edicion', `Proyecto (developers): ${p.etapa} → ${etapa}`);
+  if (devId && devId !== p.dev_id) {
+    logDealEvent(p.deal_id, req.user.id, 'edicion', `Proyecto asignado a ${nombreUsuario(devId)}`);
+    if (devId !== req.user.id) notifyUser(devId, `Te asignó el proyecto «${p.empresa}»`, `/developers?p=${p.id}`, null, req.user.id);
+  }
+  if (etapa === 'Entregado' && p.etapa !== 'Entregado') {
+    notifyAdmins(req.user.id, `Entregó el proyecto «${p.empresa}»`, `/developers?p=${p.id}`);
+    if (p.vendedor_id !== req.user.id) notifyUser(p.vendedor_id, `El proyecto de tu venta «${p.empresa}» fue entregado 🎉`, `/deals/${p.deal_id}`, null, req.user.id);
+  }
+  res.redirect(`/developers?p=${p.id}`);
+});
 
 /* ---------------- panel de cobranza ---------------- */
 

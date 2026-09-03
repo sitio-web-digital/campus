@@ -40,7 +40,7 @@ const ICONS = {
 };
 const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F3459'/%3E%3Ctext x='16' y='21' font-size='12' font-family='Helvetica,Arial' font-weight='bold' fill='white' text-anchor='middle'%3EC4D%3C/text%3E%3C/svg%3E";
 
-const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', hub: 'Campus C4D' };
+const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', developers: 'Panel de Developers', hub: 'Campus C4D' };
 const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permisos || []).includes(s));
 
 // Ícono hoja para PuntoCO2 (plataforma de huella de carbono).
@@ -105,7 +105,7 @@ function sysSwitch(sistema, user) {
       ${tieneSistema(user, 'sitioweb') ? `<a href="/sitioweb/pipeline"><span>Comercial SitioWeb Digital</span>${infoPanel('sitioweb')}</a>` : ''}
       ${tieneSistema(user, 'cobranza') ? `<a href="/cobranza"><span>Panel de Cobranza</span>${infoCobranza()}</a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
-      <span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>
+      ${tieneSistema(user, 'developers') ? '<a href="/developers"><span>Panel de Developers</span></a>' : '<span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>'}
       <a href="/campus">Campus de formación</a>
       </div>
       <div class="sys-col sys-col-ext">
@@ -156,6 +156,9 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="/admin" class="${active === 'admin' ? 'on' : ''}">${ICONS.equipo}<span>Usuarios</span></a>
         <a href="/admin/comunicacion" class="${active === 'comunicacion' ? 'on' : ''}">${ICONS.bell}<span>Comunicación</span></a>
         <a href="/admin/preferencias" class="${active === 'preferencias' ? 'on' : ''}">${ICONS.docs}<span>Preferencias</span></a>`;
+  } else if (sistema === 'developers') {
+    links = `
+        <a href="/developers" class="${active === 'developers' ? 'on' : ''}">${IC('<path d="M7 6.5L3.5 10 7 13.5M13 6.5l3.5 3.5-3.5 3.5M11.2 4.5l-2.4 11"/>')}<span>Proyectos</span></a>`;
   } else if (sistema === 'gondolas' || sistema === 'estanterias' || sistema === 'sitioweb') {
     const b = '/' + sistema;
     const dd = (user && user.deudas) || {};
@@ -2584,6 +2587,91 @@ function campanasPage({ user, campanas }) {
   });
 }
 
+/* --------- panel de developers --------- */
+
+const DEV_COLOR = { 'Por iniciar': '#8494A6', 'En desarrollo': '#2B6CB0', 'En revisión': '#A8791F', 'Entregado': '#166B4A' };
+
+function devBoardPage({ user, proyectos, abierto, devs, etapas }) {
+  const card = (p) => `
+    <div class="kcard" draggable="true" data-id="${p.id}">
+      <a class="kcard-t" href="/developers?p=${p.id}">${esc(p.empresa)}</a>
+      <div class="kcard-m"><span class="mrr">${money(p.mrr)}${p.tipo_venta === 'Suscripción mensual' ? '<span style="font-weight:400">/mes</span>' : ''}</span><span>${esc(p.tipo_venta || '')}</span></div>
+      <div class="kcard-w ${p.dev_nombre ? 'ok' : 'warn'}">${p.dev_nombre ? 'Dev: ' + esc(p.dev_nombre) : 'Sin developer asignado'}</div>
+      <div class="kcard-w">Venta de ${esc(p.vendedor)}${p.fecha_cierre ? ' · ganada ' + fecha(p.fecha_cierre) : ''}</div>
+    </div>`;
+  const col = (etapa) => {
+    const rows = proyectos.filter((p) => p.etapa === etapa);
+    return `
+    <div class="col" data-etapa="${esc(etapa)}">
+      <div class="col-h"><span class="dot" style="background:${DEV_COLOR[etapa] || '#8494A6'}"></span>${esc(etapa)}<span class="n">${rows.length}</span></div>
+      ${rows.map(card).join('')}
+    </div>`;
+  };
+  return layout({
+    title: 'Developers', user, active: 'developers', sistema: 'developers',
+    body: `
+  <h1>Proyectos en desarrollo</h1>
+  <p class="small muted">Cada venta de software <strong>ganada y aprobada</strong> en Comercial Cloud For Deploy entra acá como proyecto. Arrastrá la tarjeta para cambiar la etapa; tocala para ver los datos del cliente, asignar developer y dejar notas.</p>
+  ${proyectos.length ? '' : '<div class="card"><p class="muted" style="margin:0">Todavía no hay proyectos: cuando administración apruebe una venta de Cloud For Deploy, aparece acá sola.</p></div>'}
+  <div class="board" style="--ncols:${etapas.length}">${etapas.map(col).join('')}</div>
+  ${abierto ? devProyectoModal(abierto, devs, etapas, user) : ''}
+  <script>
+  (function () {
+    var drag = null;
+    document.querySelectorAll('.kcard[draggable=true]').forEach(function (c) {
+      c.addEventListener('dragstart', function (e) { drag = c.dataset.id; e.dataTransfer.effectAllowed = 'move'; c.classList.add('drag'); });
+      c.addEventListener('dragend', function () { c.classList.remove('drag'); });
+    });
+    document.querySelectorAll('.col').forEach(function (col) {
+      col.addEventListener('dragover', function (e) { e.preventDefault(); col.classList.add('over'); });
+      col.addEventListener('dragleave', function () { col.classList.remove('over'); });
+      col.addEventListener('drop', function (e) {
+        e.preventDefault(); col.classList.remove('over');
+        if (!drag) return;
+        var id = drag, etapa = col.dataset.etapa; drag = null;
+        fetch('/developers/proyectos/' + id + '/etapa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'etapa=' + encodeURIComponent(etapa)
+        }).then(function () { location.reload(); });
+      });
+    });
+  })();
+  </script>`
+  });
+}
+
+function devProyectoModal(p, devs, etapas, user) {
+  const dato = (l, v) => `<div><span class="muted small">${l}</span><br><strong>${v || '—'}</strong></div>`;
+  return `
+  <div class="modal-back">
+    <div class="modal">
+      <div class="modal-h"><h2>${esc(p.empresa)}</h2><a class="modal-x" href="/developers" aria-label="Cerrar">&times;</a></div>
+      <p class="small muted" style="margin:0 0 .8rem">Cliente ganado ${p.fecha_cierre ? 'el ' + fecha(p.fecha_cierre) : ''} por ${esc(p.vendedor)}${user.role === 'admin' ? ` · <a href="/deals/${p.deal_id}">ver la venta original</a>` : ''}</p>
+      <div class="card">
+        <h3 style="margin-top:0">Datos del cliente</h3>
+        <div class="grid2">
+          ${dato('Contacto / decisor', esc(p.decisor))}
+          ${dato('Teléfono', esc(p.telefono))}
+          ${dato('Tipo de venta', esc(p.tipo_venta))}
+          ${dato('Valor', money(p.mrr) + (p.tipo_venta === 'Suscripción mensual' ? '<span class="muted">/mes</span>' : ''))}
+          ${dato('Ubicación', [p.ciudad, p.provincia, p.pais].filter(Boolean).map(esc).join(', '))}
+          ${dato('Calificación del cliente', esc(p.calificacion))}
+        </div>
+      </div>
+      <form method="post" action="/developers/proyectos/${p.id}" class="card">
+        <div class="grid2">
+          <div><label>Etapa del proyecto</label><select name="etapa">${etapas.map((e) => `<option ${e === p.etapa ? 'selected' : ''}>${esc(e)}</option>`).join('')}</select></div>
+          <div><label>Developer asignado</label><select name="dev_id"><option value="">— Sin asignar —</option>${devs.map((d) => `<option value="${d.id}" ${d.id === p.dev_id ? 'selected' : ''}>${esc(d.name)}</option>`).join('')}</select></div>
+        </div>
+        <label>Notas del proyecto</label>
+        <textarea name="notas" rows="4" placeholder="Alcance, accesos, pendientes, links del repo…">${esc(p.notas)}</textarea>
+        <div style="margin-top:1rem"><button class="btn" style="width:100%">Guardar proyecto</button></div>
+      </form>
+    </div>
+  </div>`;
+}
+
 /* --------- campus / hub --------- */
 
 function hubPage({ user }) {
@@ -2661,12 +2749,18 @@ function hubPage({ user }) {
         <h3>Panel Administración</h3>
         <p>Usuarios, roles (vendedor, developer, admin) y permisos por sistema.</p>
       </a>` : ''}
+      ${tieneSistema(user, 'developers') ? `
+      <a class="hub-card" href="/developers">
+        <span class="hc-ic">${IC('<path d="M7 6.5L3.5 10 7 13.5M13 6.5l3.5 3.5-3.5 3.5M11.2 4.5l-2.4 11"/>')}</span>
+        <h3>Panel de Developers</h3>
+        <p>Las ventas de software ganadas se convierten acá en proyectos: cliente, etapa de desarrollo y entrega.</p>
+      </a>` : `
       <div class="hub-card hub-soon">
         <span class="soon-chip hc-soon">Próximamente</span>
         <span class="hc-ic">${IC('<path d="M7 6.5L3.5 10 7 13.5M13 6.5l3.5 3.5-3.5 3.5M11.2 4.5l-2.4 11"/>')}</span>
         <h3>Panel de Developers</h3>
         <p>Proyectos, entregas y documentación técnica del equipo de desarrollo.</p>
-      </div>
+      </div>`}
       <a class="hub-card" href="/campus">
         <span class="hc-ic">${IC('<path d="M10 4L2.5 7.5 10 11l7.5-3.5L10 4z"/><path d="M5 9v4c0 1.2 2.2 2.5 5 2.5s5-1.3 5-2.5V9"/>')}</span>
         <h3>Campus de formación</h3>
@@ -3837,7 +3931,7 @@ function changelogPage({ user, versiones }) {
 }
 
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusCursoPage, campusQuizPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,

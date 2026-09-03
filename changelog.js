@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.33.0',
+    fecha: '2026-08-28',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Panel de Developers: cada venta de software ganada y APROBADA en Comercial Cloud For Deploy se convierte sola en un proyecto (las ya ganadas entran automáticamente al desplegar). Tablero estilo pipeline con etapas Por iniciar → En desarrollo → En revisión → Entregado, arrastrando tarjetas como en el comercial.' },
+      { tipo: 'nuevo', texto: 'Cada proyecto muestra los datos del cliente (contacto, teléfono, valor, ubicación, calificación), permite asignar un developer y dejar notas. Avisos: a los devs cuando entra un proyecto o se los asigna, y al vendedor y admins cuando se entrega.' },
+      { tipo: 'mejora', texto: 'El permiso "Panel de Developers" se asigna desde la ficha del usuario; con el permiso, la card del inicio y el menú dejan de decir "Próximamente".' },
+    ],
+  },
+  {
     version: '2.32.1',
     fecha: '2026-08-25',
     cambios: [

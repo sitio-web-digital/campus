@@ -262,6 +262,18 @@ CREATE TABLE IF NOT EXISTS ticket_mensajes (
   imagen_nombre TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );`);
+// Migración 2.33.0: Panel de Developers — cada venta de CFD ganada y aprobada se convierte en proyecto.
+db.exec(`CREATE TABLE IF NOT EXISTS proyectos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  deal_id INTEGER NOT NULL UNIQUE REFERENCES deals(id) ON DELETE CASCADE,
+  etapa TEXT NOT NULL DEFAULT 'Por iniciar',
+  dev_id INTEGER REFERENCES users(id),
+  notas TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);`);
+// Backfill idempotente: las ventas de CFD que ya estaban ganadas y aprobadas entran como proyectos.
+db.exec("INSERT OR IGNORE INTO proyectos (deal_id) SELECT id FROM deals WHERE panel = 'cfd' AND etapa = 'Ganado' AND aprobacion = 'aprobado'");
 // Migración 2.8.0: campaña de origen y ubicación de la lead.
 if (!dealCols.includes('campana_id')) {
   db.exec('ALTER TABLE deals ADD COLUMN campana_id INTEGER REFERENCES campanas(id)');
@@ -506,7 +518,11 @@ const SISTEMAS = [
   ['estanterias', 'Comercial Estanterías Reforzadas'],
   ['sitioweb', 'Comercial SitioWeb Digital'],
   ['cobranza', 'Panel de Cobranza'],
+  ['developers', 'Panel de Developers'],
 ];
+
+// Etapas del tablero de proyectos del Panel de Developers.
+const ETAPAS_DEV = ['Por iniciar', 'En desarrollo', 'En revisión', 'Entregado'];
 
 // Migración 2.5.0: mover config de góndolas a las tablas genéricas de paneles.
 if (db.prepare('SELECT COUNT(*) AS c FROM panel_etapas').get().c === 0 && db.prepare('SELECT COUNT(*) AS c FROM gondolas_etapas').get().c > 0) {
@@ -665,4 +681,4 @@ function getSessionSecret() {
 // Secciones del Campus de formación: una por empresa + General.
 const CAMPUS_EMPRESAS = [['general', 'General'], ...PANELES_COMERCIALES.map((p) => [p.slug, p.nombre])];
 
-module.exports = { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, CALIFICACIONES, SISTEMAS, PANELES_COMERCIALES, CAMPUS_EMPRESAS };
+module.exports = { db, seedAdmin, getSessionSecret, ETAPAS, ETAPAS_ACTIVAS, ORIGENES, MOTIVOS, TIPOS_VENTA, CALIFICACIONES, SISTEMAS, PANELES_COMERCIALES, CAMPUS_EMPRESAS, ETAPAS_DEV };
