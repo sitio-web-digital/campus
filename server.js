@@ -1328,6 +1328,36 @@ for (const PANEL of PANELES_COMERCIALES) {
     res.redirect(base + '/objetivos');
   });
 
+  // Contactos del día (admin): leads nuevas cargadas y recontactos por vendedor, navegable por fecha.
+  // Recontacto = lead que YA existía (no creada ese día) y ese día recibió nota, edición o cambio de etapa.
+  // Las fechas de los eventos (UTC en SQLite) se convierten a día argentino con -3 horas.
+  app.get(base + '/contactos', requireAuth, requireSistema(slug), requireAdmin, (req, res) => {
+    const fecha = cleanDate(req.query.fecha) || hoyAR();
+    const d14 = new Date(hoyAR() + 'T00:00:00Z'); d14.setUTCDate(d14.getUTCDate() - 13);
+    const desde14 = d14.toISOString().slice(0, 10);
+    const desdeQ = fecha < desde14 ? fecha : desde14;
+    const datos = {};
+    const anotar = (f, uid, campo, valor) => {
+      if (!datos[f]) datos[f] = {};
+      if (!datos[f][uid]) datos[f][uid] = { nuevas: 0, rec: 0, toques: 0 };
+      datos[f][uid][campo] += valor;
+    };
+    for (const r of db.prepare(`SELECT substr(datetime(e.created_at, '-3 hours'), 1, 10) AS f, e.user_id, COUNT(*) AS n
+        FROM deal_events e JOIN deals d ON d.id = e.deal_id
+        WHERE d.panel = ? AND e.tipo = 'creado' AND substr(datetime(e.created_at, '-3 hours'), 1, 10) >= ?
+        GROUP BY f, e.user_id`).all(slug, desdeQ)) anotar(r.f, r.user_id, 'nuevas', r.n);
+    for (const r of db.prepare(`SELECT substr(datetime(e.created_at, '-3 hours'), 1, 10) AS f, e.user_id,
+          COUNT(DISTINCT e.deal_id) AS n, COUNT(*) AS t
+        FROM deal_events e JOIN deals d ON d.id = e.deal_id
+        WHERE d.panel = ? AND e.tipo IN ('etapa', 'edicion')
+          AND substr(datetime(e.created_at, '-3 hours'), 1, 10) >= ?
+          AND NOT EXISTS (SELECT 1 FROM deal_events c WHERE c.deal_id = e.deal_id AND c.tipo = 'creado'
+            AND substr(datetime(c.created_at, '-3 hours'), 1, 10) = substr(datetime(e.created_at, '-3 hours'), 1, 10))
+        GROUP BY f, e.user_id`).all(slug, desdeQ)) { anotar(r.f, r.user_id, 'rec', r.n); anotar(r.f, r.user_id, 'toques', r.t); }
+    const vendedores = db.prepare("SELECT id, name, avatar FROM users WHERE active = 1 AND role = 'vendedor' ORDER BY name").all();
+    res.send(V.panelContactosPage({ user: req.user, info, fecha, hoy: hoyAR(), desde14, vendedores, datos }));
+  });
+
   app.get(base + '/ranking', requireAuth, requireSistema(slug), (req, res) => {
     const periodo = req.query.p === 'mes' ? 'mes' : req.query.p === 'dia' ? 'dia' : 'semana';
     const desde = periodo === 'mes' ? inicioMes() : periodo === 'dia' ? hoyAR() : inicioSemana();

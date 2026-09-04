@@ -167,6 +167,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="${b}/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="${b}/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
         ${user && user.role === 'admin' ? `<a href="${b}/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
+        <a href="${b}/contactos" class="${active === 'contactos' ? 'on' : ''}">${IC('<path d="M4.2 3.5h2.6l1.4 3.3-1.9 1.5a11.4 11.4 0 005.4 5.4l1.5-1.9 3.3 1.4v2.6a1.4 1.4 0 01-1.5 1.4C8.8 16.7 3.3 11.2 2.8 5A1.4 1.4 0 014.2 3.5z"/>')}<span>Contactos</span></a>
         <a href="${b}/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>` : ''}`;
   } else {
     const dd = (user && user.deudas) || {};
@@ -175,6 +176,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
         ${user && user.role === 'admin' ? `<a href="/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
+        <a href="/contactos" class="${active === 'contactos' ? 'on' : ''}">${IC('<path d="M4.2 3.5h2.6l1.4 3.3-1.9 1.5a11.4 11.4 0 005.4 5.4l1.5-1.9 3.3 1.4v2.6a1.4 1.4 0 01-1.5 1.4C8.8 16.7 3.3 11.2 2.8 5A1.4 1.4 0 014.2 3.5z"/>')}<span>Contactos</span></a>
         <a href="/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>
         <a href="/admin" class="${active === 'equipo' ? 'on' : ''}">${ICONS.equipo}<span>Equipo</span></a>` : ''}`;
   }
@@ -783,6 +785,9 @@ html.dark .chip-pend { background:#8A6D1F; color:#FFF3C9; }
 .men-op .avatar { width:1.55rem; height:1.55rem; font-size:.58rem; flex-shrink:0; }
 .men-op.on, .men-op:hover { background:var(--accent-soft); color:var(--accent-ink); }
 .mencion { color:var(--accent-ink); background:var(--accent-soft); border-radius:4px; padding:0 .25rem; font-weight:600; }
+
+.ct-cero td { color:var(--faint); }
+.ct-sel td { background:var(--accent-soft); }
 
 /* ---------- estrella: leads destacadas ---------- */
 .star-f { display:inline-flex; margin:0; }
@@ -2587,6 +2592,61 @@ function campanasPage({ user, campanas }) {
   });
 }
 
+/* --------- contactos del día (admin) --------- */
+
+function panelContactosPage({ user, info, fecha: fechaSel, hoy, desde14, vendedores, datos }) {
+  const mueve = (f, dias) => { const d = new Date(f + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + dias); return d.toISOString().slice(0, 10); };
+  const ddmm = (f) => `${+f.slice(8, 10)}/${+f.slice(5, 7)}`;
+  const de = (f, uid) => (datos[f] && datos[f][uid]) || { nuevas: 0, rec: 0, toques: 0 };
+  const dia = datos[fechaSel] || {};
+  const totDia = vendedores.reduce((acu, v) => { const x = de(fechaSel, v.id); acu.nuevas += x.nuevas; acu.rec += x.rec; acu.toques += x.toques; return acu; }, { nuevas: 0, rec: 0, toques: 0 });
+  const fechas14 = []; for (let f = hoy; f >= desde14; f = mueve(f, -1)) fechas14.push(f);
+  const url = (f) => `${info.base}/contactos?fecha=${f}`;
+  return layout({
+    title: `Contactos · ${info.nombre}`, user, active: 'contactos', sistema: info.slug,
+    body: `
+  <div class="toolbar" style="margin-bottom:.2rem">
+    <h1 style="margin:0">Contactos y recontactos</h1>
+    <div class="sp"></div>
+    <a class="btn secondary small" href="${url(mueve(fechaSel, -1))}">‹ Día anterior</a>
+    <form method="get" action="${info.base}/contactos" class="cfg-inline" style="flex:0">
+      <input type="date" name="fecha" value="${fechaSel}" max="${hoy}" style="width:auto" onchange="this.form.submit()">
+    </form>
+    ${fechaSel < hoy ? `<a class="btn secondary small" href="${url(mueve(fechaSel, 1))}">Día siguiente ›</a><a class="btn secondary small" href="${info.base}/contactos">Hoy</a>` : ''}
+  </div>
+  <p class="small muted"><strong>Leads nuevas</strong>: las que cargó ese día. <strong>Recontactos</strong>: leads que ya existían y ese día volvió a trabajar (nota, edición o cambio de etapa) — entre paréntesis, los toques totales. Todo sale del historial real de las leads de ${esc(info.nombre)}.</p>
+
+  <h2 style="margin-top:.8rem">${fechaSel === hoy ? 'Hoy' : fecha(fechaSel)} · ${totDia.nuevas} nueva${totDia.nuevas === 1 ? '' : 's'} y ${totDia.rec} recontacto${totDia.rec === 1 ? '' : 's'} del equipo</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Vendedor</th><th>Leads nuevas</th><th>Recontactos</th><th>Toques totales</th></tr></thead>
+    <tbody>
+      ${vendedores.map((v) => { const x = de(fechaSel, v.id); const cero = !x.nuevas && !x.rec; return `
+      <tr class="${cero ? 'ct-cero' : ''}">
+        <td><div class="ucel">${avatar(v)}<strong>${esc(v.name)}</strong></div></td>
+        <td>${x.nuevas || '—'}</td>
+        <td>${x.rec || '—'}</td>
+        <td class="muted">${x.toques || '—'}</td>
+      </tr>`; }).join('')}
+      <tr><td><strong>TOTAL</strong></td><td><strong>${totDia.nuevas}</strong></td><td><strong>${totDia.rec}</strong></td><td><strong>${totDia.toques}</strong></td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Últimos 14 días</h2>
+  <p class="small muted" style="margin:.1rem 0 .5rem">Cada celda: <strong>nuevas</strong> · recontactos. Tocá una fila para ver ese día arriba en detalle.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Día</th>${vendedores.map((v) => `<th>${esc(v.name.split(' ')[0])}</th>`).join('')}<th>Equipo</th></tr></thead>
+    <tbody>
+      ${fechas14.map((f) => { const tot = vendedores.reduce((acu, v) => { const x = de(f, v.id); acu.n += x.nuevas; acu.r += x.rec; return acu; }, { n: 0, r: 0 }); return `
+      <tr class="rowlink ${f === fechaSel ? 'ct-sel' : ''}" onclick="location='${url(f)}'">
+        <td>${f === hoy ? 'Hoy' : ddmm(f)}</td>
+        ${vendedores.map((v) => { const x = de(f, v.id); return `<td>${x.nuevas || x.rec ? `<strong>${x.nuevas}</strong> · ${x.rec}` : '<span class="muted">—</span>'}</td>`; }).join('')}
+        <td>${tot.n || tot.r ? `<strong>${tot.n}</strong> · ${tot.r}` : '<span class="muted">—</span>'}</td>
+      </tr>`; }).join('')}
+    </tbody>
+  </table></div>`
+  });
+}
+
 /* --------- panel de developers --------- */
 
 const DEV_COLOR = { 'Por iniciar': '#8494A6', 'En desarrollo': '#2B6CB0', 'En revisión': '#A8791F', 'Entregado': '#166B4A' };
@@ -3931,7 +3991,7 @@ function changelogPage({ user, versiones }) {
 }
 
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusCursoPage, campusQuizPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,

@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.34.0',
+    fecha: '2026-09-04',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Nueva página "Contactos" en cada panel comercial (admin): cuántas leads nuevas cargó y cuántos recontactos hizo cada vendedor hoy — un recontacto es una lead que ya existía y ese día volvió a trabajarse (nota, edición o cambio de etapa). Navegable por fecha (día anterior / siguiente / calendario) y con tabla de los últimos 14 días por vendedor, clickeable para ver cualquier día en detalle.' },
+    ],
+  },
+  {
     version: '2.33.0',
     fecha: '2026-08-28',
     cambios: [
