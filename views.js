@@ -211,7 +211,7 @@ ${user && user.modalBanner ? `
   <div class="modal anuncio-box">
     <span class="anuncio-tag">Aviso de administración</span>
     <h2>${esc(user.modalBanner.titulo)}</h2>
-    <p style="margin:.4rem 0 1.1rem; line-height:1.6">${esc(user.modalBanner.texto)}</p>
+    <p style="margin:.4rem 0 1.1rem; line-height:1.6">${esc(user.modalBanner.texto).replace(/\r?\n/g, '<br>')}</p>
     <button class="btn" onclick="cerrarAnuncio('/banners/${user.modalBanner.id}/visto')">Entendido</button>
   </div>
 </div>` : user && user.modalEncuesta ? `
@@ -939,7 +939,7 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .modal-x { font-size:1.5rem; line-height:1; text-decoration:none; color:var(--muted); padding:.1rem .45rem; border-radius:6px; }
 .modal-x:hover { background:var(--surface2); color:var(--ink); text-decoration:none; }
 .anuncio { z-index:120; display:grid; place-items:center; }
-.anuncio-box { max-width:34rem; width:calc(100% - 2rem); margin:0; padding:1.25rem 1.35rem 1.35rem; border-radius:12px; background:var(--surface); }
+.anuncio-box { max-width:34rem; width:calc(100% - 2rem); margin:0; padding:1.25rem 1.35rem 1.35rem; border-radius:12px; background:var(--surface); max-height:calc(100vh - 2.5rem); max-height:calc(100dvh - 2.5rem); overflow-y:auto; overscroll-behavior:contain; }
 .anuncio-box h2 { margin:.3rem 0 .2rem; font-size:1.1rem; }
 .anuncio-tag { font-size:.6rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--role); }
 .cl-lista { list-style:none; margin:.35rem 0 0; padding:0; display:grid; gap:.5rem; }

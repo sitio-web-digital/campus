@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.34.1',
+    fecha: '2026-09-04',
+    cambios: [
+      { tipo: 'fix', texto: 'Los avisos de administración largos ya no se cortan: la ventana modal tiene scroll interno y respeta los saltos de línea y viñetas del mensaje tal como los escribiste.' },
+    ],
+  },
+  {
     version: '2.34.0',
     fecha: '2026-09-04',
     cambios: [
