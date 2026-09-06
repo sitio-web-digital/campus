@@ -986,27 +986,30 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 @media (max-width:640px) { .umenu-pop { position:fixed; top:3.3rem; right:.5rem; } }
 
 /* ---------- agenda de reuniones ---------- */
-.ag-grid { display:grid; grid-template-columns:repeat(var(--agcols, 5), 1fr); gap:.55rem; }
-@media (max-width: 900px) { .ag-grid { grid-template-columns:repeat(2, 1fr); } }
-@media (max-width: 520px) { .ag-grid { grid-template-columns:1fr; } }
-.ag-dia { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:.5rem; display:flex; flex-direction:column; gap:.3rem; }
-.ag-dia.ag-hoy { border-color:var(--accent); }
-.ag-cab { display:flex; justify-content:space-between; align-items:baseline; padding:.1rem .2rem .35rem; border-bottom:1px solid var(--line); }
-.ag-cab span { font-size:.72rem; color:var(--muted); }
-.ag-slot { border:1px solid var(--line); border-radius:8px; padding:.35rem .5rem; font-size:.76rem; display:flex; flex-direction:column; gap:.05rem; }
-.ag-hora { font-size:.66rem; font-weight:700; color:var(--faint); font-variant-numeric:tabular-nums; }
-.ag-pasado { opacity:.4; }
-.ag-libre { border-style:dashed; }
-.ag-ocupado { background:var(--accent-soft); border-color:transparent; }
-.ag-ocupado a { font-size:.78rem; }
-.ag-cancelar { background:none; border:none; color:#E05550; font-size:.66rem; cursor:pointer; padding:0; text-align:left; }
-.ag-mod-tag { font-weight:700; color:var(--accent-ink); }
-.ag-reservable { padding:0; border-color:rgba(46, 125, 79, .5); }
-.ag-reservable button { width:100%; background:none; border:none; cursor:pointer; font:inherit; color:#1D6F42; padding:.35rem .5rem; display:flex; flex-direction:column; gap:.05rem; text-align:left; font-weight:700; font-size:.76rem; border-radius:8px; }
-.ag-reservable button:hover { background:rgba(46, 125, 79, .12); }
-html.dark .ag-reservable button { color:#8FD6AC; }
-.aviso-reunion { color:#A8791F; font-weight:600; }
-.aviso-reunion a { font-weight:700; }
+.ag2-leyenda { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin:0 0 .7rem; }
+.ag2-quien { display:inline-flex; gap:.4rem; align-items:center; font-size:.78rem; font-weight:600; border:1px solid var(--line); border-left:4px solid var(--ac); border-radius:99px; padding:.18rem .6rem .18rem .3rem; background:var(--surface); }
+.ag2-quien .avatar { width:1.35rem; height:1.35rem; font-size:.55rem; }
+.ag2-grid { display:grid; grid-template-columns:repeat(var(--agcols, 5), 1fr); gap:.6rem; align-items:start; }
+@media (max-width: 980px) { .ag2-grid { grid-template-columns:repeat(2, 1fr); } }
+@media (max-width: 560px) { .ag2-grid { grid-template-columns:1fr; } }
+.ag2-dia { background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--sh); overflow:hidden; }
+.ag2-dia.ag2-hoy { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), var(--sh); }
+.ag2-cab { display:flex; gap:.45rem; align-items:baseline; padding:.55rem .7rem; background:var(--surface2); border-bottom:1px solid var(--line); }
+.ag2-dsem { font-size:.68rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+.ag2-dnum { font-size:.85rem; font-weight:700; }
+.ag2-tag-hoy { margin-left:auto; font-size:.55rem; font-weight:800; letter-spacing:.1em; color:#fff; background:var(--accent); border-radius:4px; padding:.1rem .35rem; }
+.ag2-fila { display:flex; gap:.5rem; padding:.4rem .6rem; border-top:1px solid var(--line); align-items:flex-start; }
+.ag2-fila:first-of-type { border-top:none; }
+.ag2-hora { font-size:.7rem; font-weight:700; color:var(--faint); font-variant-numeric:tabular-nums; padding-top:.25rem; min-width:2.6rem; }
+.ag2-celdas { display:flex; flex-wrap:wrap; gap:.3rem; flex:1; min-width:0; }
+.ag2-libre { font-size:.7rem; font-weight:600; color:var(--muted); border:1px dashed var(--line2); border-left:3px solid var(--ac); border-radius:7px; padding:.22rem .5rem; background:none; }
+.ag2-clic { cursor:pointer; font:inherit; font-size:.7rem; font-weight:700; color:var(--ink); border:1px solid var(--ac); border-left:3px solid var(--ac); background:var(--surface); transition:transform .1s, background .1s; }
+.ag2-clic:hover { background:var(--accent-soft); transform:translateY(-1px); }
+.ag2-pasado { opacity:.35; }
+.ag2-reu { border-left:4px solid var(--ac); background:var(--surface2); border-radius:8px; padding:.32rem .55rem; min-width:0; max-width:100%; display:flex; flex-direction:column; gap:.05rem; box-shadow:var(--sh); }
+.ag2-emp { font-size:.76rem; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:12rem; }
+.ag2-det { font-size:.64rem; color:var(--muted); }
+.ag2-cancelar { background:none; border:none; color:#E05550; font-size:.62rem; font-weight:700; cursor:pointer; padding:0; text-align:left; }
 
 /* ---------- panel de clientes ---------- */
 .pc-filtros { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin:0 0 .9rem; }
@@ -1645,7 +1648,7 @@ function pipelinePage({ user, deals, scope, closed, modal, err = null, robo = nu
       ${puedeMover(d) ? `<form method="post" action="/deals/${d.id}/destacar" class="star-f" onsubmit="this.volver.value = location.pathname + location.search"><input type="hidden" name="volver" value=""><button type="submit" class="star ${d.destacada ? 'on' : ''}" title="${d.destacada ? 'Quitar estrella' : 'Marcar con estrella: importante a cerrar / mejor seguimiento'}" aria-label="Destacar">${STAR_SVG}</button></form>` : (d.destacada ? `<span class="star on star-fija" title="Lead destacada">${STAR_SVG}</span>` : '')}
       <a class="kcard-t" href="/deals/${d.id}">${esc(d.empresa)}</a>
       <div class="kcard-m"><span class="mrr">${money(d.mrr)}${d.tipo_venta === 'Suscripción mensual' ? '<span style="font-weight:400">/mes</span>' : ''}</span><span>${d.ciudad ? esc(d.ciudad) + ' · ' : ''}${esc(d.vendedor_name.split(' ')[0])}</span></div>
-      ${d.sinReunion ? `<div class="kcard-w aviso-reunion">Sin reunión agendada — <a href="/agenda?deal=${d.id}">agendar</a></div>` : d.reunion ? `<div class="kcard-w ok">Reunión: ${+d.reunion.fecha.slice(8, 10)}/${+d.reunion.fecha.slice(5, 7)} ${d.reunion.hora} hs</div>` : ''}
+      ${d.sinReunion ? `<div class="kcard-w aviso-reunion">Sin reunión agendada — <a href="/agenda?deal=${d.id}">agendar</a></div>` : d.reunion ? `<div class="kcard-w ok">Reunión: ${+d.reunion.fecha.slice(8, 10)}/${+d.reunion.fecha.slice(5, 7)} ${d.reunion.hora} hs${d.reunion.admin ? ' · ' + esc(d.reunion.admin.split(' ')[0]) : ''}</div>` : ''}
       ${pie}
     </div>`;
   };
@@ -1773,7 +1776,7 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
   <div class="modal-h"><h2 style="display:flex; align-items:center; gap:.4rem">${isNew ? 'Nuevo deal' : `${esc(d.empresa)}${isAdmin || d.user_id === user.id ? `<form method="post" action="/deals/${d.id}/destacar" class="star-f"><input type="hidden" name="volver" value="/deals/${d.id}"><button type="submit" class="star ${d.destacada ? 'on' : ''}" title="${d.destacada ? 'Quitar estrella' : 'Marcar con estrella: importante a cerrar / mejor seguimiento'}" aria-label="Destacar">${STAR_SVG}</button></form>` : (d.destacada ? `<span class="star on star-fija" title="Lead destacada">${STAR_SVG}</span>` : '')}`}</h2><a class="modal-x" href="${backHref}" aria-label="Cerrar">&times;</a></div>
   ${!isNew && ultimaEd ? `<p class="small muted" style="margin:-.3rem 0 .7rem">Última edición: <strong>${esc(ultimaEd.nombre)}</strong> · ${fechaHora(ultimaEd.fecha)}${tiempos ? ` &nbsp;·&nbsp; Último movimiento de etapa: <strong>${tiempoRel(tiempos.ultima)}</strong> &nbsp;·&nbsp; Promedio entre etapas: <strong>${tiempos.promedio != null ? durLegible(tiempos.promedio) : '—'}</strong>` : ''}</p>` : ''}
   ${!isNew && panel === 'cfd' && !['Ganado', 'Perdido'].includes(d.etapa) ? (reunionAgendada
-    ? `<div class="flash ok" style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap">Reunión agendada: <strong>${reunionAgendada.fecha.split('-').reverse().join('/')} a las ${reunionAgendada.hora} hs</strong> <a class="btn secondary small" href="/agenda">Ver agenda</a></div>`
+    ? `<div class="flash ok" style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap">Reunión agendada: <strong>${reunionAgendada.fecha.split('-').reverse().join('/')} a las ${reunionAgendada.hora} hs${reunionAgendada.admin ? ' con ' + esc(reunionAgendada.admin) : ''}</strong> <a class="btn secondary small" href="/agenda">Ver agenda</a></div>`
     : (d.etapa === 'Reunión agendada' ? `<div class="flash bad" style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap">Esta lead está en Reunión agendada pero <strong>no tiene turno en la agenda</strong>. <a class="btn small" href="/agenda?deal=${d.id}">Agendar reunión</a></div>`
     : `<p class="small" style="margin:.1rem 0 .6rem"><a href="/agenda?deal=${d.id}">Agendar reunión con el equipo →</a></p>`)) : ''}
   ${errAprob ? `<div class="flash bad">No se pudo aprobar: falta cargar el <strong>valor del deal</strong>, que es la base para calcular la comisión del vendedor. Completalo, guardá y volvé a aprobar.</div>` : ''}
@@ -3037,49 +3040,62 @@ function asesorPage({ user, listo, limite, restantes, deal }) {
 
 /* --------- agenda de reuniones (CFD) --------- */
 
-function agendaPage({ user, dias, cfg, off, deal, hoy, msg, err }) {
+function agendaPage({ user, dias, admins, dur, off, deal, miDisp = [], hoy, msg, err }) {
   const esAdmin = user.role === 'admin';
   const DIA_NOMBRE = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const nombreDia = (f) => DIA_NOMBRE[new Date(f + 'T00:00:00Z').getUTCDay()];
   const ddmm = (f) => `${+f.slice(8, 10)}/${+f.slice(5, 7)}`;
+  const MOD = { meet: 'Meet', presencial: 'Presencial', oficina: 'En la oficina' };
+  const nombreCorto = (n) => String(n || '').split(' ')[0];
+  const miDias = miDisp.map((x) => x.dia);
   return layout({
     title: 'Agenda', user, active: 'agenda', sistema: 'comercial', msg, err,
     body: `
   <div class="toolbar" style="margin-bottom:.2rem">
     <h1 style="margin:0">Agenda de reuniones</h1>
     <div class="sp"></div>
-    <a class="btn secondary small" href="/agenda?semana=${off - 1}${deal ? `&deal=${deal.id}` : ''}">‹ Semana anterior</a>
+    <a class="btn secondary small" href="/agenda?semana=${off - 1}${deal ? `&deal=${deal.id}` : ''}">‹ Anterior</a>
     ${off !== 0 ? `<a class="btn secondary small" href="/agenda${deal ? `?deal=${deal.id}` : ''}">Hoy</a>` : ''}
-    <a class="btn secondary small" href="/agenda?semana=${off + 1}${deal ? `&deal=${deal.id}` : ''}">Semana siguiente ›</a>
+    <a class="btn secondary small" href="/agenda?semana=${off + 1}${deal ? `&deal=${deal.id}` : ''}">Siguiente ›</a>
   </div>
-  <p class="small muted">Turnos de ${cfg.duracion} minutos sobre la disponibilidad del equipo (${esc(cfg.desde)} a ${esc(cfg.hasta)}). ${deal ? '' : 'Para agendar, entrá desde la lead ("Agendar reunión") o tocá un turno libre y elegí la lead.'}</p>
-  ${deal ? `<div class="flash ok" style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap">Agendando reunión para <strong>${esc(deal.empresa)}</strong> — elegí la modalidad y tocá un turno libre.
+  <div class="ag2-leyenda">
+    ${admins.map((a) => `<span class="ag2-quien" style="--ac:${a.color}">${avatar(a)}<span>${esc(a.name)}</span></span>`).join('')}
+    <span class="small muted">· turnos de ${dur} min</span>
+  </div>
+  ${deal ? `<div class="flash ok" style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap">Agendando para <strong>${esc(deal.empresa)}</strong> — elegí la modalidad y tocá un horario libre de la persona con quien va la reunión.
     <select id="agModalidad" style="width:auto; margin:0; padding:.3rem .45rem">
       <option value="meet">Por Meet (videollamada)</option>
       <option value="presencial">Presencial (vamos nosotros)</option>
       <option value="oficina">En la oficina</option>
     </select>
-    <a href="/agenda" class="small">cancelar</a></div>` : ''}
+    <a href="/agenda" class="small">cancelar</a></div>`
+  : `<p class="small muted" style="margin:.2rem 0 .8rem">Cada color es un administrador con su disponibilidad. Para agendar, entrá desde la lead con el botón "Agendar reunión".</p>`}
 
-  <div class="ag-grid" style="--agcols:${dias.length}">
+  ${dias.length ? `<div class="ag2-grid" style="--agcols:${dias.length}">
     ${dias.map((d) => `
-    <div class="ag-dia ${d.fecha === hoy ? 'ag-hoy' : ''}">
-      <div class="ag-cab"><strong>${nombreDia(d.fecha)}</strong><span>${ddmm(d.fecha)}</span></div>
-      ${d.slots.map((sl) => sl.reunion ? `
-      <div class="ag-slot ag-ocupado" title="${esc(sl.reunion.empresa)} — ${esc(sl.reunion.vendedor)}">
-        <span class="ag-hora">${sl.hora}</span>
-        <a href="/deals/${sl.reunion.deal_id}"><strong>${esc(sl.reunion.empresa)}</strong></a>
-        <span class="small muted">${esc(sl.reunion.vendedor)} · <span class="ag-mod-tag">${{ meet: 'Meet', presencial: 'Presencial', oficina: 'En la oficina' }[sl.reunion.modalidad] || 'Meet'}</span></span>
-        ${esAdmin || sl.reunion.vendedor_id === user.id ? `<form method="post" action="/agenda/reuniones/${sl.reunion.id}/cancelar" onsubmit="return confirm('¿Cancelar la reunión con ${esc(sl.reunion.empresa)}?')"><button class="ag-cancelar">cancelar</button></form>` : ''}
-      </div>` : sl.pasado ? `
-      <div class="ag-slot ag-pasado"><span class="ag-hora">${sl.hora}</span><span class="small muted">—</span></div>` : deal ? `
-      <form method="post" action="/agenda/reservar" class="ag-slot ag-libre ag-reservable" onsubmit="return confirm('¿Agendar a ${esc(deal.empresa)} el ${nombreDia(d.fecha)} ${ddmm(d.fecha)} a las ${sl.hora} hs?')">
-        <input type="hidden" name="deal_id" value="${deal.id}"><input type="hidden" name="fecha" value="${d.fecha}"><input type="hidden" name="hora" value="${sl.hora}"><input type="hidden" name="modalidad" value="meet" class="ag-mod">
-        <button><span class="ag-hora">${sl.hora}</span><span>Agendar acá</span></button>
-      </form>` : `
-      <div class="ag-slot ag-libre"><span class="ag-hora">${sl.hora}</span><span class="small muted">libre</span></div>`).join('')}
-    </div>`).join('')}
-  </div>
+    <section class="ag2-dia ${d.fecha === hoy ? 'ag2-hoy' : ''}">
+      <header class="ag2-cab"><span class="ag2-dsem">${nombreDia(d.fecha)}</span><span class="ag2-dnum">${ddmm(d.fecha)}</span>${d.fecha === hoy ? '<span class="ag2-tag-hoy">HOY</span>' : ''}</header>
+      ${d.filas.map((fila) => `
+      <div class="ag2-fila">
+        <span class="ag2-hora">${fila.hora}</span>
+        <div class="ag2-celdas">
+          ${fila.celdas.map((c) => c.reunion ? `
+          <div class="ag2-reu" style="--ac:${c.admin ? c.admin.color : '#4A5568'}">
+            <a href="/deals/${c.reunion.deal_id}" class="ag2-emp">${esc(c.reunion.empresa)}</a>
+            <span class="ag2-det">${esc(nombreCorto(c.reunion.vendedor))} · ${MOD[c.reunion.modalidad] || 'Meet'}${c.admin ? ` · con ${esc(nombreCorto(c.admin.name))}` : ''}</span>
+            ${esAdmin || c.reunion.vendedor_id === user.id ? `<form method="post" action="/agenda/reuniones/${c.reunion.id}/cancelar" onsubmit="return confirm('¿Cancelar la reunión con ${esc(c.reunion.empresa)}?')"><button class="ag2-cancelar" title="Cancelar">Cancelar</button></form>` : ''}
+          </div>`
+          : c.pasado ? `<span class="ag2-libre ag2-pasado" style="--ac:${c.admin.color}">${esc(nombreCorto(c.admin.name))}</span>`
+          : deal ? `
+          <form method="post" action="/agenda/reservar" style="display:contents" onsubmit="return confirm('¿Agendar a ${esc(deal.empresa)} con ${esc(c.admin.name)} el ${nombreDia(d.fecha)} ${ddmm(d.fecha)} a las ${fila.hora} hs?')">
+            <input type="hidden" name="deal_id" value="${deal.id}"><input type="hidden" name="admin_id" value="${c.admin.id}"><input type="hidden" name="fecha" value="${d.fecha}"><input type="hidden" name="hora" value="${fila.hora}"><input type="hidden" name="modalidad" value="meet" class="ag-mod">
+            <button class="ag2-libre ag2-clic" style="--ac:${c.admin.color}" title="Agendar con ${esc(c.admin.name)}">${esc(nombreCorto(c.admin.name))}</button>
+          </form>`
+          : `<span class="ag2-libre" style="--ac:${c.admin.color}" title="${esc(c.admin.name)} disponible">${esc(nombreCorto(c.admin.name))}</span>`).join('')}
+        </div>
+      </div>`).join('')}
+    </section>`).join('')}
+  </div>` : '<div class="card"><p class="muted" style="margin:0">Nadie cargó disponibilidad todavía. ' + (esAdmin ? 'Cargá la tuya acá abajo y el calendario aparece solo.' : 'Pedile a un administrador que cargue sus horarios.') + '</p></div>'}
 
   <script>
   (function () {
@@ -3088,14 +3104,16 @@ function agendaPage({ user, dias, cfg, off, deal, hoy, msg, err }) {
     sel.addEventListener('change', aplicar); aplicar();
   })();
   </script>
+
   ${esAdmin ? `
-  <div class="card" style="margin-top:1rem">
-    <h3 style="margin-top:0">Disponibilidad del equipo</h3>
-    <form method="post" action="/agenda/config" class="perm-row" style="align-items:center">
-      ${[[1, 'Lun'], [2, 'Mar'], [3, 'Mié'], [4, 'Jue'], [5, 'Vie'], [6, 'Sáb'], [0, 'Dom']].map(([n, lbl]) => `<label class="perm" style="text-transform:none;letter-spacing:0"><input type="checkbox" name="dias" value="${n}" ${cfg.dias.includes(n) ? 'checked' : ''}> ${lbl}</label>`).join('')}
-      <label class="perm" style="text-transform:none;letter-spacing:0">De <input type="time" name="desde" value="${esc(cfg.desde)}" style="width:auto;display:inline-block;margin:0 .3rem"> a <input type="time" name="hasta" value="${esc(cfg.hasta)}" style="width:auto;display:inline-block;margin-left:.3rem"></label>
-      <label class="perm" style="text-transform:none;letter-spacing:0">Turnos de <input type="number" name="duracion" min="15" max="180" step="15" value="${cfg.duracion}" style="width:4.5rem;display:inline-block;margin:0 .3rem"> min</label>
-      <button class="btn small">Guardar</button>
+  <div class="card" style="margin-top:1.1rem">
+    <h3 style="margin-top:0">Mi disponibilidad</h3>
+    <p class="small muted" style="margin:.1rem 0 .6rem">Estos son TUS horarios para recibir reuniones — cada admin carga los suyos y sale con su color en el calendario.</p>
+    <form method="post" action="/agenda/mi-disponibilidad" class="perm-row" style="align-items:center">
+      ${[[1, 'Lun'], [2, 'Mar'], [3, 'Mié'], [4, 'Jue'], [5, 'Vie'], [6, 'Sáb'], [0, 'Dom']].map(([n, lbl]) => `<label class="perm" style="text-transform:none;letter-spacing:0"><input type="checkbox" name="dias" value="${n}" ${miDias.includes(n) ? 'checked' : ''}> ${lbl}</label>`).join('')}
+      <label class="perm" style="text-transform:none;letter-spacing:0">De <input type="time" name="desde" value="${esc(miDisp[0] ? miDisp[0].desde : '09:00')}" style="width:auto;display:inline-block;margin:0 .3rem"> a <input type="time" name="hasta" value="${esc(miDisp[0] ? miDisp[0].hasta : '18:00')}" style="width:auto;display:inline-block;margin-left:.3rem"></label>
+      <label class="perm" style="text-transform:none;letter-spacing:0">Turnos de <input type="number" name="duracion" min="15" max="180" step="15" value="${dur}" style="width:4.5rem;display:inline-block;margin:0 .3rem"> min</label>
+      <button class="btn small">Guardar mi disponibilidad</button>
     </form>
   </div>` : ''}`
   });

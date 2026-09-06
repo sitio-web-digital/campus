@@ -340,6 +340,28 @@ db.exec(`CREATE TABLE IF NOT EXISTS reuniones (
 if (!db.prepare('PRAGMA table_info(reuniones)').all().some((c) => c.name === 'modalidad')) {
   db.exec("ALTER TABLE reuniones ADD COLUMN modalidad TEXT NOT NULL DEFAULT 'meet'");
 }
+// 2.44.0: agenda por admin — cada administrador carga su propia disponibilidad y las reuniones son con alguien concreto.
+if (!db.prepare('PRAGMA table_info(reuniones)').all().some((c) => c.name === 'admin_id')) {
+  db.exec('ALTER TABLE reuniones ADD COLUMN admin_id INTEGER REFERENCES users(id)');
+}
+db.exec(`CREATE TABLE IF NOT EXISTS agenda_disponibilidad (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  admin_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  dia INTEGER NOT NULL,
+  desde TEXT NOT NULL,
+  hasta TEXT NOT NULL,
+  UNIQUE (admin_id, dia)
+);`);
+// Arranque: si nadie cargó disponibilidad todavía, cada admin activo hereda la franja global vieja (o L-V 9 a 18).
+if (db.prepare('SELECT COUNT(*) AS c FROM agenda_disponibilidad').get().c === 0) {
+  const val = (k, def) => { const r = db.prepare("SELECT valor FROM panel_config WHERE panel = '_agenda' AND clave = ?").get(k); return r ? r.valor : def; };
+  const dias = String(val('dias', '1,2,3,4,5')).split(',').map((n) => parseInt(n, 10)).filter((n) => n >= 0 && n <= 6);
+  const desde = val('desde', '09:00'), hasta = val('hasta', '18:00');
+  const insD = db.prepare('INSERT OR IGNORE INTO agenda_disponibilidad (admin_id, dia, desde, hasta) VALUES (?, ?, ?, ?)');
+  for (const adm of db.prepare("SELECT id FROM users WHERE active = 1 AND role = 'admin'").all()) {
+    for (const d of dias) insD.run(adm.id, d, desde, hasta);
+  }
+}
 
 // 2.42.0: estado del negocio según Google (operativo / cerrado temporal; los cerrados definitivos no se cargan).
 if (!db.prepare('PRAGMA table_info(prospectos)').all().some((c) => c.name === 'estado_negocio')) {

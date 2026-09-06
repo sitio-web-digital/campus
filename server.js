@@ -438,7 +438,7 @@ app.get('/deals/:id', requireAuth, (req, res) => {
     errAprob: req.query.err === 'valor', errCalif: req.query.err === 'calificacion', errMigrar: req.query.err === 'migrar-ganado',
     tiempos: tiemposDeLead(deal), companeros: companerosDe(deal, req.user), mencionables: mencionablesDe(deal.panel),
     tomar: (() => { const robo = configRobo(deal.panel); return leadDisponible(deal, robo) && deal.user_id !== req.user.id ? { horas: robo.horas } : null; })(),
-    reunionAgendada: deal.panel === 'cfd' ? db.prepare("SELECT fecha, hora FROM reuniones WHERE deal_id = ? AND estado = 'agendada' AND fecha >= ? ORDER BY fecha, hora LIMIT 1").get(deal.id, hoyAR()) || null : null,
+    reunionAgendada: deal.panel === 'cfd' ? db.prepare("SELECT r.fecha, r.hora, u.name AS admin FROM reuniones r LEFT JOIN users u ON u.id = r.admin_id WHERE r.deal_id = ? AND r.estado = 'agendada' AND r.fecha >= ? ORDER BY r.fecha, r.hora LIMIT 1").get(deal.id, hoyAR()) || null : null,
     panel: deal.panel, etapas: etapasDePanel(deal.panel), backHref: homeDePanel(deal.panel),
     campanas: db.prepare('SELECT id, nombre FROM campanas WHERE panel = ? AND (activa = 1 OR id = ?) ORDER BY nombre').all(deal.panel, deal.campana_id || 0),
   });
@@ -1246,7 +1246,7 @@ function panelPipelineData(req, slug) {
   // CFD: las leads en "Reunión agendada" marcan si tienen (o les falta) la reunión en la agenda.
   if (slug === 'cfd') {
     const proximas = {};
-    for (const r of db.prepare("SELECT deal_id, fecha, hora FROM reuniones WHERE estado = 'agendada' AND fecha >= ? ORDER BY fecha, hora").all(hoyAR())) {
+    for (const r of db.prepare("SELECT r.deal_id, r.fecha, r.hora, u.name AS admin FROM reuniones r LEFT JOIN users u ON u.id = r.admin_id WHERE r.estado = 'agendada' AND r.fecha >= ? ORDER BY r.fecha, r.hora").all(hoyAR())) {
       if (!proximas[r.deal_id]) proximas[r.deal_id] = r;
     }
     for (const d of deals) {
@@ -1712,69 +1712,84 @@ app.post('/clientes/:id/estado', requireAuth, requireSistema('clientes'), (req, 
 
 /* ---------------- agenda de reuniones (Cloud For Deploy) ---------------- */
 
-// Disponibilidad del equipo admin, configurable: días hábiles, franja horaria y duración del turno.
-const agendaConfig = () => ({
-  dias: String(getPanelConfig('_agenda', 'dias', '1,2,3,4,5')).split(',').map((n) => parseInt(n, 10)).filter((n) => n >= 0 && n <= 6),
-  desde: getPanelConfig('_agenda', 'desde', '09:00'),
-  hasta: getPanelConfig('_agenda', 'hasta', '18:00'),
-  duracion: Math.max(15, parseInt(getPanelConfig('_agenda', 'duracion'), 10) || 45),
-});
-
+// Cada admin carga SU disponibilidad (agenda_disponibilidad) y tiene un color fijo; las reuniones son con un admin concreto.
+const AGENDA_COLORES = ['#2B6CB0', '#0E6E66', '#7C4DBC', '#C05450', '#A8791F', '#1A6B3F', '#4A5568'];
+const duracionAgenda = () => Math.max(15, parseInt(getPanelConfig('_agenda', 'duracion'), 10) || 45);
 const aMin = (hhmm) => { const [h, m] = String(hhmm).split(':').map(Number); return h * 60 + (m || 0); };
 const aHora = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+const adminsAgenda = () => db.prepare("SELECT id, name, avatar FROM users WHERE active = 1 AND role = 'admin' ORDER BY id").all()
+  .map((a, i) => ({ ...a, color: AGENDA_COLORES[i % AGENDA_COLORES.length] }));
 
-// Semana de la agenda (lunes a domingo) con offset: cada día trae sus turnos libre/ocupado/pasado.
+// Semana (lunes como inicio) con offset: cada día trae filas por horario y, por horario, la celda de cada admin disponible.
 function armarSemana(off) {
-  const cfg = agendaConfig();
+  const dur = duracionAgenda();
+  const admins = adminsAgenda();
+  const disp = db.prepare('SELECT * FROM agenda_disponibilidad').all();
   const hoy = hoyAR();
   const base = new Date(hoy + 'T00:00:00Z');
-  base.setUTCDate(base.getUTCDate() - ((base.getUTCDay() + 6) % 7) + off * 7); // lunes de la semana
+  base.setUTCDate(base.getUTCDate() - ((base.getUTCDay() + 6) % 7) + off * 7);
   const ahoraMin = (() => { const t = new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit', hour12: false }); return aMin(t); })();
   const dias = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(base); d.setUTCDate(d.getUTCDate() + i);
     const fecha = d.toISOString().slice(0, 10);
-    if (!cfg.dias.includes((d.getUTCDay() + 7) % 7 === 0 ? 0 : d.getUTCDay())) continue;
+    const delDia = disp.filter((x) => x.dia === d.getUTCDay() && admins.some((a) => a.id === x.admin_id));
+    if (!delDia.length) continue;
     const reuniones = db.prepare(`SELECT r.*, dl.empresa, u.name AS vendedor FROM reuniones r JOIN deals dl ON dl.id = r.deal_id JOIN users u ON u.id = r.vendedor_id
       WHERE r.estado = 'agendada' AND r.fecha = ?`).all(fecha);
-    const slots = [];
-    for (let m = aMin(cfg.desde); m + cfg.duracion <= aMin(cfg.hasta); m += cfg.duracion) {
+    const ini = Math.min(...delDia.map((x) => aMin(x.desde)));
+    const fin = Math.max(...delDia.map((x) => aMin(x.hasta)));
+    const filas = [];
+    for (let m = ini; m + dur <= fin; m += dur) {
       const hora = aHora(m);
-      const ocupado = reuniones.find((r) => r.hora === hora);
       const pasado = fecha < hoy || (fecha === hoy && m <= ahoraMin);
-      slots.push({ hora, reunion: ocupado || null, pasado });
+      const celdas = [];
+      for (const adm of admins) {
+        const franja = delDia.find((x) => x.admin_id === adm.id);
+        if (!franja || m < aMin(franja.desde) || m + dur > aMin(franja.hasta)) continue;
+        celdas.push({ admin: adm, reunion: reuniones.find((r) => r.admin_id === adm.id && r.hora === hora) || null, pasado });
+      }
+      for (const r of reuniones.filter((x) => !x.admin_id && x.hora === hora)) celdas.push({ admin: null, reunion: r, pasado });
+      if (celdas.length) filas.push({ hora, celdas });
     }
-    dias.push({ fecha, slots });
+    if (filas.length) dias.push({ fecha, filas });
   }
-  return { dias, cfg };
+  return { dias, admins, dur };
 }
 
 app.get('/agenda', requireAuth, requireSistema('cfd'), (req, res) => {
   const off = Math.max(-8, Math.min(8, parseInt(req.query.semana, 10) || 0));
   let deal = parseInt(req.query.deal, 10) ? db.prepare('SELECT id, empresa, panel, user_id, etapa FROM deals WHERE id = ?').get(parseInt(req.query.deal, 10)) : null;
   if (deal && (deal.panel !== 'cfd' || (req.user.role !== 'admin' && deal.user_id !== req.user.id))) deal = null;
-  const { dias, cfg } = armarSemana(off);
-  res.send(V.agendaPage({ user: req.user, dias, cfg, off, deal, hoy: hoyAR(), msg: clean(req.query.msg), err: clean(req.query.err) }));
+  const { dias, admins, dur } = armarSemana(off);
+  const miDisp = req.user.role === 'admin' ? db.prepare('SELECT * FROM agenda_disponibilidad WHERE admin_id = ?').all(req.user.id) : [];
+  res.send(V.agendaPage({ user: req.user, dias, admins, dur, off, deal, miDisp, hoy: hoyAR(), msg: clean(req.query.msg), err: clean(req.query.err) }));
 });
 
-// Reservar un turno para una lead de CFD (su dueño o un admin).
+// Reservar un turno con un admin concreto, para una lead de CFD (su dueño o un admin).
 app.post('/agenda/reservar', requireAuth, requireSistema('cfd'), (req, res) => {
   const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(parseInt(req.body.deal_id, 10));
   if (!deal || deal.panel !== 'cfd') return res.redirect('/agenda?err=' + encodeURIComponent('Elegí una lead de Cloud For Deploy para agendar.'));
   if (req.user.role !== 'admin' && deal.user_id !== req.user.id) return res.status(403).send('Solo el dueño de la lead o un admin pueden agendarle reunión.');
+  const adminElegido = db.prepare("SELECT id, name FROM users WHERE id = ? AND active = 1 AND role = 'admin'").get(parseInt(req.body.admin_id, 10));
   const fecha = cleanDate(req.body.fecha); const hora = /^\d{2}:\d{2}$/.test(req.body.hora || '') ? req.body.hora : null;
-  const cfg = agendaConfig();
-  const valido = fecha && hora && fecha >= hoyAR() && aMin(hora) >= aMin(cfg.desde) && aMin(hora) + cfg.duracion <= aMin(cfg.hasta) && (aMin(hora) - aMin(cfg.desde)) % cfg.duracion === 0;
-  if (!valido) return res.redirect(`/agenda?deal=${deal.id}&err=` + encodeURIComponent('Ese horario no está dentro de la disponibilidad.'));
-  const ocupado = db.prepare("SELECT 1 FROM reuniones WHERE estado = 'agendada' AND fecha = ? AND hora = ?").get(fecha, hora);
+  if (!adminElegido || !fecha || !hora || fecha < hoyAR()) return res.redirect(`/agenda?deal=${deal.id}&err=` + encodeURIComponent('Ese turno no es válido.'));
+  const dur = duracionAgenda();
+  const diaSemana = new Date(fecha + 'T00:00:00Z').getUTCDay();
+  const franja = db.prepare('SELECT * FROM agenda_disponibilidad WHERE admin_id = ? AND dia = ?').get(adminElegido.id, diaSemana);
+  if (!franja || aMin(hora) < aMin(franja.desde) || aMin(hora) + dur > aMin(franja.hasta) || (aMin(hora) - aMin(franja.desde)) % dur !== 0) {
+    return res.redirect(`/agenda?deal=${deal.id}&err=` + encodeURIComponent(`Ese horario no está dentro de la disponibilidad de ${adminElegido.name}.`));
+  }
+  const ocupado = db.prepare("SELECT 1 FROM reuniones WHERE estado = 'agendada' AND fecha = ? AND hora = ? AND admin_id = ?").get(fecha, hora, adminElegido.id);
   if (ocupado) return res.redirect(`/agenda?deal=${deal.id}&err=` + encodeURIComponent('Ese turno ya lo tomó otro — elegí otro horario.'));
   const modalidad = ['meet', 'presencial', 'oficina'].includes(req.body.modalidad) ? req.body.modalidad : 'meet';
   const modTxt = { meet: 'por Meet', presencial: 'presencial (vamos nosotros)', oficina: 'en la oficina' }[modalidad];
-  db.prepare('INSERT INTO reuniones (deal_id, vendedor_id, fecha, hora, duracion, modalidad) VALUES (?, ?, ?, ?, ?, ?)').run(deal.id, deal.user_id, fecha, hora, cfg.duracion, modalidad);
-  logDealEvent(deal.id, req.user.id, 'edicion', `Nota: Reunión agendada para el ${fecha.split('-').reverse().join('/')} a las ${hora} hs, ${modTxt}`);
-  notifyAdmins(req.user.id, `Agendó reunión ${modTxt} con «${deal.empresa}» para el ${fecha.split('-').reverse().join('/')} ${hora} hs`, '/agenda');
-  if (deal.user_id !== req.user.id) notifyUser(deal.user_id, `Te agendaron reunión ${modTxt} con «${deal.empresa}» para el ${fecha.split('-').reverse().join('/')} ${hora} hs`, '/agenda', null, req.user.id);
-  res.redirect('/agenda?msg=' + encodeURIComponent(`Reunión con «${deal.empresa}» agendada: ${fecha.split('-').reverse().join('/')} a las ${hora} hs.`));
+  const linda = fecha.split('-').reverse().join('/');
+  db.prepare('INSERT INTO reuniones (deal_id, vendedor_id, admin_id, fecha, hora, duracion, modalidad) VALUES (?, ?, ?, ?, ?, ?, ?)').run(deal.id, deal.user_id, adminElegido.id, fecha, hora, dur, modalidad);
+  logDealEvent(deal.id, req.user.id, 'edicion', `Nota: Reunión agendada con ${adminElegido.name} para el ${linda} a las ${hora} hs, ${modTxt}`);
+  notifyAdmins(req.user.id, `Agendó reunión ${modTxt} con «${deal.empresa}» para el ${linda} ${hora} hs (con ${adminElegido.name})`, '/agenda');
+  if (deal.user_id !== req.user.id) notifyUser(deal.user_id, `Te agendaron reunión ${modTxt} con «${deal.empresa}» para el ${linda} ${hora} hs (con ${adminElegido.name})`, '/agenda', null, req.user.id);
+  res.redirect('/agenda?msg=' + encodeURIComponent(`Reunión con «${deal.empresa}» agendada con ${adminElegido.name}: ${linda} a las ${hora} hs, ${modTxt}.`));
 });
 
 app.post('/agenda/reuniones/:id/cancelar', requireAuth, requireSistema('cfd'), (req, res) => {
@@ -1787,15 +1802,20 @@ app.post('/agenda/reuniones/:id/cancelar', requireAuth, requireSistema('cfd'), (
   res.redirect('/agenda');
 });
 
-// Disponibilidad (solo admins): días hábiles, franja y duración del turno.
-app.post('/agenda/config', requireAuth, requireAdmin, (req, res) => {
+// Cada admin gestiona SU disponibilidad: días marcados con una franja horaria (y la duración global de los turnos).
+app.post('/agenda/mi-disponibilidad', requireAuth, requireAdmin, (req, res) => {
   let dias = req.body.dias || []; if (!Array.isArray(dias)) dias = [dias];
   dias = [...new Set(dias.map((x) => parseInt(x, 10)).filter((x) => x >= 0 && x <= 6))];
-  if (dias.length) setPanelConfig('_agenda', 'dias', dias.join(','));
-  if (/^\d{2}:\d{2}$/.test(req.body.desde || '')) setPanelConfig('_agenda', 'desde', req.body.desde);
-  if (/^\d{2}:\d{2}$/.test(req.body.hasta || '')) setPanelConfig('_agenda', 'hasta', req.body.hasta);
-  setPanelConfig('_agenda', 'duracion', Math.min(180, Math.max(15, parseInt(req.body.duracion, 10) || 45)));
-  res.redirect('/agenda');
+  const desde = /^\d{2}:\d{2}$/.test(req.body.desde || '') ? req.body.desde : '09:00';
+  const hasta = /^\d{2}:\d{2}$/.test(req.body.hasta || '') ? req.body.hasta : '18:00';
+  if (aMin(hasta) <= aMin(desde)) return res.redirect('/agenda?err=' + encodeURIComponent('La franja horaria no es válida.'));
+  db.transaction(() => {
+    db.prepare('DELETE FROM agenda_disponibilidad WHERE admin_id = ?').run(req.user.id);
+    const insD = db.prepare('INSERT INTO agenda_disponibilidad (admin_id, dia, desde, hasta) VALUES (?, ?, ?, ?)');
+    for (const d of dias) insD.run(req.user.id, d, desde, hasta);
+  })();
+  setPanelConfig('_agenda', 'duracion', Math.min(180, Math.max(15, parseInt(req.body.duracion, 10) || duracionAgenda())));
+  res.redirect('/agenda?msg=' + encodeURIComponent('Tu disponibilidad quedó guardada.'));
 });
 
 /* ---------------- asesor IA (para vendedores) ---------------- */

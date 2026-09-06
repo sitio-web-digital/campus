@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.44.0',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'mejora', texto: 'Agenda multi-admin: cada administrador carga SU disponibilidad ("Mi disponibilidad" al pie de la agenda) y aparece en el calendario con su color y su nombre. Al agendar, el vendedor elige con quién tocando el horario libre de esa persona; dos admins pueden tener reuniones a la misma hora sin pisarse.' },
+      { tipo: 'mejora', texto: 'Calendario más prolijo y profesional: leyenda con foto y color de cada admin, columnas por día con cabecera y marca de HOY, tarjetas de reunión con empresa, vendedor, modalidad y con quién es. La tarjeta del pipeline y la ficha también muestran con qué admin quedó la reunión.' },
+    ],
+  },
+  {
     version: '2.43.0',
     fecha: '2026-09-06',
     cambios: [
