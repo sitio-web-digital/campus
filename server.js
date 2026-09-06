@@ -1720,11 +1720,12 @@ const aHora = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${Strin
 const adminsAgenda = () => db.prepare("SELECT id, name, avatar FROM users WHERE active = 1 AND role = 'admin' ORDER BY id").all()
   .map((a, i) => ({ ...a, color: AGENDA_COLORES[i % AGENDA_COLORES.length] }));
 
-// Semana (lunes como inicio) con offset: cada día trae filas por horario y, por horario, la celda de cada admin disponible.
-function armarSemana(off) {
+// Semana estilo calendario: SIEMPRE los 7 días (lunes a domingo) con la grilla completa de 00 a 24 hs.
+// Cada día trae un carril por admin que cargó disponibilidad: su franja y sus reuniones, posicionadas por hora.
+function armarSemanaCal(off) {
   const dur = duracionAgenda();
-  const admins = adminsAgenda();
   const disp = db.prepare('SELECT * FROM agenda_disponibilidad').all();
+  const admins = adminsAgenda().filter((a) => disp.some((x) => x.admin_id === a.id));
   const hoy = hoyAR();
   const base = new Date(hoy + 'T00:00:00Z');
   base.setUTCDate(base.getUTCDate() - ((base.getUTCDay() + 6) % 7) + off * 7);
@@ -1733,39 +1734,28 @@ function armarSemana(off) {
   for (let i = 0; i < 7; i++) {
     const d = new Date(base); d.setUTCDate(d.getUTCDate() + i);
     const fecha = d.toISOString().slice(0, 10);
-    const delDia = disp.filter((x) => x.dia === d.getUTCDay() && admins.some((a) => a.id === x.admin_id));
-    if (!delDia.length) continue;
     const reuniones = db.prepare(`SELECT r.*, dl.empresa, u.name AS vendedor FROM reuniones r JOIN deals dl ON dl.id = r.deal_id JOIN users u ON u.id = r.vendedor_id
       WHERE r.estado = 'agendada' AND r.fecha = ?`).all(fecha);
-    const ini = Math.min(...delDia.map((x) => aMin(x.desde)));
-    const fin = Math.max(...delDia.map((x) => aMin(x.hasta)));
-    const filas = [];
-    for (let m = ini; m + dur <= fin; m += dur) {
-      const hora = aHora(m);
-      const pasado = fecha < hoy || (fecha === hoy && m <= ahoraMin);
-      const celdas = [];
-      for (const adm of admins) {
-        const franja = delDia.find((x) => x.admin_id === adm.id);
-        if (!franja || m < aMin(franja.desde) || m + dur > aMin(franja.hasta)) continue;
-        celdas.push({ admin: adm, reunion: reuniones.find((r) => r.admin_id === adm.id && r.hora === hora) || null, pasado });
-      }
-      for (const r of reuniones.filter((x) => !x.admin_id && x.hora === hora)) celdas.push({ admin: null, reunion: r, pasado });
-      if (celdas.length) filas.push({ hora, celdas });
-    }
-    if (filas.length) dias.push({ fecha, filas });
+    const lanes = admins.map((adm) => {
+      const franja = disp.find((x) => x.admin_id === adm.id && x.dia === d.getUTCDay()) || null;
+      return {
+        admin: { id: adm.id, name: adm.name, color: adm.color },
+        franja: franja ? { desde: franja.desde, hasta: franja.hasta } : null,
+        reuniones: reuniones.filter((r) => r.admin_id === adm.id),
+      };
+    });
+    dias.push({ fecha, esHoy: fecha === hoy, pasadoDia: fecha < hoy, lanes });
   }
-  return { dias, admins, dur };
+  return { dias, admins, dur, ahoraMin, hoy };
 }
 
 app.get('/agenda', requireAuth, requireSistema('cfd'), (req, res) => {
   const off = Math.max(-8, Math.min(8, parseInt(req.query.semana, 10) || 0));
   let deal = parseInt(req.query.deal, 10) ? db.prepare('SELECT id, empresa, panel, user_id, etapa FROM deals WHERE id = ?').get(parseInt(req.query.deal, 10)) : null;
   if (deal && (deal.panel !== 'cfd' || (req.user.role !== 'admin' && deal.user_id !== req.user.id))) deal = null;
-  const { dias, admins, dur } = armarSemana(off);
-  // En la leyenda solo figuran los admins que YA cargaron su disponibilidad (el color de cada uno no cambia).
-  const conDisp = new Set(db.prepare('SELECT DISTINCT admin_id FROM agenda_disponibilidad').all().map((r) => r.admin_id));
+  const sem = armarSemanaCal(off);
   const miDisp = req.user.role === 'admin' ? db.prepare('SELECT * FROM agenda_disponibilidad WHERE admin_id = ?').all(req.user.id) : [];
-  res.send(V.agendaPage({ user: req.user, dias, admins: admins.filter((a) => conDisp.has(a.id)), dur, off, deal, miDisp, hoy: hoyAR(), msg: clean(req.query.msg), err: clean(req.query.err) }));
+  res.send(V.agendaPage({ user: req.user, ...sem, off, deal, miDisp, msg: clean(req.query.msg), err: clean(req.query.err) }));
 });
 
 // Reservar un turno con un admin concreto, para una lead de CFD (su dueño o un admin).

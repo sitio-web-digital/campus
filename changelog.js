@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.45.0',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'mejora', texto: 'La agenda ahora es un calendario estilo Google: grilla de 00 a 24 hs con líneas por hora, los 7 días de la semana, la disponibilidad de cada admin como carril de su color, la línea roja de "ahora" en el día de hoy y las reuniones como bloques posicionados a su hora.' },
+      { tipo: 'nuevo', texto: 'Al tocar un hueco libre se abre una ventana modal con el detalle (con quién, día y hora), la modalidad y el botón Agendar; al tocar una reunión, su modal con todos los datos, link a la lead y cancelar. En celular la grilla se desplaza horizontal como cualquier calendario.' },
+    ],
+  },
+  {
     version: '2.44.1',
     fecha: '2026-09-06',
     cambios: [

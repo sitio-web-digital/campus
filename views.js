@@ -985,31 +985,43 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 .umenu-pop form { display:contents; }
 @media (max-width:640px) { .umenu-pop { position:fixed; top:3.3rem; right:.5rem; } }
 
-/* ---------- agenda de reuniones ---------- */
-.ag2-leyenda { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin:0 0 .7rem; }
-.ag2-quien { display:inline-flex; gap:.4rem; align-items:center; font-size:.78rem; font-weight:600; border:1px solid var(--line); border-left:4px solid var(--ac); border-radius:99px; padding:.18rem .6rem .18rem .3rem; background:var(--surface); }
-.ag2-quien .avatar { width:1.35rem; height:1.35rem; font-size:.55rem; }
-.ag2-grid { display:grid; grid-template-columns:repeat(var(--agcols, 5), 1fr); gap:.6rem; align-items:start; }
-@media (max-width: 980px) { .ag2-grid { grid-template-columns:repeat(2, 1fr); } }
-@media (max-width: 560px) { .ag2-grid { grid-template-columns:1fr; } }
-.ag2-dia { background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--sh); overflow:hidden; }
-.ag2-dia.ag2-hoy { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), var(--sh); }
-.ag2-cab { display:flex; gap:.45rem; align-items:baseline; padding:.55rem .7rem; background:var(--surface2); border-bottom:1px solid var(--line); }
-.ag2-dsem { font-size:.68rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
-.ag2-dnum { font-size:.85rem; font-weight:700; }
-.ag2-tag-hoy { margin-left:auto; font-size:.55rem; font-weight:800; letter-spacing:.1em; color:#fff; background:var(--accent); border-radius:4px; padding:.1rem .35rem; }
-.ag2-fila { display:flex; gap:.5rem; padding:.4rem .6rem; border-top:1px solid var(--line); align-items:flex-start; }
-.ag2-fila:first-of-type { border-top:none; }
-.ag2-hora { font-size:.7rem; font-weight:700; color:var(--faint); font-variant-numeric:tabular-nums; padding-top:.25rem; min-width:2.6rem; }
-.ag2-celdas { display:flex; flex-wrap:wrap; gap:.3rem; flex:1; min-width:0; }
-.ag2-libre { font-size:.7rem; font-weight:600; color:var(--muted); border:1px dashed var(--line2); border-left:3px solid var(--ac); border-radius:7px; padding:.22rem .5rem; background:none; }
-.ag2-clic { cursor:pointer; font:inherit; font-size:.7rem; font-weight:700; color:var(--ink); border:1px solid var(--ac); border-left:3px solid var(--ac); background:var(--surface); transition:transform .1s, background .1s; }
-.ag2-clic:hover { background:var(--accent-soft); transform:translateY(-1px); }
-.ag2-pasado { opacity:.35; }
-.ag2-reu { border-left:4px solid var(--ac); background:var(--surface2); border-radius:8px; padding:.32rem .55rem; min-width:0; max-width:100%; display:flex; flex-direction:column; gap:.05rem; box-shadow:var(--sh); }
-.ag2-emp { font-size:.76rem; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:12rem; }
-.ag2-det { font-size:.64rem; color:var(--muted); }
-.ag2-cancelar { background:none; border:none; color:#E05550; font-size:.62rem; font-weight:700; cursor:pointer; padding:0; text-align:left; }
+/* ---------- agenda de reuniones (calendario) ---------- */
+.ag2-leyenda { display:flex; gap:.55rem; align-items:center; flex-wrap:wrap; margin:0 0 .7rem; }
+.ag2-quien { display:inline-flex; gap:.4rem; align-items:center; font-size:.76rem; font-weight:600; border:1px solid var(--line); border-left:4px solid var(--ac); border-radius:99px; padding:.16rem .6rem .16rem .28rem; background:var(--surface); }
+.ag2-quien .avatar { width:1.3rem; height:1.3rem; font-size:.52rem; }
+
+.cal-marco { background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--sh); overflow:hidden; }
+.cal-cabecera { display:grid; grid-template-columns:3.4rem repeat(7, 1fr); border-bottom:1px solid var(--line); background:var(--surface2); }
+.cal-diacab { padding:.45rem .3rem; text-align:center; border-left:1px solid var(--line); }
+.cal-diacab .cal-dsem { display:block; font-size:.58rem; font-weight:800; letter-spacing:.1em; color:var(--muted); }
+.cal-diacab .cal-dnum { display:inline-grid; place-items:center; width:1.7rem; height:1.7rem; border-radius:50%; font-size:.9rem; font-weight:700; margin-top:.1rem; }
+.cal-diacab.cal-eshoy .cal-dnum { background:var(--accent); color:#fff; }
+.cal-scroll { max-height:62vh; overflow-y:auto; }
+.cal-cuerpo { display:grid; grid-template-columns:3.4rem repeat(7, 1fr); position:relative; }
+.cal-horas { display:flex; flex-direction:column; }
+.cal-horas span { height:var(--hpx); font-size:.62rem; color:var(--faint); text-align:right; padding-right:.4rem; transform:translateY(-.5em); font-variant-numeric:tabular-nums; }
+.cal-horas span:first-child { transform:none; }
+.cal-col { position:relative; height:calc(var(--hpx) * 24); border-left:1px solid var(--line);
+  background-image:repeating-linear-gradient(to bottom, var(--line) 0, var(--line) 1px, transparent 1px, transparent var(--hpx)); }
+.cal-col.cal-eshoy { background-color:color-mix(in srgb, var(--accent) 4%, transparent); }
+.cal-ahora { position:absolute; left:0; right:0; height:2px; background:#E05550; z-index:5; }
+.cal-ahora::before { content:''; position:absolute; left:-4px; top:-3px; width:8px; height:8px; border-radius:50%; background:#E05550; }
+.cal-disp { position:absolute; background:color-mix(in srgb, var(--ac) 12%, transparent); border-left:3px solid var(--ac); border-radius:4px; }
+.cal-slot { position:absolute; background:none; border:none; cursor:pointer; z-index:2; border-radius:4px; }
+.cal-slot:hover { background:color-mix(in srgb, var(--ac) 28%, transparent); box-shadow:inset 0 0 0 1.5px var(--ac); }
+.cal-slot:disabled { cursor:default; }
+.cal-slot:disabled:hover { background:none; box-shadow:none; }
+.cal-reu { position:absolute; z-index:3; background:var(--ac); color:#fff; border-radius:6px; padding:.15rem .35rem; overflow:hidden; cursor:pointer; box-shadow:var(--sh); border:1px solid rgba(255,255,255,.25); display:flex; flex-direction:column; line-height:1.25; }
+.cal-reu strong { font-size:.62rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cal-reu span { font-size:.55rem; opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cal-reu:hover { filter:brightness(1.12); }
+@media (max-width: 760px) {
+  .cal-cabecera, .cal-cuerpo { grid-template-columns:2.6rem repeat(7, minmax(5.5rem, 1fr)); }
+  .cal-marco { overflow-x:auto; }
+  .cal-cabecera { min-width:44rem; }
+  .cal-cuerpo { min-width:44rem; }
+  .cal-scroll { max-height:58vh; }
+}
 
 /* ---------- panel de clientes ---------- */
 .pc-filtros { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin:0 0 .9rem; }
@@ -3038,77 +3050,130 @@ function asesorPage({ user, listo, limite, restantes, deal }) {
   });
 }
 
-/* --------- agenda de reuniones (CFD) --------- */
+/* --------- agenda de reuniones (CFD): calendario estilo Google --------- */
 
-function agendaPage({ user, dias, admins, dur, off, deal, miDisp = [], hoy, msg, err }) {
+function agendaPage({ user, dias, admins, dur, ahoraMin, hoy, off, deal, miDisp = [], msg, err }) {
   const esAdmin = user.role === 'admin';
-  const DIA_NOMBRE = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  const nombreDia = (f) => DIA_NOMBRE[new Date(f + 'T00:00:00Z').getUTCDay()];
-  const ddmm = (f) => `${+f.slice(8, 10)}/${+f.slice(5, 7)}`;
+  const DIA_CORTO = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+  const diaCorto = (f) => DIA_CORTO[new Date(f + 'T00:00:00Z').getUTCDay()];
   const MOD = { meet: 'Meet', presencial: 'Presencial', oficina: 'En la oficina' };
+  const min = (hhmm) => { const [h, m] = String(hhmm).split(':').map(Number); return h * 60 + (m || 0); };
   const nombreCorto = (n) => String(n || '').split(' ')[0];
   const miDias = miDisp.map((x) => x.dia);
+  const HPX = 48; // alto de una hora en píxeles
+  const px = (m) => Math.round((m / 60) * HPX);
   return layout({
     title: 'Agenda', user, active: 'agenda', sistema: 'comercial', msg, err,
     body: `
   <div class="toolbar" style="margin-bottom:.2rem">
     <h1 style="margin:0">Agenda de reuniones</h1>
     <div class="sp"></div>
-    <a class="btn secondary small" href="/agenda?semana=${off - 1}${deal ? `&deal=${deal.id}` : ''}">‹ Anterior</a>
-    ${off !== 0 ? `<a class="btn secondary small" href="/agenda${deal ? `?deal=${deal.id}` : ''}">Hoy</a>` : ''}
-    <a class="btn secondary small" href="/agenda?semana=${off + 1}${deal ? `&deal=${deal.id}` : ''}">Siguiente ›</a>
+    <a class="btn secondary small" href="/agenda?semana=${off - 1}${deal ? `&deal=${deal.id}` : ''}">‹</a>
+    <a class="btn secondary small" href="/agenda${deal ? `?deal=${deal.id}` : ''}" ${off === 0 ? 'style="opacity:.5;pointer-events:none"' : ''}>Hoy</a>
+    <a class="btn secondary small" href="/agenda?semana=${off + 1}${deal ? `&deal=${deal.id}` : ''}">›</a>
   </div>
   ${admins.length ? `<div class="ag2-leyenda">
     ${admins.map((a) => `<span class="ag2-quien" style="--ac:${a.color}">${avatar(a)}<span>${esc(a.name)}</span></span>`).join('')}
     <span class="small muted">· turnos de ${dur} min</span>
   </div>` : ''}
-  ${deal ? `<div class="flash ok" style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap">Agendando para <strong>${esc(deal.empresa)}</strong> — elegí la modalidad y tocá un horario libre de la persona con quien va la reunión.
-    <select id="agModalidad" style="width:auto; margin:0; padding:.3rem .45rem">
-      <option value="meet">Por Meet (videollamada)</option>
-      <option value="presencial">Presencial (vamos nosotros)</option>
-      <option value="oficina">En la oficina</option>
-    </select>
-    <a href="/agenda" class="small">cancelar</a></div>`
-  : `<p class="small muted" style="margin:.2rem 0 .8rem">Cada color es un administrador con su disponibilidad. Para agendar, entrá desde la lead con el botón "Agendar reunión".</p>`}
+  ${deal ? `<div class="flash ok">Agendando para <strong>${esc(deal.empresa)}</strong> — tocá un hueco libre de la persona con quien va la reunión. <a href="/agenda" class="small">cancelar</a></div>` : ''}
 
-  ${dias.length ? `<div class="ag2-grid" style="--agcols:${dias.length}">
-    ${dias.map((d) => `
-    <section class="ag2-dia ${d.fecha === hoy ? 'ag2-hoy' : ''}">
-      <header class="ag2-cab"><span class="ag2-dsem">${nombreDia(d.fecha)}</span><span class="ag2-dnum">${ddmm(d.fecha)}</span>${d.fecha === hoy ? '<span class="ag2-tag-hoy">HOY</span>' : ''}</header>
-      ${d.filas.map((fila) => `
-      <div class="ag2-fila">
-        <span class="ag2-hora">${fila.hora}</span>
-        <div class="ag2-celdas">
-          ${fila.celdas.map((c) => c.reunion ? `
-          <div class="ag2-reu" style="--ac:${c.admin ? c.admin.color : '#4A5568'}">
-            <a href="/deals/${c.reunion.deal_id}" class="ag2-emp">${esc(c.reunion.empresa)}</a>
-            <span class="ag2-det">${esc(nombreCorto(c.reunion.vendedor))} · ${MOD[c.reunion.modalidad] || 'Meet'}${c.admin ? ` · con ${esc(nombreCorto(c.admin.name))}` : ''}</span>
-            ${esAdmin || c.reunion.vendedor_id === user.id ? `<form method="post" action="/agenda/reuniones/${c.reunion.id}/cancelar" onsubmit="return confirm('¿Cancelar la reunión con ${esc(c.reunion.empresa)}?')"><button class="ag2-cancelar" title="Cancelar">Cancelar</button></form>` : ''}
-          </div>`
-          : c.pasado ? `<span class="ag2-libre ag2-pasado" style="--ac:${c.admin.color}">${esc(nombreCorto(c.admin.name))}</span>`
-          : deal ? `
-          <form method="post" action="/agenda/reservar" style="display:contents" onsubmit="return confirm('¿Agendar a ${esc(deal.empresa)} con ${esc(c.admin.name)} el ${nombreDia(d.fecha)} ${ddmm(d.fecha)} a las ${fila.hora} hs?')">
-            <input type="hidden" name="deal_id" value="${deal.id}"><input type="hidden" name="admin_id" value="${c.admin.id}"><input type="hidden" name="fecha" value="${d.fecha}"><input type="hidden" name="hora" value="${fila.hora}"><input type="hidden" name="modalidad" value="meet" class="ag-mod">
-            <button class="ag2-libre ag2-clic" style="--ac:${c.admin.color}" title="Agendar con ${esc(c.admin.name)}">${esc(nombreCorto(c.admin.name))}</button>
-          </form>`
-          : `<span class="ag2-libre" style="--ac:${c.admin.color}" title="${esc(c.admin.name)} disponible">${esc(nombreCorto(c.admin.name))}</span>`).join('')}
-        </div>
-      </div>`).join('')}
-    </section>`).join('')}
-  </div>` : '<div class="card"><p class="muted" style="margin:0">Nadie cargó disponibilidad todavía. ' + (esAdmin ? 'Cargá la tuya acá abajo y el calendario aparece solo.' : 'Pedile a un administrador que cargue sus horarios.') + '</p></div>'}
+  ${admins.length ? `
+  <div class="cal-marco">
+    <div class="cal-cabecera">
+      <span class="cal-esq"></span>
+      ${dias.map((d) => `<div class="cal-diacab ${d.esHoy ? 'cal-eshoy' : ''}"><span class="cal-dsem">${diaCorto(d.fecha)}</span><span class="cal-dnum">${+d.fecha.slice(8, 10)}</span></div>`).join('')}
+    </div>
+    <div class="cal-scroll" id="calScroll">
+      <div class="cal-cuerpo" style="--hpx:${HPX}px">
+        <div class="cal-horas">${Array.from({ length: 24 }, (x, h) => `<span>${String(h).padStart(2, '0')}:00</span>`).join('')}</div>
+        ${dias.map((d) => `
+        <div class="cal-col ${d.esHoy ? 'cal-eshoy' : ''}">
+          ${d.esHoy ? `<div class="cal-ahora" style="top:${px(ahoraMin)}px"></div>` : ''}
+          ${d.lanes.map((ln, li) => { const nl = d.lanes.length; const izq = (100 / nl) * li; const ancho = 100 / nl; return `
+            ${ln.franja ? `<div class="cal-disp" style="top:${px(min(ln.franja.desde))}px; height:${px(min(ln.franja.hasta) - min(ln.franja.desde))}px; left:${izq}%; width:${ancho}%; --ac:${ln.admin.color}"></div>` : ''}
+            ${ln.franja ? (() => { const botones = []; for (let m = min(ln.franja.desde); m + dur <= min(ln.franja.hasta); m += dur) {
+              const hora = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+              if (ln.reuniones.some((r) => r.hora === hora)) continue;
+              const pasado = d.pasadoDia || (d.esHoy && m <= ahoraMin);
+              botones.push(`<button type="button" class="cal-slot" ${pasado ? 'disabled' : ''} style="top:${px(m)}px; height:${px(dur)}px; left:${izq}%; width:${ancho}%; --ac:${ln.admin.color}"
+                data-admin="${ln.admin.id}" data-nombre="${esc(ln.admin.name)}" data-color="${ln.admin.color}" data-fecha="${d.fecha}" data-hora="${hora}" title="${esc(ln.admin.name)} · ${hora}"></button>`);
+            } return botones.join(''); })() : ''}
+            ${ln.reuniones.map((r) => `<div class="cal-reu" style="top:${px(min(r.hora))}px; height:${px(r.duracion || dur)}px; left:${izq}%; width:${ancho}%; --ac:${ln.admin.color}"
+              data-id="${r.id}" data-empresa="${esc(r.empresa)}" data-deal="${r.deal_id}" data-vendedor="${esc(r.vendedor)}" data-mod="${MOD[r.modalidad] || 'Meet'}" data-admin="${esc(ln.admin.name)}" data-hora="${r.hora}" data-fecha="${d.fecha}" data-puede="${esAdmin || r.vendedor_id === user.id ? '1' : '0'}">
+              <strong>${esc(r.empresa)}</strong><span>${esc(nombreCorto(r.vendedor))} · ${MOD[r.modalidad] || 'Meet'}</span>
+            </div>`).join('')}`; }).join('')}
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>` : `<div class="card"><p class="muted" style="margin:0">Nadie cargó disponibilidad todavía. ${esAdmin ? 'Cargá la tuya acá abajo y el calendario aparece solo.' : 'Pedile a un administrador que cargue sus horarios.'}</p></div>`}
+
+  <div class="modal-back modal-carga" id="calModal">
+    <div class="modal" style="max-width:26rem">
+      <div class="modal-h"><h2 id="cmTitulo">Reunión</h2><button type="button" class="modal-x" onclick="document.getElementById('calModal').classList.remove('abierto')" aria-label="Cerrar">&times;</button></div>
+      <div id="cmInfo" class="small" style="line-height:1.9"></div>
+      <form method="post" action="/agenda/reservar" id="cmReservar" hidden>
+        <input type="hidden" name="deal_id" value="${deal ? deal.id : ''}">
+        <input type="hidden" name="admin_id" id="cmAdmin"><input type="hidden" name="fecha" id="cmFecha"><input type="hidden" name="hora" id="cmHora">
+        <label>Modalidad</label>
+        <select name="modalidad">
+          <option value="meet">Por Meet (videollamada)</option>
+          <option value="presencial">Presencial (vamos nosotros)</option>
+          <option value="oficina">En la oficina</option>
+        </select>
+        <div style="margin-top:.9rem"><button class="btn" style="width:100%" id="cmConfirmar">Agendar</button></div>
+      </form>
+      <div id="cmSinDeal" hidden>
+        <p class="small muted">Para agendarle una reunión a un cliente, entrá desde su lead con el botón <strong>"Agendar reunión"</strong> — así queda vinculada a esa lead.</p>
+      </div>
+      <div id="cmDetalle" hidden>
+        <a class="btn secondary small" id="cmVerLead" href="#">Ver la lead</a>
+        <form method="post" action="#" id="cmCancelar" style="display:inline" onsubmit="return confirm('¿Cancelar esta reunión?')"><button class="btn danger small">Cancelar reunión</button></form>
+      </div>
+    </div>
+  </div>
 
   <script>
   (function () {
-    var sel = document.getElementById('agModalidad'); if (!sel) return;
-    function aplicar() { Array.prototype.forEach.call(document.querySelectorAll('.ag-mod'), function (i) { i.value = sel.value; }); }
-    sel.addEventListener('change', aplicar); aplicar();
+    var scroll = document.getElementById('calScroll');
+    if (scroll) scroll.scrollTop = ${Math.max(0, px(Math.min(...(admins.length ? dias.flatMap((d) => d.lanes.filter((l) => l.franja).map((l) => min(l.franja.desde))) : [480]), 480)) - 30)};
+    var modal = document.getElementById('calModal'), titulo = document.getElementById('cmTitulo'), info = document.getElementById('cmInfo');
+    var fReservar = document.getElementById('cmReservar'), sinDeal = document.getElementById('cmSinDeal'), detalle = document.getElementById('cmDetalle');
+    var HAY_DEAL = ${deal ? 'true' : 'false'};
+    function abrirModal() { modal.classList.add('abierto'); }
+    function linea(k, v) { return '<strong>' + k + ':</strong> ' + v + '<br>'; }
+    Array.prototype.forEach.call(document.querySelectorAll('.cal-slot'), function (b) {
+      b.addEventListener('click', function () {
+        var f = b.getAttribute('data-fecha').split('-');
+        titulo.textContent = 'Agendar con ' + b.getAttribute('data-nombre');
+        info.innerHTML = linea('Día', f[2] + '/' + f[1] + '/' + f[0]) + linea('Hora', b.getAttribute('data-hora') + ' hs (${dur} min)') + linea('Con', b.getAttribute('data-nombre'));
+        fReservar.hidden = !HAY_DEAL; sinDeal.hidden = HAY_DEAL; detalle.hidden = true;
+        document.getElementById('cmAdmin').value = b.getAttribute('data-admin');
+        document.getElementById('cmFecha').value = b.getAttribute('data-fecha');
+        document.getElementById('cmHora').value = b.getAttribute('data-hora');
+        abrirModal();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.cal-reu'), function (r) {
+      r.addEventListener('click', function () {
+        var f = r.getAttribute('data-fecha').split('-');
+        titulo.textContent = r.getAttribute('data-empresa');
+        info.innerHTML = linea('Día', f[2] + '/' + f[1] + '/' + f[0]) + linea('Hora', r.getAttribute('data-hora') + ' hs') + linea('Vendedor', r.getAttribute('data-vendedor')) + linea('Modalidad', r.getAttribute('data-mod')) + linea('Con', r.getAttribute('data-admin'));
+        fReservar.hidden = true; sinDeal.hidden = true; detalle.hidden = false;
+        document.getElementById('cmVerLead').href = '/deals/' + r.getAttribute('data-deal');
+        var fc = document.getElementById('cmCancelar');
+        fc.action = '/agenda/reuniones/' + r.getAttribute('data-id') + '/cancelar';
+        fc.style.display = r.getAttribute('data-puede') === '1' ? 'inline' : 'none';
+        abrirModal();
+      });
+    });
   })();
   </script>
 
   ${esAdmin ? `
   <div class="card" style="margin-top:1.1rem">
     <h3 style="margin-top:0">Mi disponibilidad</h3>
-    <p class="small muted" style="margin:.1rem 0 .6rem">Estos son TUS horarios para recibir reuniones — cada admin carga los suyos y sale con su color en el calendario.</p>
+    <p class="small muted" style="margin:.1rem 0 .6rem">Estos son TUS horarios para recibir reuniones — aparecés en el calendario recién cuando los cargás.</p>
     <form method="post" action="/agenda/mi-disponibilidad" class="perm-row" style="align-items:center">
       ${[[1, 'Lun'], [2, 'Mar'], [3, 'Mié'], [4, 'Jue'], [5, 'Vie'], [6, 'Sáb'], [0, 'Dom']].map(([n, lbl]) => `<label class="perm" style="text-transform:none;letter-spacing:0"><input type="checkbox" name="dias" value="${n}" ${miDias.includes(n) ? 'checked' : ''}> ${lbl}</label>`).join('')}
       <label class="perm" style="text-transform:none;letter-spacing:0">De <input type="time" name="desde" value="${esc(miDisp[0] ? miDisp[0].desde : '09:00')}" style="width:auto;display:inline-block;margin:0 .3rem"> a <input type="time" name="hasta" value="${esc(miDisp[0] ? miDisp[0].hasta : '18:00')}" style="width:auto;display:inline-block;margin-left:.3rem"></label>
