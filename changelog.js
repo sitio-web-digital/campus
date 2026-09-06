@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.36.1',
+    fecha: '2026-09-04',
+    cambios: [
+      { tipo: 'mejora', texto: 'MiniJuan cobró vida: mientras procesa aparece la burbuja de "escribiendo" con puntitos, el muñeco se mece pensando (mira para arriba y frunce la boca) y mueve la boca cuando responde. Siempre arranca minimizado — solo la cara — y la primera vez te saluda con un globito y un saltito en vez de abrirse solo.' },
+      { tipo: 'mejora', texto: 'Chat más lindo y responsive: cabecera con degradado, burbujas redondeadas (las tuyas en verde), botón de enviar circular, campo que crece al escribir y, en celular, ocupa la pantalla como una app de mensajería.' },
+    ],
+  },
+  {
     version: '2.36.0',
     fecha: '2026-09-04',
     cambios: [

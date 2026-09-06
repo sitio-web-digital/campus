@@ -116,34 +116,52 @@ function sysSwitch(sistema, user) {
   </details>`;
 }
 
-// MiniJuan: el asesor IA del equipo comercial. Dibujo (rubio, joven) + burbuja flotante con chat.
-const MINIJUAN_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#0E6E66"/><path d="M14 66c1-13 8-19 18-19s17 6 18 19z" fill="#1D6FB8"/><path d="M27 44h10v7c0 3-10 3-10 0z" fill="#F0BE8F"/><ellipse cx="32" cy="32" rx="15" ry="16.5" fill="#F6C99F"/><path d="M17 31c-1-12 6-19 15-19s16 7 15 19c-1-7-3-9-5-11-2 3-6 4-10 4s-8-1-10-4c-2 2-4 4-5 11z" fill="#F7D774"/><path d="M17 31c0 3 .8 5 2 6M47 31c0 3-.8 5-2 6" stroke="#F7D774" stroke-width="4" stroke-linecap="round"/><circle cx="26.5" cy="32" r="2" fill="#2B3A4D"/><circle cx="37.5" cy="32" r="2" fill="#2B3A4D"/><path d="M23.5 27.5c1.8-1.4 4-1.4 5.6-.3M34.9 27.2c1.6-1.1 3.8-1.1 5.6.3" stroke="#D9A94E" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M27 40c3 2.6 7 2.6 10 0" stroke="#B96A4B" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`;
+// MiniJuan: el asesor IA del equipo comercial. Dibujo (rubio, joven) con partes animables + burbuja flotante.
+const MINIJUAN_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#0E6E66"/><g class="mj-cara"><path d="M14 66c1-13 8-19 18-19s17 6 18 19z" fill="#1D6FB8"/><path d="M27 44h10v7c0 3-10 3-10 0z" fill="#F0BE8F"/><ellipse cx="32" cy="32" rx="15" ry="16.5" fill="#F6C99F"/><path d="M17 31c-1-12 6-19 15-19s16 7 15 19c-1-7-3-9-5-11-2 3-6 4-10 4s-8-1-10-4c-2 2-4 4-5 11z" fill="#F7D774"/><path d="M17 31c0 3 .8 5 2 6M47 31c0 3-.8 5-2 6" stroke="#F7D774" stroke-width="4" stroke-linecap="round"/><g class="mj-ojos"><circle cx="26.5" cy="32" r="2" fill="#2B3A4D"/><circle cx="37.5" cy="32" r="2" fill="#2B3A4D"/></g><path class="mj-cejas" d="M23.5 27.5c1.8-1.4 4-1.4 5.6-.3M34.9 27.2c1.6-1.1 3.8-1.1 5.6.3" stroke="#D9A94E" stroke-width="1.8" fill="none" stroke-linecap="round"/><path class="mj-boca" d="M27 40c3 2.6 7 2.6 10 0" stroke="#B96A4B" stroke-width="2.2" fill="none" stroke-linecap="round"/></g></svg>`;
 
-// Solo en paneles comerciales, para vendedores y admins. data-bienvenida abre el chat solo la primera vez.
+// Solo en paneles comerciales, para vendedores y admins. Siempre arranca minimizado (solo la cara);
+// la primera vez saluda con un globito y un salto, y recién al tocarlo se presenta.
 function miniJuanWidget(user, sistema) {
   if (!user || !['admin', 'vendedor'].includes(user.role)) return '';
   if (!['comercial', 'cfd', 'gondolas', 'estanterias', 'sitioweb'].includes(sistema)) return '';
   return `
 <div class="mj" id="mj" data-bienvenida="${user.ia_bienvenida ? '0' : '1'}">
   <div class="mj-panel" id="mjPanel" hidden>
-    <div class="mj-head">${MINIJUAN_SVG}<div><strong>MiniJuan</strong><small>Tu experto en desarrollo web y software a medida</small></div><button type="button" class="mj-x" id="mjCerrar" aria-label="Cerrar">&times;</button></div>
+    <div class="mj-head">${MINIJUAN_SVG}<div><strong>MiniJuan</strong><small id="mjEstado">Tu experto en desarrollo web y software a medida</small></div><button type="button" class="mj-x" id="mjCerrar" aria-label="Minimizar">&minus;</button></div>
     <div class="mj-ctx" id="mjCtx" hidden></div>
     <div class="mj-chat" id="mjChat"></div>
     <form class="mj-form" id="mjForm">
-      <textarea id="mjInput" rows="2" maxlength="1500" placeholder="Preguntale lo que quieras a MiniJuan…"></textarea>
-      <button class="btn" id="mjEnviar">Enviar</button>
+      <textarea id="mjInput" rows="1" maxlength="1500" placeholder="Escribile a MiniJuan…"></textarea>
+      <button class="mj-enviar" id="mjEnviar" aria-label="Enviar"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10L17 3l-3.5 14-4-5.5z"/><path d="M17 3L9.5 11.5"/></svg></button>
     </form>
   </div>
-  <button type="button" class="mj-burbuja" id="mjBurbuja" title="MiniJuan — preguntame lo que quieras" aria-label="Abrir el chat de MiniJuan">${MINIJUAN_SVG}</button>
+  <div class="mj-mini" id="mjMini">
+    <div class="mj-hola" id="mjHola" hidden>¡Hola! Soy <strong>MiniJuan</strong> 👋 Tocame y charlamos</div>
+    <button type="button" class="mj-burbuja" id="mjBurbuja" title="MiniJuan — preguntame lo que quieras" aria-label="Abrir el chat de MiniJuan">${MINIJUAN_SVG}</button>
+  </div>
 </div>
 <script>
 (function () {
   var mj = document.getElementById('mj'); if (!mj) return;
   var panel = document.getElementById('mjPanel'), chat = document.getElementById('mjChat'), form = document.getElementById('mjForm');
-  var ta = document.getElementById('mjInput'), btn = document.getElementById('mjEnviar'), burb = document.getElementById('mjBurbuja'), ctxBox = document.getElementById('mjCtx');
-  var ctxDeal = null, saludado = false;
+  var ta = document.getElementById('mjInput'), btn = document.getElementById('mjEnviar'), burb = document.getElementById('mjBurbuja');
+  var mini = document.getElementById('mjMini'), hola = document.getElementById('mjHola'), ctxBox = document.getElementById('mjCtx'), estado = document.getElementById('mjEstado');
+  var ctxDeal = null, saludado = false, timerHabla = null;
+  var primeraVez = mj.getAttribute('data-bienvenida') === '1';
+  if (primeraVez) { hola.hidden = false; burb.classList.add('mj-salta'); }
   function burbuja(t, c) { var d = document.createElement('div'); d.className = 'mj-msj ' + c; d.textContent = t; chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return d; }
-  function saludar(primeraVez) {
+  function escribiendo() {
+    var d = document.createElement('div'); d.className = 'mj-msj mj-bot mj-escribiendo';
+    for (var i = 0; i < 3; i++) d.appendChild(document.createElement('span'));
+    chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return d;
+  }
+  function pensar(si) { mj.classList.toggle('pensando', si); estado.textContent = si ? 'pensando…' : 'Tu experto en desarrollo web y software a medida'; }
+  function hablar() {
+    mj.classList.add('hablando'); estado.textContent = 'respondiendo';
+    clearTimeout(timerHabla);
+    timerHabla = setTimeout(function () { mj.classList.remove('hablando'); estado.textContent = 'Tu experto en desarrollo web y software a medida'; }, 2600);
+  }
+  function saludar() {
     if (saludado) return; saludado = true;
     fetch('/ia/historial').then(function (r) { return r.json(); }).then(function (h) {
       var items = (h && h.items) || [];
@@ -151,37 +169,41 @@ function miniJuanWidget(user, sistema) {
       burbuja(primeraVez
         ? '¡Hola! Soy MiniJuan 👋 Tu nuevo asesor con inteligencia artificial, experto en desarrollo web y software a medida. Estoy para ayudarte a vender: pegame el mensaje de un cliente y te armo la respuesta, preguntame cómo explicar algo técnico o cómo manejar una objeción de precio. Podés preguntarme lo que quieras, las veces que quieras hasta tu tope del día. ¡Dale, probame!'
         : (items.length ? '¡Seguimos cuando quieras! 👋 ¿En qué te ayudo ahora?' : '¡Hola de nuevo! 👋 Soy MiniJuan. ¿En qué te ayudo?'), 'mj-bot');
+      hablar();
       chat.scrollTop = chat.scrollHeight;
     }).catch(function () { burbuja('¡Hola! Soy MiniJuan 👋 ¿En qué te ayudo?', 'mj-bot'); });
   }
-  function abrir(primeraVez) { panel.hidden = false; burb.classList.add('mj-oculta'); saludar(primeraVez); ta.focus(); }
-  function cerrar() { panel.hidden = true; burb.classList.remove('mj-oculta'); }
-  burb.addEventListener('click', function () { abrir(false); });
+  function abrir() {
+    panel.hidden = false; mini.hidden = true;
+    if (primeraVez && !saludado) fetch('/ia/bienvenida', { method: 'POST' });
+    hola.hidden = true; burb.classList.remove('mj-salta');
+    saludar(); ta.focus();
+  }
+  function cerrar() { panel.hidden = true; mini.hidden = false; }
+  burb.addEventListener('click', abrir);
   document.getElementById('mjCerrar').addEventListener('click', cerrar);
   window.miniJuanAbrir = function (dealId, empresa) {
     ctxDeal = dealId || null;
     if (ctxDeal) { ctxBox.hidden = false; ctxBox.textContent = 'Hablando sobre la lead: ' + (empresa || ('#' + dealId)) + ' — MiniJuan ya conoce sus datos'; } else ctxBox.hidden = true;
-    abrir(false);
+    abrir();
   };
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var q = ta.value.trim(); if (!q || btn.disabled) return;
-    burbuja(q, 'mj-yo'); ta.value = ''; btn.disabled = true;
-    var esp = burbuja('MiniJuan está pensando…', 'mj-bot mj-esp');
+    burbuja(q, 'mj-yo'); ta.value = ''; ta.style.height = ''; btn.disabled = true;
+    var esp = escribiendo(); pensar(true);
     fetch('/ia/consulta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pregunta: q, deal_id: ctxDeal }) })
       .then(function (r) { return r.json(); })
       .then(function (r) {
-        esp.remove();
-        if (r.ok) burbuja(r.respuesta, 'mj-bot');
+        esp.remove(); pensar(false);
+        if (r.ok) { burbuja(r.respuesta, 'mj-bot'); hablar(); }
         else burbuja(r.error || 'No pude responder, probá de nuevo.', 'mj-bot mj-err');
         btn.disabled = false; ta.focus();
       })
-      .catch(function () { esp.remove(); burbuja('Error de conexión — probá de nuevo.', 'mj-bot mj-err'); btn.disabled = false; });
+      .catch(function () { esp.remove(); pensar(false); burbuja('Error de conexión — probá de nuevo.', 'mj-bot mj-err'); btn.disabled = false; });
   });
   ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
-  if (mj.getAttribute('data-bienvenida') === '1') {
-    setTimeout(function () { abrir(true); fetch('/ia/bienvenida', { method: 'POST' }); }, 900);
-  }
+  ta.addEventListener('input', function () { ta.style.height = ''; ta.style.height = Math.min(ta.scrollHeight, 110) + 'px'; });
 })();
 </script>`;
 }
@@ -914,33 +936,62 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 
 /* ---------- MiniJuan: burbuja flotante ---------- */
 .mj { position:fixed; right:1.1rem; bottom:1.1rem; z-index:150; }
-.mj-burbuja { width:58px; height:58px; border-radius:50%; border:2px solid rgba(255,255,255,.55); padding:0; overflow:hidden; cursor:pointer; box-shadow:var(--sh-lg); background:#0E6E66; transition:transform .15s; display:block; }
+.mj-mini { position:relative; }
+.mj-burbuja { width:60px; height:60px; border-radius:50%; border:2.5px solid rgba(255,255,255,.6); padding:0; overflow:hidden; cursor:pointer; box-shadow:0 6px 18px rgba(10,40,40,.35); background:#0E6E66; transition:transform .16s; display:block; }
 .mj-burbuja svg { width:100%; height:100%; display:block; }
-.mj-burbuja:hover { transform:scale(1.08); }
-.mj-burbuja.mj-oculta { display:none; }
-.mj-panel { position:fixed; right:1.1rem; bottom:1.1rem; width:min(24rem, calc(100vw - 1.4rem)); max-height:min(34rem, calc(100vh - 5rem)); background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--sh-lg); display:flex; flex-direction:column; overflow:hidden; }
-.mj-head { display:flex; gap:.6rem; align-items:center; padding:.65rem .8rem; background:#0E6E66; color:#fff; }
-.mj-head svg { width:2.4rem; height:2.4rem; border-radius:50%; flex-shrink:0; border:1.5px solid rgba(255,255,255,.4); }
-.mj-head strong { font-size:.95rem; }
-.mj-head small { display:block; font-size:.64rem; opacity:.85; line-height:1.3; }
-.mj-x { margin-left:auto; background:none; border:none; color:#fff; font-size:1.35rem; cursor:pointer; line-height:1; padding:.1rem .3rem; }
-.mj-ctx { font-size:.7rem; padding:.4rem .8rem; background:var(--accent-soft); color:var(--accent-ink); font-weight:600; }
-.mj-chat { flex:1; overflow-y:auto; padding:.7rem; display:flex; flex-direction:column; gap:.5rem; min-height:9rem; }
-.mj-msj { max-width:88%; padding:.5rem .7rem; border-radius:10px; font-size:.84rem; line-height:1.5; white-space:pre-wrap; overflow-wrap:break-word; }
-.mj-bot { background:var(--surface2); border:1px solid var(--line); align-self:flex-start; }
-.mj-yo { background:var(--accent-soft); align-self:flex-end; }
+.mj-burbuja:hover { transform:scale(1.09); }
+.mj-salta { animation: mj-bounce 2.6s ease-in-out infinite; }
+@keyframes mj-bounce { 0%, 78%, 100% { transform:translateY(0); } 84% { transform:translateY(-8px); } 90% { transform:translateY(0); } 95% { transform:translateY(-4px); } }
+.mj-hola { position:absolute; bottom:calc(100% + .55rem); right:.2rem; background:var(--surface); color:var(--ink); border:1px solid var(--line); box-shadow:var(--sh-md); border-radius:14px 14px 3px 14px; padding:.5rem .8rem; font-size:.8rem; white-space:nowrap; animation: mj-pop .45s ease-out; }
+@keyframes mj-pop { from { opacity:0; transform:translateY(6px) scale(.9); } }
+
+.mj-panel { position:fixed; right:1.1rem; bottom:1.1rem; width:min(24.5rem, calc(100vw - 1.4rem)); height:min(36rem, calc(100vh - 4.5rem)); background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:0 18px 50px rgba(8,20,30,.35); display:flex; flex-direction:column; overflow:hidden; animation: mj-abre .22s ease-out; }
+@keyframes mj-abre { from { opacity:0; transform:translateY(14px) scale(.96); } }
+.mj-head { display:flex; gap:.65rem; align-items:center; padding:.7rem .85rem; background:linear-gradient(135deg, #0E6E66, #0A544E); color:#fff; }
+.mj-head svg { width:2.6rem; height:2.6rem; border-radius:50%; flex-shrink:0; border:2px solid rgba(255,255,255,.45); }
+.mj-head strong { font-size:1rem; letter-spacing:.01em; }
+.mj-head small { display:block; font-size:.65rem; opacity:.85; line-height:1.3; }
+.mj-x { margin-left:auto; background:rgba(255,255,255,.12); border:none; color:#fff; font-size:1.2rem; cursor:pointer; line-height:1; width:1.8rem; height:1.8rem; border-radius:8px; }
+.mj-x:hover { background:rgba(255,255,255,.22); }
+.mj-ctx { font-size:.7rem; padding:.42rem .85rem; background:var(--accent-soft); color:var(--accent-ink); font-weight:600; }
+.mj-chat { flex:1; overflow-y:auto; padding:.8rem; display:flex; flex-direction:column; gap:.55rem; background:var(--bg); }
+.mj-msj { max-width:86%; padding:.55rem .75rem; font-size:.85rem; line-height:1.5; white-space:pre-wrap; overflow-wrap:break-word; box-shadow:var(--sh); }
+.mj-bot { background:var(--surface); border:1px solid var(--line); align-self:flex-start; border-radius:14px 14px 14px 4px; }
+.mj-yo { background:#0E6E66; color:#fff; align-self:flex-end; border-radius:14px 14px 4px 14px; }
+html.dark .mj-yo { background:#0E6E66; }
 .mj-esp { color:var(--muted); font-style:italic; }
 .mj-err { color:#E05550; }
-.mj-form { display:flex; gap:.45rem; padding:.55rem; border-top:1px solid var(--line); align-items:flex-end; }
-.mj-form textarea { flex:1; margin:0; }
-.mj-uso { display:flex; gap:.7rem; align-items:center; padding:.35rem 0; border-top:1px solid var(--line); flex-wrap:wrap; }
-.mj-uso input { width:5.5rem; margin:0; }
-.uso-bar { flex:1; min-width:8rem; height:.55rem; background:var(--surface2); border:1px solid var(--line); border-radius:99px; overflow:hidden; }
-.uso-bar span { display:block; height:100%; background:#0E6E66; border-radius:99px; transition:width .3s; }
-.uso-bar span.lleno { background:#E05550; }
+.mj-form { display:flex; gap:.5rem; padding:.6rem .7rem; border-top:1px solid var(--line); align-items:flex-end; background:var(--surface); }
+.mj-form textarea { flex:1; margin:0; resize:none; border-radius:12px; min-height:2.4rem; max-height:110px; }
+.mj-enviar { width:2.6rem; height:2.6rem; border-radius:50%; border:none; background:#0E6E66; color:#fff; cursor:pointer; flex-shrink:0; display:grid; place-items:center; transition:transform .12s, background .12s; }
+.mj-enviar svg { width:1.15rem; height:1.15rem; }
+.mj-enviar:hover { transform:scale(1.08); background:#0A544E; }
+.mj-enviar:disabled { opacity:.55; cursor:default; transform:none; }
+
+/* burbuja "escribiendo" (tres puntitos) */
+.mj-escribiendo { display:inline-flex; gap:.3rem; padding:.7rem .85rem; align-items:center; }
+.mj-escribiendo span { width:.44rem; height:.44rem; border-radius:50%; background:var(--muted); animation: mj-dot 1.1s ease-in-out infinite; }
+.mj-escribiendo span:nth-child(2) { animation-delay:.18s; }
+.mj-escribiendo span:nth-child(3) { animation-delay:.36s; }
+@keyframes mj-dot { 0%, 60%, 100% { transform:translateY(0); opacity:.4; } 30% { transform:translateY(-4px); opacity:1; } }
+
+/* animaciones del muñeco: piensa (se mece y mira arriba) y habla (mueve la boca) */
+.mj .mj-cara, .mj .mj-ojos, .mj .mj-boca { transform-box:fill-box; transform-origin:center; }
+.mj.pensando .mj-head .mj-cara { animation: mj-piensa 1.7s ease-in-out infinite; }
+@keyframes mj-piensa { 0%, 100% { transform:rotate(-3.5deg); } 50% { transform:rotate(3.5deg) translateY(-.8px); } }
+.mj.pensando .mj-head .mj-ojos { animation: mj-mira 1.7s ease-in-out infinite; }
+@keyframes mj-mira { 0%, 100% { transform:translate(-1px, -1.2px); } 50% { transform:translate(1.4px, -1.6px); } }
+.mj.pensando .mj-head .mj-boca { transform:scaleX(.55); }
+.mj.hablando .mj-head .mj-boca { animation: mj-habla .24s ease-in-out infinite alternate; }
+@keyframes mj-habla { from { transform:scaleY(.35) translateY(1px); } to { transform:scaleY(1.5); } }
+.mj.hablando .mj-head .mj-cara { animation: mj-asiente 1s ease-in-out infinite; }
+@keyframes mj-asiente { 0%, 100% { transform:translateY(0); } 50% { transform:translateY(1.1px); } }
+@media (prefers-reduced-motion: reduce) { .mj-salta, .mj.pensando .mj-head .mj-cara, .mj.pensando .mj-head .mj-ojos, .mj.hablando .mj-head .mj-boca, .mj.hablando .mj-head .mj-cara, .mj-escribiendo span { animation:none; } }
+
 @media (max-width:640px) {
   .mj { right:.7rem; bottom:4.6rem; }
-  .mj-panel { right:.55rem; left:.55rem; width:auto; bottom:4.6rem; max-height:calc(100vh - 8rem); }
+  .mj-panel { right:.5rem; left:.5rem; bottom:4.5rem; width:auto; height:auto; top:3.6rem; max-height:none; border-radius:14px; }
+  .mj-hola { white-space:normal; width:11.5rem; text-align:right; }
 }
 
 /* ---------- asesor IA ---------- */
