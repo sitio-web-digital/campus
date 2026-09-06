@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.44.1',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'fix', texto: 'La agenda ya no da por sentada la disponibilidad de nadie: cada admin aparece en el calendario recién cuando carga sus propios horarios en "Mi disponibilidad". Se limpiaron las franjas que se habían clonado automáticamente — cada administrador tiene que cargar la suya una vez.' },
+    ],
+  },
+  {
     version: '2.44.0',
     fecha: '2026-09-06',
     cambios: [

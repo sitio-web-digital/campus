@@ -352,15 +352,11 @@ db.exec(`CREATE TABLE IF NOT EXISTS agenda_disponibilidad (
   hasta TEXT NOT NULL,
   UNIQUE (admin_id, dia)
 );`);
-// Arranque: si nadie cargó disponibilidad todavía, cada admin activo hereda la franja global vieja (o L-V 9 a 18).
-if (db.prepare('SELECT COUNT(*) AS c FROM agenda_disponibilidad').get().c === 0) {
-  const val = (k, def) => { const r = db.prepare("SELECT valor FROM panel_config WHERE panel = '_agenda' AND clave = ?").get(k); return r ? r.valor : def; };
-  const dias = String(val('dias', '1,2,3,4,5')).split(',').map((n) => parseInt(n, 10)).filter((n) => n >= 0 && n <= 6);
-  const desde = val('desde', '09:00'), hasta = val('hasta', '18:00');
-  const insD = db.prepare('INSERT OR IGNORE INTO agenda_disponibilidad (admin_id, dia, desde, hasta) VALUES (?, ?, ?, ?)');
-  for (const adm of db.prepare("SELECT id FROM users WHERE active = 1 AND role = 'admin'").all()) {
-    for (const d of dias) insD.run(adm.id, d, desde, hasta);
-  }
+// 2.44.1: la disponibilidad NO se hereda ni se siembra: cada admin aparece en la agenda recién
+// cuando carga la suya. Limpieza única de las franjas que la 2.44.0 había clonado a todos.
+if (!db.prepare("SELECT 1 FROM panel_config WHERE panel = '_agenda' AND clave = 'sin_semilla'").get()) {
+  db.exec('DELETE FROM agenda_disponibilidad');
+  db.exec("INSERT OR IGNORE INTO panel_config (panel, clave, valor) VALUES ('_agenda', 'sin_semilla', '1')");
 }
 
 // 2.42.0: estado del negocio según Google (operativo / cerrado temporal; los cerrados definitivos no se cargan).

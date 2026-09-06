@@ -1762,8 +1762,10 @@ app.get('/agenda', requireAuth, requireSistema('cfd'), (req, res) => {
   let deal = parseInt(req.query.deal, 10) ? db.prepare('SELECT id, empresa, panel, user_id, etapa FROM deals WHERE id = ?').get(parseInt(req.query.deal, 10)) : null;
   if (deal && (deal.panel !== 'cfd' || (req.user.role !== 'admin' && deal.user_id !== req.user.id))) deal = null;
   const { dias, admins, dur } = armarSemana(off);
+  // En la leyenda solo figuran los admins que YA cargaron su disponibilidad (el color de cada uno no cambia).
+  const conDisp = new Set(db.prepare('SELECT DISTINCT admin_id FROM agenda_disponibilidad').all().map((r) => r.admin_id));
   const miDisp = req.user.role === 'admin' ? db.prepare('SELECT * FROM agenda_disponibilidad WHERE admin_id = ?').all(req.user.id) : [];
-  res.send(V.agendaPage({ user: req.user, dias, admins, dur, off, deal, miDisp, hoy: hoyAR(), msg: clean(req.query.msg), err: clean(req.query.err) }));
+  res.send(V.agendaPage({ user: req.user, dias, admins: admins.filter((a) => conDisp.has(a.id)), dur, off, deal, miDisp, hoy: hoyAR(), msg: clean(req.query.msg), err: clean(req.query.err) }));
 });
 
 // Reservar un turno con un admin concreto, para una lead de CFD (su dueño o un admin).

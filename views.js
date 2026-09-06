@@ -3058,10 +3058,10 @@ function agendaPage({ user, dias, admins, dur, off, deal, miDisp = [], hoy, msg,
     ${off !== 0 ? `<a class="btn secondary small" href="/agenda${deal ? `?deal=${deal.id}` : ''}">Hoy</a>` : ''}
     <a class="btn secondary small" href="/agenda?semana=${off + 1}${deal ? `&deal=${deal.id}` : ''}">Siguiente ›</a>
   </div>
-  <div class="ag2-leyenda">
+  ${admins.length ? `<div class="ag2-leyenda">
     ${admins.map((a) => `<span class="ag2-quien" style="--ac:${a.color}">${avatar(a)}<span>${esc(a.name)}</span></span>`).join('')}
     <span class="small muted">· turnos de ${dur} min</span>
-  </div>
+  </div>` : ''}
   ${deal ? `<div class="flash ok" style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap">Agendando para <strong>${esc(deal.empresa)}</strong> — elegí la modalidad y tocá un horario libre de la persona con quien va la reunión.
     <select id="agModalidad" style="width:auto; margin:0; padding:.3rem .45rem">
       <option value="meet">Por Meet (videollamada)</option>
