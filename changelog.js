@@ -2,6 +2,16 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.37.0',
+    fecha: '2026-09-04',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Panel de MiniJuan con la plata a la vista: gasto del mes, gastado total y crédito restante en USD con barra de saldo — cargás una vez cuánto crédito pusiste en Anthropic y el sistema descuenta solo, valuando cada consulta según el modelo con que se hizo.' },
+      { tipo: 'nuevo', texto: 'Nueva página "Conversaciones con MiniJuan": todas las charlas de los vendedores guardadas y navegables por día y por vendedor, con la lead sobre la que preguntaron y sus tokens — para analizar qué consultan y detectar qué reforzar en el Campus.' },
+      { tipo: 'mejora', texto: 'La configuración de límites por vendedor ahora es una tabla prolija: vendedor, barra de uso de hoy (X/tope), consumo del mes y límite propio, alineado y apilable en celular.' },
+      { tipo: 'mejora', texto: 'MiniJuan enfocado: experto en VENDER páginas web, ecommerce y sistemas a medida (y dudas de clientes sobre eso). Cualquier pregunta fuera de esos temas la rechaza directamente. Y responde más corto: 3 a 6 líneas salvo que le pidas detalle.' },
+    ],
+  },
+  {
     version: '2.36.3',
     fecha: '2026-09-04',
     cambios: [

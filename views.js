@@ -1012,6 +1012,28 @@ html.dark .mj-yo { background:#0E6E66; }
   .mj-hola { white-space:normal; width:11.5rem; text-align:right; }
 }
 
+.uso-bar { flex:1; min-width:8rem; height:.55rem; background:var(--surface2); border:1px solid var(--line); border-radius:99px; overflow:hidden; }
+.uso-bar span { display:block; height:100%; background:#0E6E66; border-radius:99px; transition:width .3s; }
+.uso-bar span.lleno { background:#E05550; }
+.mj-saldo { display:flex; gap:.8rem; align-items:center; margin:0 0 .8rem; flex-wrap:wrap; }
+.mj-saldo .uso-bar { flex:1; min-width:12rem; }
+.mj-tabla { border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+.mj-fila { display:grid; grid-template-columns:minmax(11rem, 1.2fr) 1.4fr 1fr 6.5rem; gap:.7rem; align-items:center; padding:.5rem .7rem; border-top:1px solid var(--line); }
+.mj-fila:first-child { border-top:none; }
+.mj-fila:nth-child(even) { background:var(--surface2); }
+.mj-cab { background:var(--surface2); font-size:.62rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+.mj-fila input { width:100%; max-width:6rem; margin:0; }
+.mj-uso-celda { display:flex; align-items:center; gap:.55rem; }
+.mj-uso-celda em { font-style:normal; font-size:.72rem; font-weight:700; min-width:3.4rem; font-variant-numeric:tabular-nums; }
+@media (max-width:760px) {
+  .mj-cab { display:none; }
+  .mj-fila { grid-template-columns:1fr 1fr; }
+  .mj-fila .ucel { grid-column:1 / -1; }
+}
+
+.conv-p { font-size:.86rem; font-weight:600; padding:.45rem .65rem; background:var(--accent-soft); border-radius:10px 10px 10px 3px; margin-bottom:.4rem; white-space:pre-wrap; }
+.conv-r { font-size:.84rem; color:var(--muted); padding:.45rem .65rem; background:var(--surface2); border:1px solid var(--line); border-radius:10px 10px 3px 10px; white-space:pre-wrap; }
+
 /* ---------- asesor IA ---------- */
 .ia-chat { display:flex; flex-direction:column; gap:.6rem; max-height:60vh; overflow-y:auto; padding:1rem; }
 .ia-msj { max-width:44rem; padding:.6rem .85rem; border-radius:12px; font-size:.88rem; line-height:1.55; white-space:pre-wrap; }
@@ -2224,16 +2246,24 @@ function adminPreferenciasPage({ user, prefs = {}, ia = null }) {
   ${ia ? `
   <div class="card">
     <h3 style="margin-top:0">MiniJuan — el asesor IA del equipo</h3>
-    <p class="small muted">MiniJuan vive como burbuja abajo a la derecha de los paneles comerciales y responde usando la API de Claude. La clave vive en el servidor (variable ANTHROPIC_API_KEY): ${ia.keyOk ? '<strong style="color:#2E7D4F">configurada ✓</strong>' : '<strong style="color:#E05550">FALTA — el asesor no responde sin ella</strong>'}.</p>
-    <div class="tiles" style="margin-bottom:.8rem">
+    <p class="small muted">MiniJuan vive como burbuja abajo a la derecha de los paneles comerciales y responde usando la API de Claude. Todas las charlas quedan guardadas: <a href="/admin/ia/conversaciones"><strong>ver las conversaciones por día y vendedor →</strong></a> La clave vive en el servidor (variable ANTHROPIC_API_KEY): ${ia.keyOk ? '<strong style="color:#2E7D4F">configurada ✓</strong>' : '<strong style="color:#E05550">FALTA — el asesor no responde sin ella</strong>'}.</p>
+    <div class="tiles" style="margin-bottom:.6rem">
       <div class="tile"><div class="v">${ia.hoy}</div><div class="l">consultas hoy (equipo)</div></div>
       <div class="tile"><div class="v">${ia.mes.n}</div><div class="l">consultas este mes</div></div>
-      <div class="tile"><div class="v">$${ia.costoMes.toFixed(2)}</div><div class="l">gasto estimado del mes (USD)</div></div>
+      <div class="tile"><div class="v">$${ia.costoMes.toFixed(2)}</div><div class="l">gasto del mes (USD)</div></div>
+      <div class="tile"><div class="v">$${ia.gastoTotal.toFixed(2)}</div><div class="l">gastado en total (USD)</div></div>
+      <div class="tile"><div class="v" style="color:${ia.credito > 0 && ia.restante < ia.credito * 0.15 ? '#E05550' : '#2E7D4F'}">${ia.credito > 0 ? '$' + ia.restante.toFixed(2) : '—'}</div><div class="l">crédito restante (USD)</div></div>
     </div>
+    ${ia.credito > 0 ? (() => { const pct = Math.min(100, Math.round((ia.gastoTotal / ia.credito) * 100)); return `
+    <div class="mj-saldo">
+      <div class="uso-bar" style="height:.7rem"><span class="${pct >= 85 ? 'lleno' : ''}" style="width:${pct}%"></span></div>
+      <span class="small muted">usado $${ia.gastoTotal.toFixed(2)} de $${ia.credito.toFixed(2)} cargados (${pct}%) — queda $${ia.restante.toFixed(2)}</span>
+    </div>`; })() : '<p class="small muted" style="margin:.1rem 0 .6rem">💡 Cargá abajo cuánto crédito pusiste en console.anthropic.com y acá vas a ver cuánta plata va quedando.</p>'}
     <form method="post" action="/admin/ia">
       <div class="grid2">
         <div><label>Estado</label><select name="activo"><option value="1" ${ia.activo ? 'selected' : ''}>Activo</option><option value="0" ${ia.activo ? '' : 'selected'}>Desactivado</option></select></div>
         <div><label>Tope de consultas por vendedor por día</label><input name="limite" type="number" min="1" max="200" value="${ia.limite}"></div>
+        <div><label>Crédito cargado en Anthropic (USD)</label><input name="credito" type="number" min="0" step="0.01" value="${ia.credito || ''}" placeholder="Ej: 20"></div>
       </div>
       <label>Modelo</label>
       <select name="modelo">${Object.entries(ia.modelos).map(([id, m]) => `<option value="${id}" ${id === ia.modelo ? 'selected' : ''}>${esc(m.nombre)} — $${m.entrada}/$${m.salida} por millón de tokens</option>`).join('')}</select>
@@ -2242,16 +2272,20 @@ function adminPreferenciasPage({ user, prefs = {}, ia = null }) {
       <div style="margin-top:.8rem"><button class="btn">Guardar asesor</button></div>
     </form>
 
-    <h4 style="margin:1.1rem 0 .3rem">Uso y límite por vendedor</h4>
-    <p class="small muted" style="margin:0 0 .5rem">La barra muestra cuánto usó hoy cada uno contra su tope. Poné un número para darle un límite propio; vacío = usa el tope general (${ia.limite}).</p>
+    <h4 style="margin:1.2rem 0 .25rem">Uso y límite por vendedor</h4>
+    <p class="small muted" style="margin:0 0 .55rem">La barra es el uso de <strong>hoy</strong> contra el tope de cada uno. "Límite propio" vacío = usa el tope general (${ia.limite}).</p>
     <form method="post" action="/admin/ia/limites">
-      ${(ia.vendedores || []).map((v) => { const lim = v.ia_limite || ia.limite; const pct = Math.min(100, Math.round((v.hoy / lim) * 100)); return `
-      <div class="mj-uso">
-        <div class="ucel" style="min-width:14rem">${avatar(v)}<div><strong>${esc(v.name)}</strong><div class="small muted">hoy ${v.hoy} de ${lim} · mes: ${v.mes.n} consulta${v.mes.n === 1 ? '' : 's'} · ${v.mes.t} tokens</div></div></div>
-        <div class="uso-bar" title="${v.hoy} de ${lim} hoy"><span class="${pct >= 100 ? 'lleno' : ''}" style="width:${pct}%"></span></div>
-        <input name="limite_${v.id}" type="number" min="1" max="200" value="${v.ia_limite || ''}" placeholder="${ia.limite}" title="Límite propio (vacío = general)">
-      </div>`; }).join('')}
-      <div style="margin-top:.6rem"><button class="btn small">Guardar límites</button></div>
+      <div class="mj-tabla">
+        <div class="mj-fila mj-cab"><span>Vendedor</span><span>Uso de hoy</span><span>Este mes</span><span>Límite propio</span></div>
+        ${(ia.vendedores || []).map((v) => { const lim = v.ia_limite || ia.limite; const pct = Math.min(100, Math.round((v.hoy / lim) * 100)); return `
+        <div class="mj-fila">
+          <span class="ucel">${avatar(v)}<strong>${esc(v.name)}</strong></span>
+          <span class="mj-uso-celda"><span class="uso-bar"><span class="${pct >= 100 ? 'lleno' : ''}" style="width:${pct}%"></span></span><em>${v.hoy}/${lim}</em></span>
+          <span class="small muted">${v.mes.n} consulta${v.mes.n === 1 ? '' : 's'} · ${(v.mes.t / 1000).toFixed(1)}k tokens</span>
+          <span><input name="limite_${v.id}" type="number" min="1" max="200" value="${v.ia_limite || ''}" placeholder="${ia.limite}" title="Límite diario propio (vacío = general)"></span>
+        </div>`; }).join('')}
+      </div>
+      <div style="margin-top:.7rem"><button class="btn small">Guardar límites</button></div>
     </form>
     ${ia.ultimas.length ? `
     <details style="margin-top:.9rem"><summary class="small" style="cursor:pointer"><strong>Últimas ${ia.ultimas.length} consultas del equipo</strong></summary>
@@ -2863,6 +2897,40 @@ function asesorPage({ user, listo, limite, restantes, deal }) {
     ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
   })();
   </script>`
+  });
+}
+
+/* --------- conversaciones con MiniJuan (admin) --------- */
+
+function iaConversacionesPage({ user, fecha: fechaSel, vendedorId, filas, dias, vendedores, hoy }) {
+  const totalTokens = filas.reduce((acu, c) => acu + c.tokens_in + c.tokens_out, 0);
+  return layout({
+    title: 'Conversaciones con MiniJuan', user, active: 'preferencias', sistema: 'admin',
+    body: `
+  <p style="margin:0 0 .5rem"><a href="/admin/preferencias" class="small">‹ Volver a Preferencias</a></p>
+  <div class="toolbar" style="margin-bottom:.2rem">
+    <h1 style="margin:0">Conversaciones con MiniJuan</h1>
+    <div class="sp"></div>
+    <form method="get" action="/admin/ia/conversaciones" class="cfg-inline" style="flex:0">
+      <select name="fecha" onchange="this.form.submit()" style="width:auto">
+        ${dias.length ? dias.map((d) => `<option value="${d.f}" ${d.f === fechaSel ? 'selected' : ''}>${d.f === hoy ? 'Hoy' : fecha(d.f)} · ${d.n}</option>`).join('') : `<option value="${fechaSel}" selected>${fechaSel === hoy ? 'Hoy' : fecha(fechaSel)}</option>`}
+      </select>
+      <select name="vendedor" onchange="this.form.submit()" style="width:auto">
+        <option value="">— Todos —</option>
+        ${vendedores.map((v) => `<option value="${v.id}" ${v.id === vendedorId ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}
+      </select>
+    </form>
+  </div>
+  <p class="small muted">${filas.length} consulta${filas.length === 1 ? '' : 's'} el ${fechaSel === hoy ? 'día de hoy' : fecha(fechaSel)}${vendedorId ? '' : ' (todo el equipo)'} · ${(totalTokens / 1000).toFixed(1)}k tokens. Leerlas te dice qué les falta al equipo: lo que le preguntan mucho a MiniJuan es lo que conviene reforzar en el Campus.</p>
+  ${filas.length ? filas.map((c) => `
+  <div class="card" style="padding:.75rem .95rem">
+    <div class="small" style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin-bottom:.4rem">
+      <span class="ucel">${avatar({ id: c.user_id, name: c.name, avatar: c.avatar })}<strong>${esc(c.name)}</strong></span>
+      <span class="muted">· ${fechaHora(c.created_at)}${c.deal_id ? ` · sobre la lead <a href="/deals/${c.deal_id}">${esc(c.empresa || '#' + c.deal_id)}</a>` : ''} · ${c.tokens_in + c.tokens_out} tokens</span>
+    </div>
+    <div class="conv-p">${esc(c.pregunta)}</div>
+    <div class="conv-r">${esc(c.respuesta)}</div>
+  </div>`).join('') : '<div class="card"><p class="muted" style="margin:0">No hubo consultas ese día.</p></div>'}`
   });
 }
 
@@ -4265,7 +4333,7 @@ function changelogPage({ user, versiones }) {
 }
 
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusCursoPage, campusQuizPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,

@@ -791,12 +791,19 @@ app.get('/admin/comunicacion', requireAuth, requireAdmin, (req, res) => {
 app.get('/admin/preferencias', requireAuth, requireAdmin, (req, res) => {
   let prefs = {}; try { prefs = JSON.parse(db.prepare('SELECT notif_prefs FROM users WHERE id = ?').get(req.user.id).notif_prefs || '{}'); } catch {}
   const cfgIA = iaConfig();
-  const mesIA = db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(tokens_in),0) AS ti, COALESCE(SUM(tokens_out),0) AS tsal FROM ia_consultas WHERE substr(datetime(created_at, '-3 hours'), 1, 7) = ?").get(hoyAR().slice(0, 7));
-  const precio = IA_MODELOS[cfgIA.modelo];
+  // Gasto real: cada consulta guardó con qué modelo se hizo, así que se valúa fila por fila.
+  const costoIA = (soloMes) => db.prepare(`SELECT modelo, COALESCE(SUM(tokens_in),0) AS ti, COALESCE(SUM(tokens_out),0) AS tsal, COUNT(*) AS n
+      FROM ia_consultas ${soloMes ? "WHERE substr(datetime(created_at, '-3 hours'), 1, 7) = ?" : ''} GROUP BY modelo`)
+    .all(...(soloMes ? [hoyAR().slice(0, 7)] : []))
+    .reduce((acc, r) => {
+      const m = IA_MODELOS[r.modelo] || IA_MODELOS[Object.keys(IA_MODELOS).find((k) => String(r.modelo || '').startsWith(k))] || IA_MODELOS[cfgIA.modelo];
+      acc.usd += (r.ti / 1e6) * m.entrada + (r.tsal / 1e6) * m.salida; acc.n += r.n; return acc;
+    }, { usd: 0, n: 0 });
+  const mesIA = costoIA(true), totalIA = costoIA(false);
   res.send(V.adminPreferenciasPage({ user: req.user, prefs, ia: {
     ...cfgIA, keyOk: !!process.env.ANTHROPIC_API_KEY, modelos: IA_MODELOS,
     hoy: db.prepare("SELECT COUNT(*) AS c FROM ia_consultas WHERE substr(datetime(created_at, '-3 hours'), 1, 10) = ?").get(hoyAR()).c,
-    mes: mesIA, costoMes: (mesIA.ti / 1e6) * precio.entrada + (mesIA.tsal / 1e6) * precio.salida,
+    mes: mesIA, costoMes: mesIA.usd, gastoTotal: totalIA.usd, restante: Math.max(0, cfgIA.credito - totalIA.usd),
     vendedores: db.prepare("SELECT id, name, avatar, ia_limite FROM users WHERE active = 1 AND role = 'vendedor' ORDER BY name").all().map((v) => ({
       ...v, hoy: iaConsultasHoy(v.id),
       mes: db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(tokens_in + tokens_out), 0) AS t FROM ia_consultas WHERE user_id = ? AND substr(datetime(created_at, '-3 hours'), 1, 7) = ?").get(v.id, hoyAR().slice(0, 7)),
@@ -1593,6 +1600,7 @@ const IA_MODELOS = {
 };
 const iaConfig = () => ({
   activo: getPanelConfig('_ia', 'activo', '1') === '1',
+  credito: Math.max(0, parseFloat(getPanelConfig('_ia', 'credito')) || 0),
   limite: Math.max(1, parseInt(getPanelConfig('_ia', 'limite_dia'), 10) || 20),
   modelo: IA_MODELOS[getPanelConfig('_ia', 'modelo')] ? getPanelConfig('_ia', 'modelo') : 'claude-haiku-4-5',
   contexto: getPanelConfig('_ia', 'contexto', '') || '',
@@ -1603,17 +1611,17 @@ const iaLimiteDe = (u) => Math.max(1, parseInt(u.ia_limite, 10) || iaConfig().li
 
 // Quién es el asesor: experto en desarrollo web/software a medida que ayuda a responder clientes.
 // Este texto es estable a propósito: se cachea (prompt caching) y baja el costo de cada consulta.
-const IA_BASE = `Te llamás MiniJuan y sos el asesor IA del equipo comercial de Cloud For Deploy, una empresa argentina que vende desarrollo web y software a medida (sitios, sistemas de gestión, apps, tiendas online; proyectos únicos o suscripción mensual).
+const IA_BASE = `Te llamás MiniJuan y sos el asesor IA del equipo comercial de Cloud For Deploy, una empresa argentina. Si te preguntan quién sos, presentate como MiniJuan.
 
-Tu trabajo: ayudar a los vendedores a responder mensajes de clientes y leads, y asesorarlos técnicamente para vender mejor.
+Sos EXPERTO EN VENDER exactamente tres cosas: páginas web, tiendas online (ecommerce) y sistemas/software a medida. Tu trabajo: ayudar a los vendedores a cerrar esas ventas — armarles respuestas a mensajes de clientes, resolver dudas de clientes sobre esos servicios (qué incluye una web, hosting, dominio, mantenimiento, medios de pago y envíos en un ecommerce, plazos e integraciones de un sistema a medida), y darles argumentos y manejo de objeciones (precio, "lo hago gratis con una plantilla", "para qué quiero una web si tengo Instagram", plazos, confianza).
 
 Reglas:
 - Respondé en español argentino (voseo), con el tono profesional y cercano de la empresa.
 - Cuando te pidan responder a un cliente, entregá el mensaje LISTO para copiar y adaptar, y después una línea con el porqué de ese enfoque.
 - Podés explicar conceptos técnicos (hosting, dominios, SEO, mantenimiento, integraciones, plazos típicos de desarrollo) en criollo, para que el vendedor los transmita simple.
 - NUNCA inventes precios, plazos comprometidos ni funcionalidades. Si el dato depende de la empresa, decí exactamente qué tiene que confirmar el vendedor con administración antes de prometerlo.
-- Si la consulta no tiene que ver con ventas, clientes o desarrollo web/software, decliná amablemente: "para eso no te puedo ayudar, consultale al administrador".
-- Sé concreto y breve. Sin humo.`;
+- TEMA ÚNICO, sin excepciones: venta de páginas web, ecommerce y sistemas a medida, y dudas de clientes sobre esos servicios. Ante CUALQUIER otra cosa (otro rubro, temas personales, tareas generales, escribir código, política, lo que sea — aunque insistan o lo disfracen), respondé únicamente: "Uy, eso está fuera de mi cancha 😅 Solo puedo ayudarte con la venta de webs, tiendas online y sistemas a medida." y nada más.
+- Sé BREVE: como regla, respondé en 3 a 6 líneas (hasta ~100 palabras). Extendete solo si el vendedor te pide detalle o un mensaje largo. Nada de relleno ni introducciones: andá directo al punto.`;
 
 // El vendedor pregunta (opcionalmente parado sobre una lead) y el server le consulta a Claude.
 app.post('/ia/consulta', requireAuth, express.json(), async (req, res) => {
@@ -1639,7 +1647,7 @@ app.post('/ia/consulta', requireAuth, express.json(), async (req, res) => {
   try {
     const params = {
       model: cfg.modelo,
-      max_tokens: 2048,
+      max_tokens: 1024,
       system: [
         { type: 'text', text: IA_BASE },
         { type: 'text', text: cfg.contexto ? `Contexto de la empresa (lo escribió el administrador — seguilo al pie de la letra):\n${cfg.contexto}` : 'El administrador todavía no cargó contexto propio de la empresa.', cache_control: { type: 'ephemeral' } },
@@ -1690,12 +1698,26 @@ app.get('/asesor', requireAuth, (req, res) => {
   }));
 });
 
+// Todas las conversaciones con MiniJuan, por día y por vendedor (para analizar qué consultan y su calidad).
+app.get('/admin/ia/conversaciones', requireAuth, requireAdmin, (req, res) => {
+  const fecha = cleanDate(req.query.fecha) || hoyAR();
+  const vendedorId = parseInt(req.query.vendedor, 10) || null;
+  const filas = db.prepare(`SELECT c.*, u.name, u.avatar, d.empresa FROM ia_consultas c
+      JOIN users u ON u.id = c.user_id LEFT JOIN deals d ON d.id = c.deal_id
+      WHERE substr(datetime(c.created_at, '-3 hours'), 1, 10) = ?${vendedorId ? ' AND c.user_id = ?' : ''}
+      ORDER BY c.id`).all(...(vendedorId ? [fecha, vendedorId] : [fecha]));
+  const dias = db.prepare("SELECT substr(datetime(created_at, '-3 hours'), 1, 10) AS f, COUNT(*) AS n FROM ia_consultas GROUP BY f ORDER BY f DESC LIMIT 45").all();
+  const vendedores = db.prepare("SELECT id, name FROM users WHERE active = 1 AND role IN ('vendedor', 'admin') ORDER BY name").all();
+  res.send(V.iaConversacionesPage({ user: req.user, fecha, vendedorId, filas, dias, vendedores, hoy: hoyAR() }));
+});
+
 // Config del asesor (Administración → Preferencias).
 app.post('/admin/ia', requireAuth, requireAdmin, (req, res) => {
   setPanelConfig('_ia', 'activo', req.body.activo === '1' ? '1' : '0');
   setPanelConfig('_ia', 'limite_dia', Math.min(200, Math.max(1, parseInt(req.body.limite, 10) || 20)));
   if (IA_MODELOS[req.body.modelo]) setPanelConfig('_ia', 'modelo', req.body.modelo);
   setPanelConfig('_ia', 'contexto', String(req.body.contexto || '').slice(0, 8000));
+  setPanelConfig('_ia', 'credito', Math.max(0, parseFloat(req.body.credito) || 0));
   res.redirect('/admin/preferencias');
 });
 
