@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.41.0',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Panel de Clientes — el generador de prospectos: el admin lanza un escaneo de Google Maps por rubro y zona (API oficial de Google Places) y el sistema carga los prospectos con nombre, dirección, teléfono con link a WhatsApp, sitio web y estrellas, sin duplicar entre escaneos.' },
+      { tipo: 'nuevo', texto: 'Cada vendedor puede TOMAR un prospecto eligiendo en el momento a qué panel comercial va: nace como lead suya (primera etapa, teléfono, origen "Prospección Google Maps" y una nota con todos los datos) y el prospecto queda en rojo con quién lo tomó y cuándo. Se pueden descartar los que no sirven y el admin puede liberar tomados. Permiso nuevo "Panel de Clientes" por usuario.' },
+      { tipo: 'mejora', texto: 'MiniJuan por ahora atiende solo en el panel de Cloud For Deploy.' },
+    ],
+  },
+  {
     version: '2.40.0',
     fecha: '2026-09-06',
     cambios: [

@@ -40,7 +40,7 @@ const ICONS = {
 };
 const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F3459'/%3E%3Ctext x='16' y='21' font-size='12' font-family='Helvetica,Arial' font-weight='bold' fill='white' text-anchor='middle'%3EC4D%3C/text%3E%3C/svg%3E";
 
-const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', developers: 'Panel de Developers', hub: 'Campus C4D' };
+const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', developers: 'Panel de Developers', clientes: 'Panel de Clientes', hub: 'Campus C4D' };
 const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permisos || []).includes(s));
 
 // Ícono hoja para PuntoCO2 (plataforma de huella de carbono).
@@ -103,6 +103,7 @@ function sysSwitch(sistema, user) {
       ${tieneSistema(user, 'gondolas') ? `<a href="/gondolas/pipeline"><span>Comercial Góndolas</span>${infoPanel('gondolas')}</a>` : ''}
       ${tieneSistema(user, 'estanterias') ? `<a href="/estanterias/pipeline"><span>Comercial Estanterías Reforzadas</span>${infoPanel('estanterias')}</a>` : ''}
       ${tieneSistema(user, 'sitioweb') ? `<a href="/sitioweb/pipeline"><span>Comercial SitioWeb Digital</span>${infoPanel('sitioweb')}</a>` : ''}
+      ${tieneSistema(user, 'clientes') ? `<a href="/clientes"><span>Panel de Clientes</span></a>` : ''}
       ${tieneSistema(user, 'cobranza') ? `<a href="/cobranza"><span>Panel de Cobranza</span>${infoCobranza()}</a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
       ${tieneSistema(user, 'developers') ? '<a href="/developers"><span>Panel de Developers</span></a>' : '<span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>'}
@@ -123,7 +124,7 @@ const MINIJUAN_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearG
 // la primera vez saluda con un globito y un salto, y recién al tocarlo se presenta.
 function miniJuanWidget(user, sistema) {
   if (!user || !['admin', 'vendedor'].includes(user.role)) return '';
-  if (!['comercial', 'cfd', 'gondolas', 'estanterias', 'sitioweb'].includes(sistema)) return '';
+  if (!['comercial', 'cfd'].includes(sistema)) return ''; // por ahora MiniJuan vive solo en Cloud For Deploy
   return `
 <div class="mj" id="mj" data-bienvenida="${user.ia_bienvenida ? '0' : '1'}">
   <div class="mj-panel" id="mjPanel" hidden>
@@ -292,6 +293,9 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="/admin" class="${active === 'admin' ? 'on' : ''}">${ICONS.equipo}<span>Usuarios</span></a>
         <a href="/admin/comunicacion" class="${active === 'comunicacion' ? 'on' : ''}">${ICONS.bell}<span>Comunicación</span></a>
         <a href="/admin/preferencias" class="${active === 'preferencias' ? 'on' : ''}">${ICONS.docs}<span>Preferencias</span></a>`;
+  } else if (sistema === 'clientes') {
+    links = `
+        <a href="/clientes" class="${active === 'clientes' ? 'on' : ''}">${IC('<path d="M10 17.5s6-5.2 6-9.5a6 6 0 10-12 0c0 4.3 6 9.5 6 9.5z"/><circle cx="10" cy="8" r="2.2"/>')}<span>Prospectos</span></a>`;
   } else if (sistema === 'developers') {
     links = `
         <a href="/developers" class="${active === 'developers' ? 'on' : ''}">${IC('<path d="M7 6.5L3.5 10 7 13.5M13 6.5l3.5 3.5-3.5 3.5M11.2 4.5l-2.4 11"/>')}<span>Proyectos</span></a>`;
@@ -979,6 +983,12 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 .umenu-pop svg { width:1rem; height:1rem; color:var(--muted); flex-shrink:0; }
 .umenu-pop form { display:contents; }
 @media (max-width:640px) { .umenu-pop { position:fixed; top:3.3rem; right:.5rem; } }
+
+/* ---------- panel de clientes ---------- */
+tr.pr-tomado td { background:rgba(192, 84, 80, .09); }
+tr.pr-tomado td:first-child { box-shadow:inset 3px 0 0 #C05450; }
+tr.pr-descartado td { opacity:.55; }
+.pr-chip-tomado { display:inline-block; font-size:.68rem; font-weight:700; color:#fff; background:#C05450; border-radius:99px; padding:.18rem .55rem; margin-right:.3rem; }
 
 /* ---------- MiniJuan: burbuja flotante ---------- */
 .mj { position:fixed; right:1.1rem; bottom:1.1rem; z-index:150; }
@@ -2968,6 +2978,91 @@ function asesorPage({ user, listo, limite, restantes, deal }) {
   });
 }
 
+/* --------- panel de clientes: prospectos de Google Maps --------- */
+
+function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fRubro, q, keyOk, msg, err }) {
+  const esAdmin = user.role === 'admin';
+  const urlBase = (cambios) => {
+    const par = new URLSearchParams();
+    const est = 'estado' in cambios ? cambios.estado : fEstado;
+    const rub = 'rubro' in cambios ? cambios.rubro : fRubro;
+    if (est) par.set('estado', est);
+    if (rub) par.set('rubro', rub);
+    if (q) par.set('q', q);
+    const t = par.toString();
+    return '/clientes' + (t ? '?' + t : '');
+  };
+  return layout({
+    title: 'Clientes', user, active: 'clientes', sistema: 'clientes', msg, err,
+    body: `
+  <h1>Generador de clientes</h1>
+  <p class="small muted">Prospectos traídos de Google Maps por rubro y zona. Tomá uno y nace como lead tuya en el panel comercial que elijas — el prospecto queda marcado en rojo para que nadie lo llame dos veces.</p>
+
+  ${esAdmin ? `
+  <div class="card" style="border-left:4px solid var(--accent)">
+    <h3 style="margin-top:0">Escanear Google Maps</h3>
+    ${keyOk ? '' : '<div class="flash bad">Falta la clave de Google: creá una API key en console.cloud.google.com con "Places API (New)" habilitada y agregala al archivo .env del server como GOOGLE_MAPS_API_KEY=… Después reiniciá el contenedor.</div>'}
+    <form method="post" action="/clientes/scan" class="cfg-inline" onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').textContent = 'Escaneando…';">
+      <input name="rubro" placeholder="Rubro (ej: gimnasios, ferreterías)" required style="flex:1; min-width:11rem">
+      <input name="zona" placeholder="Zona (ej: Yerba Buena, Tucumán)" required style="flex:1; min-width:11rem">
+      <select name="cantidad" style="width:auto"><option value="20">hasta 20</option><option value="40">hasta 40</option><option value="60" selected>hasta 60</option></select>
+      <button class="btn" ${keyOk ? '' : 'disabled'}>Escanear</button>
+    </form>
+    ${scans.length ? `<p class="caption" style="margin:.5rem 0 0">Últimos escaneos: ${scans.map((sc) => `${esc(sc.rubro)} en ${esc(sc.zona)} (${sc.nuevos} nuevos)`).join(' · ')}</p>` : ''}
+  </div>` : ''}
+
+  <div class="toolbar">
+    <div class="seg">
+      <a href="${urlBase({ estado: '' })}" class="${fEstado === '' ? 'on' : ''}">Todos</a>
+      <a href="${urlBase({ estado: 'nuevo' })}" class="${fEstado === 'nuevo' ? 'on' : ''}">Disponibles</a>
+      <a href="${urlBase({ estado: 'tomado' })}" class="${fEstado === 'tomado' ? 'on' : ''}">Tomados</a>
+      <a href="${urlBase({ estado: 'descartado' })}" class="${fEstado === 'descartado' ? 'on' : ''}">Descartados</a>
+    </div>
+    <div class="sp"></div>
+    <form method="get" action="/clientes" class="cfg-inline" style="flex:0">
+      ${fEstado ? `<input type="hidden" name="estado" value="${esc(fEstado)}">` : ''}
+      <select name="rubro" onchange="this.form.submit()" style="width:auto"><option value="">Rubro: todos</option>${rubros.map((r) => `<option value="${esc(r)}" ${r === fRubro ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
+      <input name="q" value="${esc(q)}" placeholder="Buscar nombre o dirección" style="width:auto">
+      <button class="btn secondary small">Buscar</button>
+    </form>
+  </div>
+
+  ${prospectos.length ? `<div class="tablewrap"><table>
+    <thead><tr><th>Prospecto</th><th>Contacto</th><th>Valoración</th><th>Estado</th></tr></thead>
+    <tbody>
+      ${prospectos.map((pr) => `
+      <tr class="${pr.estado === 'tomado' ? 'pr-tomado' : pr.estado === 'descartado' ? 'pr-descartado' : ''}">
+        <td>
+          <strong>${esc(pr.nombre)}</strong>${pr.maps_url ? ` <a href="${esc(pr.maps_url)}" target="_blank" rel="noopener" class="small">mapa ↗</a>` : ''}
+          <div class="small muted">${esc(pr.direccion || 'Sin dirección')} · <span class="chip" style="font-size:.6rem">${esc(pr.rubro || '')}</span></div>
+        </td>
+        <td class="small">
+          ${pr.telefono ? `<a href="https://wa.me/${esc(String(pr.telefono).replace(/[^0-9]/g, ''))}" target="_blank" rel="noopener">📱 ${esc(pr.telefono)}</a>` : '<span class="muted">sin teléfono</span>'}
+          ${pr.sitio_web ? `<br><a href="${esc(pr.sitio_web)}" target="_blank" rel="noopener" class="muted">${esc(pr.sitio_web.replace(/^https?:[/][/](www[.])?/, '').slice(0, 30))}</a>` : ''}
+        </td>
+        <td class="small">${pr.rating ? `⭐ ${pr.rating} <span class="muted">(${pr.resenas || 0})</span>` : '<span class="muted">—</span>'}</td>
+        <td>
+          ${pr.estado === 'nuevo' ? `
+          <div style="display:flex; gap:.35rem; align-items:center; flex-wrap:wrap">
+            <form method="post" action="/clientes/${pr.id}/tomar" class="cfg-inline" style="gap:.35rem">
+              <select name="panel" style="width:auto; padding:.3rem .4rem">${misPaneles.map((mp) => `<option value="${mp.slug}">${esc(mp.nombre)}</option>`).join('')}</select>
+              <button class="btn small">Tomar</button>
+            </form>
+            <form method="post" action="/clientes/${pr.id}/estado" style="display:inline"><input type="hidden" name="accion" value="descartar"><button class="btn secondary small" title="No sirve como prospecto">✕</button></form>
+          </div>`
+          : pr.estado === 'tomado' ? `
+          <span class="pr-chip-tomado">Tomada por ${esc(pr.tomado_nombre || '—')} · ${tiempoRel(pr.tomado_at)}</span>
+          ${pr.deal_id ? `<a class="small" href="/deals/${pr.deal_id}">ver la lead</a>` : ''}
+          ${esAdmin ? `<form method="post" action="/clientes/${pr.id}/estado" style="display:inline"><input type="hidden" name="accion" value="liberar"><button class="btn secondary small" title="Volver a disponible">liberar</button></form>` : ''}`
+          : `<span class="muted small">descartado</span>${esAdmin ? ` <form method="post" action="/clientes/${pr.id}/estado" style="display:inline"><input type="hidden" name="accion" value="liberar"><button class="btn secondary small">recuperar</button></form>` : ''}`}
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`
+  : '<div class="card"><p class="muted" style="margin:0">Todavía no hay prospectos con esos filtros. ' + (esAdmin ? 'Lanzá un escaneo arriba: rubro + zona y listo.' : 'Pedile al administrador que lance un escaneo.') + '</p></div>'}`
+  });
+}
+
 /* --------- MiniJuan modo negocio (admin) --------- */
 
 function iaNegocioPage({ user, listo, restantes, modelo }) {
@@ -3288,6 +3383,12 @@ function hubPage({ user }) {
         <h3>Comercial SitioWeb Digital</h3>
         <p>Ventas de sitios web: pipeline, actividad y metas propias.</p>
         ${chipsPanel('sitioweb')}
+      </a>` : ''}
+      ${tieneSistema(user, 'clientes') ? `
+      <a class="hub-card" href="/clientes">
+        <span class="hc-ic">${IC('<path d="M10 17.5s6-5.2 6-9.5a6 6 0 10-12 0c0 4.3 6 9.5 6 9.5z"/><circle cx="10" cy="8" r="2.2"/>')}</span>
+        <h3>Panel de Clientes</h3>
+        <p>Generador de prospectos: escanea Google Maps por rubro y zona, y las tomás como leads.</p>
       </a>` : ''}
       ${tieneSistema(user, 'cobranza') ? `
       <a class="hub-card" href="/cobranza">
@@ -4484,7 +4585,7 @@ function changelogPage({ user, versiones }) {
 }
 
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusCursoPage, campusQuizPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,

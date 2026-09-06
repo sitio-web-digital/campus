@@ -295,6 +295,35 @@ db.exec(`CREATE TABLE IF NOT EXISTS ia_consultas (
   // 2.38.0: "Nueva charla" — la charla actual arranca después de esta consulta (las viejas quedan guardadas igual).
   if (!cols.includes('ia_charla_desde')) db.exec('ALTER TABLE users ADD COLUMN ia_charla_desde INTEGER NOT NULL DEFAULT 0');
 }
+// 2.41.0: Panel de Clientes — prospectos traídos de Google Maps (Places API) y su ciclo de vida.
+db.exec(`CREATE TABLE IF NOT EXISTS prospectos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  place_id TEXT UNIQUE,
+  nombre TEXT NOT NULL,
+  direccion TEXT,
+  telefono TEXT,
+  sitio_web TEXT,
+  rating REAL,
+  resenas INTEGER,
+  maps_url TEXT,
+  rubro TEXT,
+  zona TEXT,
+  estado TEXT NOT NULL DEFAULT 'nuevo' CHECK (estado IN ('nuevo', 'tomado', 'descartado')),
+  tomado_por INTEGER REFERENCES users(id),
+  tomado_at TEXT,
+  deal_id INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS prospecto_scans (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  rubro TEXT NOT NULL,
+  zona TEXT NOT NULL,
+  encontrados INTEGER NOT NULL DEFAULT 0,
+  nuevos INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);`);
+
 // 2.39.0: modo negocio — se distingue el tipo de consulta ('vendedor' | 'negocio').
 if (!db.prepare('PRAGMA table_info(ia_consultas)').all().some((c) => c.name === 'tipo')) {
   db.exec("ALTER TABLE ia_consultas ADD COLUMN tipo TEXT NOT NULL DEFAULT 'vendedor'");
@@ -544,6 +573,7 @@ const SISTEMAS = [
   ['sitioweb', 'Comercial SitioWeb Digital'],
   ['cobranza', 'Panel de Cobranza'],
   ['developers', 'Panel de Developers'],
+  ['clientes', 'Panel de Clientes (prospectos)'],
 ];
 
 // Etapas del tablero de proyectos del Panel de Developers.

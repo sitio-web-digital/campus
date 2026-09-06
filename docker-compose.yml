@@ -14,3 +14,5 @@ services:
       # Clave de la API de Anthropic para el Asesor IA: se define en un archivo .env
       # junto a este compose (ANTHROPIC_API_KEY=sk-ant-...). NUNCA se commitea.
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # Clave de Google Places API (New) para el Panel de Clientes (prospección en Maps): va en el mismo .env.
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-}

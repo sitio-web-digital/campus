@@ -1589,6 +1589,107 @@ app.post('/developers/proyectos/:id', requireAuth, requireSistema('developers'),
   res.redirect(`/developers?p=${p.id}`);
 });
 
+/* ---------------- panel de clientes: prospectos desde Google Maps ---------------- */
+
+// Búsqueda oficial (Places API New): misma data que Google Maps, sin scraping frágil.
+// La clave vive en la variable de entorno GOOGLE_MAPS_API_KEY (archivo .env del server).
+async function buscarProspectosMaps(rubro, zona, objetivo) {
+  const paginas = Math.min(3, Math.ceil(objetivo / 20));
+  const lugares = [];
+  let pageToken = null;
+  for (let i = 0; i < paginas; i++) {
+    const resp = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': process.env.GOOGLE_MAPS_API_KEY,
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.googleMapsUri,nextPageToken',
+      },
+      body: JSON.stringify({ textQuery: `${rubro} en ${zona}`, languageCode: 'es', ...(pageToken ? { pageToken } : {}) }),
+    });
+    if (!resp.ok) throw new Error(`Google Places ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
+    const data = await resp.json();
+    for (const p of data.places || []) lugares.push(p);
+    pageToken = data.nextPageToken;
+    if (!pageToken) break;
+    await new Promise((esperar) => setTimeout(esperar, 1200)); // el token de página tarda en activarse
+  }
+  return lugares;
+}
+
+app.get('/clientes', requireAuth, requireSistema('clientes'), (req, res) => {
+  const fEstado = ['nuevo', 'tomado', 'descartado'].includes(req.query.estado) ? req.query.estado : '';
+  const fRubro = clean(req.query.rubro) || '';
+  const q = clean(req.query.q) || '';
+  const where = ['1=1']; const params = [];
+  if (fEstado) { where.push('p.estado = ?'); params.push(fEstado); }
+  if (fRubro) { where.push('p.rubro = ?'); params.push(fRubro); }
+  if (q) { where.push('(p.nombre LIKE ? OR p.direccion LIKE ?)'); params.push(`%${q}%`, `%${q}%`); }
+  const prospectos = db.prepare(`SELECT p.*, u.name AS tomado_nombre FROM prospectos p LEFT JOIN users u ON u.id = p.tomado_por
+    WHERE ${where.join(' AND ')} ORDER BY p.estado = 'nuevo' DESC, p.id DESC LIMIT 400`).all(...params);
+  const rubros = db.prepare('SELECT DISTINCT rubro FROM prospectos WHERE rubro IS NOT NULL ORDER BY rubro').all().map((r) => r.rubro);
+  const scans = db.prepare('SELECT s.*, u.name FROM prospecto_scans s JOIN users u ON u.id = s.user_id ORDER BY s.id DESC LIMIT 5').all();
+  const misPaneles = PANELES_COMERCIALES.filter((P) => puede(req.user, P.slug)).map((P) => ({ slug: P.slug, nombre: P.nombre }));
+  res.send(V.clientesPage({
+    user: req.user, prospectos, rubros, scans, misPaneles,
+    fEstado, fRubro, q,
+    keyOk: !!process.env.GOOGLE_MAPS_API_KEY,
+    msg: clean(req.query.msg), err: clean(req.query.err),
+  }));
+});
+
+// El admin lanza el escaneo: rubro + zona → Google Places → se cargan los prospectos nuevos (sin duplicar).
+app.post('/clientes/scan', requireAuth, requireAdmin, async (req, res) => {
+  const rubro = (clean(req.body.rubro) || '').slice(0, 80);
+  const zona = (clean(req.body.zona) || '').slice(0, 120);
+  const objetivo = Math.min(60, Math.max(20, parseInt(req.body.cantidad, 10) || 20));
+  if (!rubro || !zona) return res.redirect('/clientes?err=' + encodeURIComponent('Completá rubro y zona.'));
+  if (!process.env.GOOGLE_MAPS_API_KEY) return res.redirect('/clientes?err=' + encodeURIComponent('Falta la clave GOOGLE_MAPS_API_KEY en el servidor.'));
+  try {
+    const lugares = await buscarProspectosMaps(rubro, zona, objetivo);
+    const ins = db.prepare(`INSERT OR IGNORE INTO prospectos (place_id, nombre, direccion, telefono, sitio_web, rating, resenas, maps_url, rubro, zona)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    let nuevos = 0;
+    for (const p of lugares) {
+      const r = ins.run(p.id || null, (p.displayName && p.displayName.text) || 'Sin nombre', p.formattedAddress || null,
+        p.nationalPhoneNumber || p.internationalPhoneNumber || null, p.websiteUri || null,
+        p.rating || null, p.userRatingCount || null, p.googleMapsUri || null, rubro.toLowerCase(), zona);
+      if (r.changes > 0) nuevos++;
+    }
+    db.prepare('INSERT INTO prospecto_scans (user_id, rubro, zona, encontrados, nuevos) VALUES (?, ?, ?, ?, ?)').run(req.user.id, rubro, zona, lugares.length, nuevos);
+    res.redirect('/clientes?msg=' + encodeURIComponent(`Escaneo listo: ${lugares.length} resultados, ${nuevos} prospectos nuevos.`));
+  } catch (e) {
+    console.error('scan maps:', e.message);
+    res.redirect('/clientes?err=' + encodeURIComponent('El escaneo falló: ' + e.message.slice(0, 160)));
+  }
+});
+
+// Un vendedor toma el prospecto: queda marcado en rojo (por quién y cuándo) y nace la lead en el panel que elija.
+app.post('/clientes/:id/tomar', requireAuth, requireSistema('clientes'), (req, res) => {
+  const p = db.prepare('SELECT * FROM prospectos WHERE id = ?').get(req.params.id);
+  if (!p) return res.redirect('/clientes');
+  if (p.estado !== 'nuevo') return res.redirect('/clientes?err=' + encodeURIComponent('Ese prospecto ya fue tomado o descartado.'));
+  const panel = PANEL_SLUGS.includes(req.body.panel) ? req.body.panel : null;
+  if (!panel || !puede(req.user, panel)) return res.status(403).send('Sin acceso a ese panel comercial.');
+  const etapa = etapasDePanel(panel)[0] || 'Lead';
+  const r = db.prepare(`INSERT INTO deals (empresa, user_id, panel, etapa, telefono, origen, etapa_movida_at)
+    VALUES (?, ?, ?, ?, ?, 'Prospección Google Maps', datetime('now'))`).run(p.nombre, req.user.id, panel, etapa, p.telefono);
+  logDealEvent(r.lastInsertRowid, req.user.id, 'creado', `Deal creado en etapa ${etapa}`);
+  logDealEvent(r.lastInsertRowid, req.user.id, 'edicion', `Nota: Prospecto de Google Maps — ${p.direccion || 'sin dirección'}${p.sitio_web ? ' · ' + p.sitio_web : ''}${p.rating ? ` · ⭐ ${p.rating} (${p.resenas || 0} reseñas)` : ''}${p.maps_url ? ' · ' + p.maps_url : ''}`);
+  db.prepare("UPDATE prospectos SET estado = 'tomado', tomado_por = ?, tomado_at = datetime('now'), deal_id = ? WHERE id = ?").run(req.user.id, r.lastInsertRowid, p.id);
+  res.redirect(`/deals/${r.lastInsertRowid}`);
+});
+
+// Descartar (cualquiera con acceso) o liberar (solo admin; la lead ya creada no se toca).
+app.post('/clientes/:id/estado', requireAuth, requireSistema('clientes'), (req, res) => {
+  const p = db.prepare('SELECT * FROM prospectos WHERE id = ?').get(req.params.id);
+  if (p) {
+    if (req.body.accion === 'descartar' && p.estado === 'nuevo') db.prepare("UPDATE prospectos SET estado = 'descartado' WHERE id = ?").run(p.id);
+    if (req.body.accion === 'liberar' && req.user.role === 'admin' && p.estado !== 'nuevo') db.prepare("UPDATE prospectos SET estado = 'nuevo', tomado_por = NULL, tomado_at = NULL WHERE id = ?").run(p.id);
+  }
+  res.redirect('/clientes');
+});
+
 /* ---------------- asesor IA (para vendedores) ---------------- */
 
 // Config global del asesor, guardada en panel_config bajo el pseudo-panel '_ia'.
