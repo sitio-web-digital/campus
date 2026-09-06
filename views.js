@@ -156,6 +156,22 @@ function miniJuanWidget(user, sistema) {
     chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return d;
   }
   function pensar(si) { mj.classList.toggle('pensando', si); estado.textContent = si ? 'pensando…' : 'Tu experto en desarrollo web y software a medida'; }
+  var REDUCIDO = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function tipear(texto) {
+    var d = burbuja('', 'mj-bot');
+    if (REDUCIDO) { d.textContent = texto; hablar(); return; }
+    var partes = texto.split(' '), i = 0;
+    mj.classList.add('hablando'); estado.textContent = 'respondiendo';
+    var iv = setInterval(function () {
+      if (i >= partes.length) {
+        clearInterval(iv); mj.classList.remove('hablando');
+        estado.textContent = 'Tu experto en desarrollo web y software a medida';
+        return;
+      }
+      d.textContent += (i ? ' ' : '') + partes[i]; i++;
+      chat.scrollTop = chat.scrollHeight;
+    }, 26);
+  }
   function hablar() {
     mj.classList.add('hablando'); estado.textContent = 'respondiendo';
     clearTimeout(timerHabla);
@@ -166,10 +182,9 @@ function miniJuanWidget(user, sistema) {
     fetch('/ia/historial').then(function (r) { return r.json(); }).then(function (h) {
       var items = (h && h.items) || [];
       items.forEach(function (it) { burbuja(it.pregunta, 'mj-yo'); burbuja(it.respuesta, 'mj-bot'); });
-      burbuja(primeraVez
+      tipear(primeraVez
         ? '¡Hola! Soy MiniJuan 👋 Tu nuevo asesor con inteligencia artificial, experto en desarrollo web y software a medida. Estoy para ayudarte a vender: pegame el mensaje de un cliente y te armo la respuesta, preguntame cómo explicar algo técnico o cómo manejar una objeción de precio. Podés preguntarme lo que quieras, las veces que quieras hasta tu tope del día. ¡Dale, probame!'
-        : (items.length ? '¡Seguimos cuando quieras! 👋 ¿En qué te ayudo ahora?' : '¡Hola de nuevo! 👋 Soy MiniJuan. ¿En qué te ayudo?'), 'mj-bot');
-      hablar();
+        : (items.length ? '¡Seguimos cuando quieras! 👋 ¿En qué te ayudo ahora?' : '¡Hola de nuevo! 👋 Soy MiniJuan. ¿En qué te ayudo?'));
       chat.scrollTop = chat.scrollHeight;
     }).catch(function () { burbuja('¡Hola! Soy MiniJuan 👋 ¿En qué te ayudo?', 'mj-bot'); });
   }
@@ -196,7 +211,7 @@ function miniJuanWidget(user, sistema) {
       .then(function (r) { return r.json(); })
       .then(function (r) {
         esp.remove(); pensar(false);
-        if (r.ok) { burbuja(r.respuesta, 'mj-bot'); hablar(); }
+        if (r.ok) tipear(r.respuesta);
         else burbuja(r.error || 'No pude responder, probá de nuevo.', 'mj-bot mj-err');
         btn.disabled = false; ta.focus();
       })
@@ -957,7 +972,8 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 .mj-x:hover { background:rgba(255,255,255,.22); }
 .mj-ctx { font-size:.7rem; padding:.42rem .85rem; background:var(--accent-soft); color:var(--accent-ink); font-weight:600; }
 .mj-chat { flex:1; overflow-y:auto; padding:.8rem; display:flex; flex-direction:column; gap:.55rem; background:var(--bg); }
-.mj-msj { max-width:86%; padding:.55rem .75rem; font-size:.85rem; line-height:1.5; white-space:pre-wrap; overflow-wrap:break-word; box-shadow:var(--sh); }
+.mj-msj { max-width:86%; padding:.55rem .75rem; font-size:.85rem; line-height:1.5; white-space:pre-wrap; overflow-wrap:break-word; box-shadow:var(--sh); animation: mj-msj-in .18s ease-out; }
+@keyframes mj-msj-in { from { opacity:0; transform:translateY(5px); } }
 .mj-bot { background:var(--surface); border:1px solid var(--line); align-self:flex-start; border-radius:14px 14px 14px 4px; }
 .mj-yo { background:#0E6E66; color:#fff; align-self:flex-end; border-radius:14px 14px 4px 14px; }
 html.dark .mj-yo { background:#0E6E66; }
@@ -988,7 +1004,7 @@ html.dark .mj-yo { background:#0E6E66; }
 @keyframes mj-habla { from { transform:scaleY(.35) translateY(1px); } to { transform:scaleY(1.5); } }
 .mj.hablando .mj-head .mj-cara { animation: mj-asiente 1s ease-in-out infinite; }
 @keyframes mj-asiente { 0%, 100% { transform:translateY(0); } 50% { transform:translateY(1.1px); } }
-@media (prefers-reduced-motion: reduce) { .mj-salta, .mj.pensando .mj-head .mj-cara, .mj.pensando .mj-head .mj-ojos, .mj.hablando .mj-head .mj-boca, .mj.hablando .mj-head .mj-cara, .mj-escribiendo span { animation:none; } }
+@media (prefers-reduced-motion: reduce) { .mj-salta, .mj.pensando .mj-head .mj-cara, .mj.pensando .mj-head .mj-ojos, .mj.hablando .mj-head .mj-boca, .mj.hablando .mj-head .mj-cara, .mj-escribiendo span, .mj-msj { animation:none; } }
 
 @media (max-width:640px) {
   .mj { right:.7rem; bottom:4.6rem; }

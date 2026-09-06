@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.36.3',
+    fecha: '2026-09-04',
+    cambios: [
+      { tipo: 'mejora', texto: 'Las respuestas de MiniJuan aparecen de arriba hacia abajo, palabra por palabra (efecto máquina de escribir, como ChatGPT), con la boca del muñeco moviéndose mientras "habla" y el chat siguiéndolo solo. Cada burbuja entra con un fundido suave.' },
+    ],
+  },
+  {
     version: '2.36.2',
     fecha: '2026-09-04',
     cambios: [
