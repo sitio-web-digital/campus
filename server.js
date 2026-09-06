@@ -1803,7 +1803,11 @@ app.get('/agenda', requireAuth, requireSistema('cfd'), (req, res) => {
   if (deal && (deal.panel !== 'cfd' || (req.user.role !== 'admin' && deal.user_id !== req.user.id))) deal = null;
   const cal = armarCalendario(vista, off);
   const miDisp = req.user.role === 'admin' ? db.prepare('SELECT * FROM agenda_disponibilidad WHERE admin_id = ?').all(req.user.id) : [];
-  res.send(V.agendaPage({ user: req.user, ...cal, off, deal, miDisp, msg: clean(req.query.msg), err: clean(req.query.err) }));
+  // Para agendar directo desde el calendario (sin venir de la ficha): las leads abiertas de CFD que puede tocar.
+  const leadsCFD = req.user.role === 'admin'
+    ? db.prepare("SELECT d.id, d.empresa, u.name AS vendedor FROM deals d JOIN users u ON u.id = d.user_id WHERE d.panel = 'cfd' AND d.etapa NOT IN ('Ganado', 'Perdido') ORDER BY d.empresa").all()
+    : db.prepare("SELECT d.id, d.empresa, NULL AS vendedor FROM deals d WHERE d.panel = 'cfd' AND d.user_id = ? AND d.etapa NOT IN ('Ganado', 'Perdido') ORDER BY d.empresa").all(req.user.id);
+  res.send(V.agendaPage({ user: req.user, ...cal, off, deal, miDisp, leadsCFD, msg: clean(req.query.msg), err: clean(req.query.err) }));
 });
 
 // Reservar un turno con un admin concreto, para una lead de CFD (su dueño o un admin).

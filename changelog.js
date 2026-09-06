@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.46.1',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'mejora', texto: 'Ahora se puede agendar directo desde el calendario: al tocar un hueco libre, el modal deja elegir la lead de Cloud For Deploy (los admins ven todas las abiertas; cada vendedor las suyas), la modalidad, y Agendar. Entrar desde la ficha sigue funcionando igual, con la lead ya elegida.' },
+    ],
+  },
+  {
     version: '2.46.0',
     fecha: '2026-09-06',
     cambios: [

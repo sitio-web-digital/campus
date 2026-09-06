@@ -3067,7 +3067,7 @@ function asesorPage({ user, listo, limite, restantes, deal }) {
 
 /* --------- agenda de reuniones (CFD): calendario estilo Google --------- */
 
-function agendaPage({ user, vista, dias = [], semanas = [], admins, dur, ahoraMin, hoy, titulo, off, deal, miDisp = [], msg, err }) {
+function agendaPage({ user, vista, dias = [], semanas = [], admins, dur, ahoraMin, hoy, titulo, off, deal, miDisp = [], leadsCFD = [], msg, err }) {
   const esAdmin = user.role === 'admin';
   const DIA_CORTO = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
   const diaCorto = (f) => DIA_CORTO[new Date(f + 'T00:00:00Z').getUTCDay()];
@@ -3151,7 +3151,12 @@ function agendaPage({ user, vista, dias = [], semanas = [], admins, dur, ahoraMi
       <div class="modal-h"><h2 id="cmTitulo">Reunión</h2><button type="button" class="modal-x" onclick="document.getElementById('calModal').classList.remove('abierto')" aria-label="Cerrar">&times;</button></div>
       <div id="cmInfo" class="small" style="line-height:1.9"></div>
       <form method="post" action="/agenda/reservar" id="cmReservar" hidden>
-        <input type="hidden" name="deal_id" value="${deal ? deal.id : ''}">
+        ${deal ? `<input type="hidden" name="deal_id" value="${deal.id}">` : `
+        <label>Lead / cliente</label>
+        <select name="deal_id" required>
+          <option value="">Elegí la lead…</option>
+          ${leadsCFD.map((l) => `<option value="${l.id}">${esc(l.empresa)}${l.vendedor ? ` — ${esc(l.vendedor.split(' ')[0])}` : ''}</option>`).join('')}
+        </select>`}
         <input type="hidden" name="admin_id" id="cmAdmin"><input type="hidden" name="fecha" id="cmFecha"><input type="hidden" name="hora" id="cmHora">
         <label>Modalidad</label>
         <select name="modalidad">
@@ -3162,7 +3167,7 @@ function agendaPage({ user, vista, dias = [], semanas = [], admins, dur, ahoraMi
         <div style="margin-top:.9rem"><button class="btn" style="width:100%">Agendar</button></div>
       </form>
       <div id="cmSinDeal" hidden>
-        <p class="small muted">Para agendarle una reunión a un cliente, entrá desde su lead con el botón <strong>"Agendar reunión"</strong> — así queda vinculada a esa lead.</p>
+        <p class="small muted">No tenés leads abiertas en Cloud For Deploy para agendarles reunión.</p>
       </div>
       <div id="cmDetalle" hidden>
         <a class="btn secondary small" id="cmVerLead" href="#">Ver la lead</a>
@@ -3177,14 +3182,14 @@ function agendaPage({ user, vista, dias = [], semanas = [], admins, dur, ahoraMi
     if (cuerpo && window.scrollY < 60) window.scrollTo(0, Math.max(0, cuerpo.getBoundingClientRect().top + window.scrollY + ${inicioScroll} - 190));
     var modal = document.getElementById('calModal'), titulo = document.getElementById('cmTitulo'), info = document.getElementById('cmInfo');
     var fReservar = document.getElementById('cmReservar'), sinDeal = document.getElementById('cmSinDeal'), detalle = document.getElementById('cmDetalle');
-    var HAY_DEAL = ${deal ? 'true' : 'false'};
+    var PUEDE_AGENDAR = ${deal || leadsCFD.length ? 'true' : 'false'};
     function linea(k, v) { return '<strong>' + k + ':</strong> ' + v + '<br>'; }
     Array.prototype.forEach.call(document.querySelectorAll('.cal-slot'), function (b) {
       b.addEventListener('click', function () {
         var f = b.getAttribute('data-fecha').split('-');
         titulo.textContent = 'Agendar con ' + b.getAttribute('data-nombre');
         info.innerHTML = linea('Día', f[2] + '/' + f[1] + '/' + f[0]) + linea('Hora', b.getAttribute('data-hora') + ' hs (${dur} min)') + linea('Con', b.getAttribute('data-nombre'));
-        fReservar.hidden = !HAY_DEAL; sinDeal.hidden = HAY_DEAL; detalle.hidden = true;
+        fReservar.hidden = !PUEDE_AGENDAR; sinDeal.hidden = PUEDE_AGENDAR; detalle.hidden = true;
         document.getElementById('cmAdmin').value = b.getAttribute('data-admin');
         document.getElementById('cmFecha').value = b.getAttribute('data-fecha');
         document.getElementById('cmHora').value = b.getAttribute('data-hora');
