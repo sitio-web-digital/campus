@@ -295,6 +295,10 @@ db.exec(`CREATE TABLE IF NOT EXISTS ia_consultas (
   // 2.38.0: "Nueva charla" — la charla actual arranca después de esta consulta (las viejas quedan guardadas igual).
   if (!cols.includes('ia_charla_desde')) db.exec('ALTER TABLE users ADD COLUMN ia_charla_desde INTEGER NOT NULL DEFAULT 0');
 }
+// 2.39.0: modo negocio — se distingue el tipo de consulta ('vendedor' | 'negocio').
+if (!db.prepare('PRAGMA table_info(ia_consultas)').all().some((c) => c.name === 'tipo')) {
+  db.exec("ALTER TABLE ia_consultas ADD COLUMN tipo TEXT NOT NULL DEFAULT 'vendedor'");
+}
 // Migración 2.8.0: campaña de origen y ubicación de la lead.
 if (!dealCols.includes('campana_id')) {
   db.exec('ALTER TABLE deals ADD COLUMN campana_id INTEGER REFERENCES campanas(id)');

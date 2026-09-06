@@ -296,6 +296,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="${b}/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="${b}/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
         ${user && user.role === 'admin' ? `<a href="${b}/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
+        <a href="/ia/negocio" class="${active === 'ianegocio' ? 'on' : ''}">${IC('<path d="M4 16V9M10 16V4M16 16v-5"/><circle cx="10" cy="10" r="8.2"/>')}<span>IA Negocio</span></a>
         <a href="${b}/contactos" class="${active === 'contactos' ? 'on' : ''}">${IC('<path d="M4.2 3.5h2.6l1.4 3.3-1.9 1.5a11.4 11.4 0 005.4 5.4l1.5-1.9 3.3 1.4v2.6a1.4 1.4 0 01-1.5 1.4C8.8 16.7 3.3 11.2 2.8 5A1.4 1.4 0 014.2 3.5z"/>')}<span>Contactos</span></a>
         <a href="${b}/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>` : ''}`;
   } else {
@@ -305,6 +306,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
         ${user && user.role === 'admin' ? `<a href="/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
+        <a href="/ia/negocio" class="${active === 'ianegocio' ? 'on' : ''}">${IC('<path d="M4 16V9M10 16V4M16 16v-5"/><circle cx="10" cy="10" r="8.2"/>')}<span>IA Negocio</span></a>
         <a href="/contactos" class="${active === 'contactos' ? 'on' : ''}">${IC('<path d="M4.2 3.5h2.6l1.4 3.3-1.9 1.5a11.4 11.4 0 005.4 5.4l1.5-1.9 3.3 1.4v2.6a1.4 1.4 0 01-1.5 1.4C8.8 16.7 3.3 11.2 2.8 5A1.4 1.4 0 014.2 3.5z"/>')}<span>Contactos</span></a>
         <a href="/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>
         <a href="/admin" class="${active === 'equipo' ? 'on' : ''}">${ICONS.equipo}<span>Equipo</span></a>` : ''}`;
@@ -2310,6 +2312,9 @@ function adminPreferenciasPage({ user, prefs = {}, ia = null }) {
         <div><label>Estado</label><select name="activo"><option value="1" ${ia.activo ? 'selected' : ''}>Activo</option><option value="0" ${ia.activo ? '' : 'selected'}>Desactivado</option></select></div>
         <div><label>Tope de consultas por vendedor por día</label><input name="limite" type="number" min="1" max="200" value="${ia.limite}"></div>
         <div><label>Crédito cargado en Anthropic (USD)</label><input name="credito" type="number" min="0" step="0.01" value="${ia.credito || ''}" placeholder="Ej: 20"></div>
+        <div><label>Tope de consultas por admin por día</label><input name="limite_admin" type="number" min="1" max="500" value="${ia.limiteAdmin}"></div>
+        <div><label>Tope mensual de tokens por admin (en miles, 0 = sin tope)</label><input name="tokens_mes_admin" type="number" min="0" value="${ia.tokensMesAdmin || 0}"></div>
+        <div><label>Modelo del modo negocio (IA Negocio)</label><select name="modelo_negocio">${Object.entries(ia.modelos).map(([id, m]) => `<option value="${id}" ${id === ia.modeloNegocio ? 'selected' : ''}>${esc(m.nombre)}</option>`).join('')}</select></div>
       </div>
       <label>Modelo</label>
       <select name="modelo">${Object.entries(ia.modelos).map(([id, m]) => `<option value="${id}" ${id === ia.modelo ? 'selected' : ''}>${esc(m.nombre)} — $${m.entrada}/$${m.salida} por millón de tokens</option>`).join('')}</select>
@@ -2323,12 +2328,12 @@ function adminPreferenciasPage({ user, prefs = {}, ia = null }) {
     <form method="post" action="/admin/ia/limites">
       <div class="mj-tabla">
         <div class="mj-fila mj-cab"><span>Vendedor</span><span>Uso de hoy</span><span>Este mes</span><span>Límite propio</span></div>
-        ${(ia.vendedores || []).map((v) => { const lim = v.ia_limite || ia.limite; const pct = Math.min(100, Math.round((v.hoy / lim) * 100)); return `
+        ${(ia.vendedores || []).map((v) => { const lim = v.ia_limite || (v.role === 'admin' ? ia.limiteAdmin : ia.limite); const pct = Math.min(100, Math.round((v.hoy / lim) * 100)); return `
         <div class="mj-fila">
           <span class="ucel">${avatar(v)}<strong>${esc(v.name)}</strong>${v.role === 'admin' ? '<span class="chip" style="font-size:.6rem">admin</span>' : ''}</span>
-          <span class="mj-uso-celda">${v.role === 'admin' ? `<em>${v.hoy} hoy</em><span class="small muted">sin tope</span>` : `<span class="uso-bar"><span class="${pct >= 100 ? 'lleno' : ''}" style="width:${pct}%"></span></span><em>${v.hoy}/${lim}</em>`}</span>
+          <span class="mj-uso-celda"><span class="uso-bar"><span class="${pct >= 100 ? 'lleno' : ''}" style="width:${pct}%"></span></span><em>${v.hoy}/${lim}</em></span>
           <span class="small muted">${v.mes.n} consulta${v.mes.n === 1 ? '' : 's'} · ${(v.mes.t / 1000).toFixed(1)}k tokens</span>
-          <span>${v.role === 'admin' ? '<span class="small muted">—</span>' : `<input name="limite_${v.id}" type="number" min="1" max="200" value="${v.ia_limite || ''}" placeholder="${ia.limite}" title="Límite diario propio (vacío = general)">`}</span>
+          <span><input name="limite_${v.id}" type="number" min="1" max="500" value="${v.ia_limite || ''}" placeholder="${v.role === 'admin' ? ia.limiteAdmin : ia.limite}" title="Límite diario propio (vacío = general de su rol)"></span>
         </div>`; }).join('')}
       </div>
       <div style="margin-top:.7rem"><button class="btn small">Guardar límites</button></div>
@@ -2946,6 +2951,73 @@ function asesorPage({ user, listo, limite, restantes, deal }) {
   });
 }
 
+/* --------- MiniJuan modo negocio (admin) --------- */
+
+function iaNegocioPage({ user, listo, restantes, modelo }) {
+  return layout({
+    title: 'IA Negocio', user, active: 'ianegocio', sistema: 'comercial',
+    body: `
+  <div class="toolbar" style="margin-bottom:.2rem">
+    <h1 style="margin:0">MiniJuan — modo negocio</h1>
+    <div class="sp"></div>
+    <span class="chip" id="ngRestantes">${restantes} consulta${restantes === 1 ? '' : 's'} hoy</span>
+    <button type="button" class="btn secondary small" id="ngNueva">Nueva charla</button>
+  </div>
+  <p class="small muted">Preguntale por los datos reales del negocio: consulta la base del CRM antes de responder (${esc(modelo)}). Podés repreguntar y afinar dentro de la misma charla.</p>
+  ${listo ? '' : '<div class="flash bad">MiniJuan está desactivado o falta la clave de la API.</div>'}
+  <div class="card" style="display:flex; gap:.35rem; flex-wrap:wrap; padding:.6rem .8rem">
+    ${['¿Cuántas leads nuevas cargamos hoy y quiénes?', '¿Cómo viene Celina este mes en Góndolas?', '¿Qué panel tiene más leads liberadas sin tomar?', '¿Cuánta plata hay en juego en Negociación por panel?'].map((ej) => `<button type="button" class="fx-var ng-ej">${esc(ej)}</button>`).join('')}
+  </div>
+  <div class="card ia-chat" id="ngChat">
+    <div class="ia-msj ia-bot">¡Hola ${esc(user.name.split(' ')[0])}! 👋 Soy MiniJuan en modo negocio. Preguntame lo que quieras de los números: leads, ventas, vendedores, actividad, comisiones… Voy directo a la base y te respondo con datos reales.</div>
+  </div>
+  <form id="ngForm" class="card" style="display:flex; gap:.6rem; align-items:flex-end; flex-wrap:wrap">
+    <div style="flex:1; min-width:16rem">
+      <textarea id="ngPregunta" rows="2" maxlength="1500" placeholder="Ej: ¿cuántas leads vamos hoy por panel?" ${listo ? '' : 'disabled'}></textarea>
+    </div>
+    <button class="btn" id="ngEnviar" ${listo ? '' : 'disabled'}>Preguntar</button>
+  </form>
+  <p class="caption">Solo administradores. MiniJuan consulta la base en modo solo-lectura; cada consulta queda registrada con sus tokens.</p>
+  <script>
+  (function () {
+    var form = document.getElementById('ngForm'), ta = document.getElementById('ngPregunta'), btn = document.getElementById('ngEnviar'), chat = document.getElementById('ngChat');
+    var HIST = [];
+    function burbuja(t, c) { var d = document.createElement('div'); d.className = 'ia-msj ' + c; d.textContent = t; chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return d; }
+    document.getElementById('ngNueva').addEventListener('click', function () {
+      HIST = []; chat.innerHTML = '';
+      burbuja('¡Listo, charla nueva! ¿Qué querés saber del negocio?', 'ia-bot');
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.ng-ej'), function (b) {
+      b.addEventListener('click', function () { ta.value = b.textContent; form.requestSubmit(); });
+    });
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var q = ta.value.trim(); if (!q || btn.disabled) return;
+      burbuja(q, 'ia-yo'); ta.value = ''; btn.disabled = true;
+      var esp = burbuja('Consultando la base…', 'ia-bot ia-espera');
+      fetch('/ia/negocio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pregunta: q, historial: HIST.slice(-4) }) })
+        .then(function (r) { return r.json(); })
+        .then(function (r) {
+          esp.remove();
+          if (r.ok) {
+            burbuja(r.respuesta, 'ia-bot');
+            HIST.push({ p: q, r: r.respuesta });
+            var det = document.createElement('div'); det.className = 'caption'; det.style.margin = '0 0 .3rem';
+            det.textContent = (r.sqls ? r.sqls + ' consulta' + (r.sqls === 1 ? '' : 's') + ' a la base · ' : '') + r.tokens + ' tokens';
+            chat.appendChild(det);
+            var ch = document.getElementById('ngRestantes');
+            if (ch && r.restantes != null) ch.textContent = r.restantes + (r.restantes === 1 ? ' consulta hoy' : ' consultas hoy');
+          } else burbuja(r.error || 'No pude responder.', 'ia-bot ia-error');
+          btn.disabled = false; ta.focus();
+        })
+        .catch(function () { esp.remove(); burbuja('Error de conexión — probá de nuevo.', 'ia-bot ia-error'); btn.disabled = false; });
+    });
+    ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+  })();
+  </script>`
+  });
+}
+
 /* --------- conversaciones con MiniJuan (admin) --------- */
 
 function iaConversacionesPage({ user, fecha: fechaSel, vendedorId, filas, dias, vendedores, hoy }) {
@@ -2985,7 +3057,7 @@ function iaConversacionesPage({ user, fecha: fechaSel, vendedorId, filas, dias, 
     </div>
     ${g.items.map((c) => `
     <details class="conv-item">
-      <summary><span class="conv-hora">${horaDe(c.created_at)}</span><span class="conv-tit">${esc(titulo(c.pregunta))}</span>${c.deal_id ? `<span class="conv-lead">📌 ${esc(String(c.empresa || '#' + c.deal_id).slice(0, 22))}</span>` : ''}</summary>
+      <summary><span class="conv-hora">${horaDe(c.created_at)}</span><span class="conv-tit">${esc(titulo(c.pregunta))}</span>${c.tipo === 'negocio' ? '<span class="conv-lead" style="background:#123B66;color:#fff">📊 negocio</span>' : ''}${c.deal_id ? `<span class="conv-lead">📌 ${esc(String(c.empresa || '#' + c.deal_id).slice(0, 22))}</span>` : ''}</summary>
       <div class="conv-cuerpo">
         <div class="conv-p">${esc(c.pregunta)}</div>
         <div class="conv-r">${esc(c.respuesta)}</div>

@@ -1602,12 +1602,26 @@ const iaConfig = () => ({
   activo: getPanelConfig('_ia', 'activo', '1') === '1',
   credito: Math.max(0, parseFloat(getPanelConfig('_ia', 'credito')) || 0),
   limite: Math.max(1, parseInt(getPanelConfig('_ia', 'limite_dia'), 10) || 20),
+  limiteAdmin: Math.max(1, parseInt(getPanelConfig('_ia', 'limite_admin'), 10) || 40),
+  tokensMesAdmin: Math.max(0, parseInt(getPanelConfig('_ia', 'tokens_mes_admin'), 10) || 0),
+  modeloNegocio: IA_MODELOS[getPanelConfig('_ia', 'modelo_negocio')] ? getPanelConfig('_ia', 'modelo_negocio') : 'claude-opus-5',
   modelo: IA_MODELOS[getPanelConfig('_ia', 'modelo')] ? getPanelConfig('_ia', 'modelo') : 'claude-haiku-4-5',
   contexto: getPanelConfig('_ia', 'contexto', '') || '',
 });
 const iaConsultasHoy = (uid) => db.prepare("SELECT COUNT(*) AS c FROM ia_consultas WHERE user_id = ? AND substr(datetime(created_at, '-3 hours'), 1, 10) = ?").get(uid, hoyAR()).c;
-// Límite diario efectivo: el propio del vendedor si el admin le puso uno; si no, el general de Config.
-const iaLimiteDe = (u) => Math.max(1, parseInt(u.ia_limite, 10) || iaConfig().limite);
+// Límite diario efectivo: el propio si se lo pusieron; si no, el general de su rol.
+const iaLimiteDe = (u) => Math.max(1, parseInt(u.ia_limite, 10) || (u.role === 'admin' ? iaConfig().limiteAdmin : iaConfig().limite));
+// Tope de admins: consultas diarias + tokens mensuales (0 = sin tope). Devuelve el mensaje de error o null.
+function iaTopeDe(u) {
+  const lim = iaLimiteDe(u);
+  if (iaConsultasHoy(u.id) >= lim) return `Llegaste al tope de ${lim} consultas por hoy — mañana se renueva.`;
+  const cfg = iaConfig();
+  if (u.role === 'admin' && cfg.tokensMesAdmin > 0) {
+    const t = db.prepare("SELECT COALESCE(SUM(tokens_in + tokens_out), 0) AS t FROM ia_consultas WHERE user_id = ? AND substr(datetime(created_at, '-3 hours'), 1, 7) = ?").get(u.id, hoyAR().slice(0, 7)).t;
+    if (t >= cfg.tokensMesAdmin * 1000) return `Alcanzaste tu tope mensual de ${cfg.tokensMesAdmin}k tokens.`;
+  }
+  return null;
+}
 
 // Quién es el asesor: experto en desarrollo web/software a medida que ayuda a responder clientes.
 // Este texto es estable a propósito: se cachea (prompt caching) y baja el costo de cada consulta.
@@ -1633,7 +1647,8 @@ app.post('/ia/consulta', requireAuth, express.json(), async (req, res) => {
   if (pregunta.length < 4) return res.status(400).json({ error: 'Contame un poco más qué necesitás.' });
   const usadas = iaConsultasHoy(req.user.id);
   const lim = iaLimiteDe(req.user);
-  if (req.user.role !== 'admin' && usadas >= lim) return res.status(429).json({ error: `Llegaste al tope de ${lim} consultas por hoy — mañana se renueva.` });
+  const tope = iaTopeDe(req.user);
+  if (tope) return res.status(429).json({ error: tope });
 
   // Contexto real de la lead desde la que pregunta (solo si tiene acceso a ese panel).
   let extra = '';
@@ -1667,7 +1682,7 @@ app.post('/ia/consulta', requireAuth, express.json(), async (req, res) => {
     const u = r.usage || {};
     db.prepare('INSERT INTO ia_consultas (user_id, deal_id, pregunta, respuesta, modelo, tokens_in, tokens_out) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .run(req.user.id, deal ? deal.id : null, pregunta, texto, r.model || cfg.modelo, (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0), u.output_tokens || 0);
-    res.json({ ok: true, respuesta: texto, restantes: req.user.role === 'admin' ? null : Math.max(0, lim - usadas - 1) });
+    res.json({ ok: true, respuesta: texto, restantes: Math.max(0, lim - usadas - 1) });
   } catch (e) {
     if (e instanceof Anthropic.AuthenticationError) return res.status(502).json({ error: 'La clave de la API no es válida — avisale al administrador.' });
     if (e instanceof Anthropic.RateLimitError) return res.status(503).json({ error: 'El asesor está saturado, esperá un minuto y probá de nuevo.' });
@@ -1692,6 +1707,134 @@ app.get('/ia/historial', requireAuth, (req, res) => {
 app.post('/ia/nueva', requireAuth, (req, res) => {
   db.prepare('UPDATE users SET ia_charla_desde = (SELECT COALESCE(MAX(id), 0) FROM ia_consultas WHERE user_id = ?) WHERE id = ?').run(req.user.id, req.user.id);
   res.json({ ok: true });
+});
+
+/* ---- MiniJuan modo NEGOCIO (solo admins): consulta la base real con una herramienta SQL de solo lectura ---- */
+
+let _dbLectura = null;
+const dbLectura = () => _dbLectura || (_dbLectura = new (require('better-sqlite3'))(path.join(__dirname, 'data', 'crm.db'), { readonly: true, fileMustExist: true }));
+
+let _esquemaCRM = null;
+function esquemaCRM() {
+  if (_esquemaCRM) return _esquemaCRM;
+  const tablas = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all();
+  _esquemaCRM = tablas.map((t) => `${t.name}(${db.prepare(`PRAGMA table_info(${t.name})`).all().map((c) => c.name).join(', ')})`).join('\n');
+  return _esquemaCRM;
+}
+
+function ejecutarSQLLectura(sql) {
+  const limpio = String(sql || '').trim().replace(/;\s*$/, '');
+  if (!/^(select|with)\b/i.test(limpio)) return 'ERROR: solo se permiten consultas SELECT (o WITH).';
+  if (/;/.test(limpio) || /\b(attach|pragma)\b/i.test(limpio) || /password_hash/i.test(limpio)) return 'ERROR: consulta no permitida.';
+  try {
+    const filas = dbLectura().prepare(limpio).all().slice(0, 200);
+    if (!filas.length) return '(sin filas)';
+    const out = JSON.stringify(filas);
+    return out.length > 12000 ? out.slice(0, 12000) + '… (recortado a 200 filas / 12k caracteres)' : out;
+  } catch (e) { return 'ERROR SQL: ' + e.message; }
+}
+
+const IA_NEGOCIO_TOOL = {
+  name: 'consultar_crm',
+  description: 'Ejecuta una consulta SQL de SOLO LECTURA (SELECT/WITH, dialecto SQLite) sobre la base real del CRM y devuelve las filas en JSON (máximo 200). Usala todas las veces que haga falta antes de responder.',
+  input_schema: {
+    type: 'object',
+    properties: { sql: { type: 'string', description: 'Una única consulta SELECT de SQLite, con LIMIT razonable.' } },
+    required: ['sql'],
+  },
+};
+
+const IA_NEGOCIO_BASE = () => `Sos MiniJuan en modo NEGOCIO: el analista de datos del CRM "Campus C4D" de Cloud For Deploy, hablándole a un administrador. Respondés en español argentino, con los números primero y sin humo.
+
+Tenés la herramienta consultar_crm (SQL de solo lectura sobre SQLite). Usala SIEMPRE antes de responder — nunca inventes ni estimes un dato que podés consultar. Si una consulta falla, corregila y reintentá.
+
+Esquema de la base:
+${esquemaCRM()}
+
+Claves del dominio:
+- deals = las leads. panel: 'cfd' (software), 'gondolas', 'estanterias', 'sitioweb'. Una VENTA real es etapa='Ganado' AND aprobacion='aprobado'; mrr es el valor. destacada=1 es lead con estrella.
+- deal_events = historial de cada lead (tipo: 'creado' | 'etapa' | 'edicion'). Las fechas están en UTC: el día argentino es substr(datetime(created_at, '-3 hours'), 1, 10). "Leads nuevas de un día" = eventos tipo 'creado' de ese día; "recontactos" = leads YA existentes tocadas ese día (etapa/edicion, excluyendo las creadas ese mismo día).
+- panel_activity = carga diaria de actividad por vendedor (valores es JSON con claves c<id> según panel_campos).
+- commissions = comisiones (estado pendiente/pagado/cancelado). proyectos = ventas de cfd en desarrollo. ia_consultas = uso de MiniJuan.
+- users: los vendedores tienen role='vendedor'. NUNCA consultes ni muestres password_hash.
+
+Hoy es ${hoyAR()} (hora argentina). Si la pregunta no es sobre el negocio, decliná: "eso está fuera de mi cancha".`;
+
+app.post('/ia/negocio', requireAuth, requireAdmin, express.json(), async (req, res) => {
+  const cfg = iaConfig();
+  if (!cfg.activo) return res.status(503).json({ error: 'MiniJuan está desactivado.' });
+  if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'Falta configurar la clave de la API en el servidor.' });
+  const pregunta = String((req.body && req.body.pregunta) || '').trim().slice(0, 1500);
+  if (pregunta.length < 4) return res.status(400).json({ error: 'Contame un poco más qué querés saber.' });
+  const tope = iaTopeDe(req.user);
+  if (tope) return res.status(429).json({ error: tope });
+
+  // Historial corto de la charla (lo maneja el navegador): hasta 4 idas y vueltas.
+  const historial = Array.isArray(req.body.historial) ? req.body.historial.slice(-4) : [];
+  const mensajes = [];
+  for (const h of historial) {
+    if (h && typeof h.p === 'string' && typeof h.r === 'string') {
+      mensajes.push({ role: 'user', content: String(h.p).slice(0, 1500) });
+      mensajes.push({ role: 'assistant', content: String(h.r).slice(0, 6000) });
+    }
+  }
+  mensajes.push({ role: 'user', content: pregunta });
+
+  const modelo = cfg.modeloNegocio;
+  const cliente = new Anthropic();
+  const crear = (params) => (modelo === 'claude-opus-5'
+    ? cliente.beta.messages.create({ ...params, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' })
+    : cliente.messages.create(params));
+  let totalIn = 0, totalOut = 0, sqls = 0, texto = '';
+  try {
+    for (let vuelta = 0; vuelta < 8; vuelta++) {
+      const r = await crear({
+        model: modelo,
+        max_tokens: 2048,
+        system: [{ type: 'text', text: IA_NEGOCIO_BASE(), cache_control: { type: 'ephemeral' } }],
+        tools: [IA_NEGOCIO_TOOL],
+        messages: mensajes,
+      });
+      const u = r.usage || {};
+      totalIn += (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
+      totalOut += u.output_tokens || 0;
+      if (r.stop_reason === 'pause_turn') { mensajes.push({ role: 'assistant', content: r.content }); continue; }
+      if (r.stop_reason === 'tool_use') {
+        mensajes.push({ role: 'assistant', content: r.content });
+        const resultados = [];
+        for (const b of r.content) {
+          if (b.type !== 'tool_use') continue;
+          sqls++;
+          resultados.push({ type: 'tool_result', tool_use_id: b.id, content: ejecutarSQLLectura(b.input && b.input.sql) });
+        }
+        mensajes.push({ role: 'user', content: resultados });
+        continue;
+      }
+      if (r.stop_reason === 'refusal') { texto = ''; break; }
+      texto = r.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim();
+      break;
+    }
+    if (!texto) return res.json({ ok: false, error: 'No pude armar la respuesta — probá reformular la pregunta.' });
+    db.prepare("INSERT INTO ia_consultas (user_id, pregunta, respuesta, modelo, tokens_in, tokens_out, tipo) VALUES (?, ?, ?, ?, ?, ?, 'negocio')")
+      .run(req.user.id, pregunta, texto, modelo, totalIn, totalOut);
+    res.json({ ok: true, respuesta: texto, sqls, tokens: totalIn + totalOut, restantes: Math.max(0, iaLimiteDe(req.user) - iaConsultasHoy(req.user.id)) });
+  } catch (e) {
+    if (e instanceof Anthropic.AuthenticationError) return res.status(502).json({ error: 'La clave de la API no es válida.' });
+    if (e instanceof Anthropic.RateLimitError) return res.status(503).json({ error: 'La API está saturada, probá en un minuto.' });
+    if (e instanceof Anthropic.APIError) { console.error('ia negocio api:', e.status, e.message); return res.status(502).json({ error: 'No pude responder — probá de nuevo.' }); }
+    console.error('ia negocio:', e.message);
+    res.status(500).json({ error: 'Error inesperado.' });
+  }
+});
+
+app.get('/ia/negocio', requireAuth, requireAdmin, (req, res) => {
+  const cfg = iaConfig();
+  res.send(V.iaNegocioPage({
+    user: req.user,
+    listo: cfg.activo && !!process.env.ANTHROPIC_API_KEY,
+    restantes: Math.max(0, iaLimiteDe(req.user) - iaConsultasHoy(req.user.id)),
+    modelo: IA_MODELOS[cfg.modeloNegocio].nombre,
+  }));
 });
 
 app.get('/asesor', requireAuth, (req, res) => {
@@ -1728,6 +1871,9 @@ app.post('/admin/ia', requireAuth, requireAdmin, (req, res) => {
   if (IA_MODELOS[req.body.modelo]) setPanelConfig('_ia', 'modelo', req.body.modelo);
   setPanelConfig('_ia', 'contexto', String(req.body.contexto || '').slice(0, 8000));
   setPanelConfig('_ia', 'credito', Math.max(0, parseFloat(req.body.credito) || 0));
+  setPanelConfig('_ia', 'limite_admin', Math.min(500, Math.max(1, parseInt(req.body.limite_admin, 10) || 40)));
+  setPanelConfig('_ia', 'tokens_mes_admin', Math.max(0, parseInt(req.body.tokens_mes_admin, 10) || 0));
+  if (IA_MODELOS[req.body.modelo_negocio]) setPanelConfig('_ia', 'modelo_negocio', req.body.modelo_negocio);
   res.redirect('/admin/preferencias');
 });
 
@@ -1738,7 +1884,7 @@ app.post('/admin/ia/limites', requireAuth, requireAdmin, (req, res) => {
     if (!k.startsWith('limite_')) continue;
     const uid = parseInt(k.slice(7), 10);
     const n = parseInt(v, 10);
-    if (Number.isFinite(uid)) up.run(Number.isFinite(n) && n >= 1 ? Math.min(200, n) : null, uid, 'vendedor');
+    if (Number.isFinite(uid)) { up.run(Number.isFinite(n) && n >= 1 ? Math.min(500, n) : null, uid, 'vendedor'); up.run(Number.isFinite(n) && n >= 1 ? Math.min(500, n) : null, uid, 'admin'); }
   }
   res.redirect('/admin/preferencias');
 });

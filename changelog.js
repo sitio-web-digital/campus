@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.39.0',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'nuevo', texto: 'MiniJuan modo NEGOCIO (solo admins, link "IA Negocio" en la barra de los paneles): preguntale por los datos reales del negocio — "¿cuántas leads vamos hoy?", "¿cómo viene tal vendedor?" — y consulta la base del CRM en modo solo-lectura antes de responder, con memoria de charla, ejemplos listos y detalle de cuántas consultas hizo y tokens usó.' },
+      { tipo: 'nuevo', texto: 'Límites para admins en el panel de la IA: tope de consultas por día (general e individual, editable en la misma tabla de uso) y tope mensual de tokens por admin. Las charlas del modo negocio quedan en Conversaciones marcadas con 📊.' },
+    ],
+  },
+  {
     version: '2.38.0',
     fecha: '2026-09-06',
     cambios: [
