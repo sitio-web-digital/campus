@@ -116,6 +116,76 @@ function sysSwitch(sistema, user) {
   </details>`;
 }
 
+// MiniJuan: el asesor IA del equipo comercial. Dibujo (rubio, joven) + burbuja flotante con chat.
+const MINIJUAN_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#0E6E66"/><path d="M14 66c1-13 8-19 18-19s17 6 18 19z" fill="#1D6FB8"/><path d="M27 44h10v7c0 3-10 3-10 0z" fill="#F0BE8F"/><ellipse cx="32" cy="32" rx="15" ry="16.5" fill="#F6C99F"/><path d="M17 31c-1-12 6-19 15-19s16 7 15 19c-1-7-3-9-5-11-2 3-6 4-10 4s-8-1-10-4c-2 2-4 4-5 11z" fill="#F7D774"/><path d="M17 31c0 3 .8 5 2 6M47 31c0 3-.8 5-2 6" stroke="#F7D774" stroke-width="4" stroke-linecap="round"/><circle cx="26.5" cy="32" r="2" fill="#2B3A4D"/><circle cx="37.5" cy="32" r="2" fill="#2B3A4D"/><path d="M23.5 27.5c1.8-1.4 4-1.4 5.6-.3M34.9 27.2c1.6-1.1 3.8-1.1 5.6.3" stroke="#D9A94E" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M27 40c3 2.6 7 2.6 10 0" stroke="#B96A4B" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`;
+
+// Solo en paneles comerciales, para vendedores y admins. data-bienvenida abre el chat solo la primera vez.
+function miniJuanWidget(user, sistema) {
+  if (!user || !['admin', 'vendedor'].includes(user.role)) return '';
+  if (!['comercial', 'cfd', 'gondolas', 'estanterias', 'sitioweb'].includes(sistema)) return '';
+  return `
+<div class="mj" id="mj" data-bienvenida="${user.ia_bienvenida ? '0' : '1'}">
+  <div class="mj-panel" id="mjPanel" hidden>
+    <div class="mj-head">${MINIJUAN_SVG}<div><strong>MiniJuan</strong><small>Tu experto en desarrollo web y software a medida</small></div><button type="button" class="mj-x" id="mjCerrar" aria-label="Cerrar">&times;</button></div>
+    <div class="mj-ctx" id="mjCtx" hidden></div>
+    <div class="mj-chat" id="mjChat"></div>
+    <form class="mj-form" id="mjForm">
+      <textarea id="mjInput" rows="2" maxlength="1500" placeholder="Preguntale lo que quieras a MiniJuan…"></textarea>
+      <button class="btn" id="mjEnviar">Enviar</button>
+    </form>
+  </div>
+  <button type="button" class="mj-burbuja" id="mjBurbuja" title="MiniJuan — preguntame lo que quieras" aria-label="Abrir el chat de MiniJuan">${MINIJUAN_SVG}</button>
+</div>
+<script>
+(function () {
+  var mj = document.getElementById('mj'); if (!mj) return;
+  var panel = document.getElementById('mjPanel'), chat = document.getElementById('mjChat'), form = document.getElementById('mjForm');
+  var ta = document.getElementById('mjInput'), btn = document.getElementById('mjEnviar'), burb = document.getElementById('mjBurbuja'), ctxBox = document.getElementById('mjCtx');
+  var ctxDeal = null, saludado = false;
+  function burbuja(t, c) { var d = document.createElement('div'); d.className = 'mj-msj ' + c; d.textContent = t; chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return d; }
+  function saludar(primeraVez) {
+    if (saludado) return; saludado = true;
+    fetch('/ia/historial').then(function (r) { return r.json(); }).then(function (h) {
+      var items = (h && h.items) || [];
+      items.forEach(function (it) { burbuja(it.pregunta, 'mj-yo'); burbuja(it.respuesta, 'mj-bot'); });
+      burbuja(primeraVez
+        ? '¡Hola! Soy MiniJuan 👋 Tu nuevo asesor con inteligencia artificial, experto en desarrollo web y software a medida. Estoy para ayudarte a vender: pegame el mensaje de un cliente y te armo la respuesta, preguntame cómo explicar algo técnico o cómo manejar una objeción de precio. Podés preguntarme lo que quieras, las veces que quieras hasta tu tope del día. ¡Dale, probame!'
+        : (items.length ? '¡Seguimos cuando quieras! 👋 ¿En qué te ayudo ahora?' : '¡Hola de nuevo! 👋 Soy MiniJuan. ¿En qué te ayudo?'), 'mj-bot');
+      chat.scrollTop = chat.scrollHeight;
+    }).catch(function () { burbuja('¡Hola! Soy MiniJuan 👋 ¿En qué te ayudo?', 'mj-bot'); });
+  }
+  function abrir(primeraVez) { panel.hidden = false; burb.classList.add('mj-oculta'); saludar(primeraVez); ta.focus(); }
+  function cerrar() { panel.hidden = true; burb.classList.remove('mj-oculta'); }
+  burb.addEventListener('click', function () { abrir(false); });
+  document.getElementById('mjCerrar').addEventListener('click', cerrar);
+  window.miniJuanAbrir = function (dealId, empresa) {
+    ctxDeal = dealId || null;
+    if (ctxDeal) { ctxBox.hidden = false; ctxBox.textContent = 'Hablando sobre la lead: ' + (empresa || ('#' + dealId)) + ' — MiniJuan ya conoce sus datos'; } else ctxBox.hidden = true;
+    abrir(false);
+  };
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var q = ta.value.trim(); if (!q || btn.disabled) return;
+    burbuja(q, 'mj-yo'); ta.value = ''; btn.disabled = true;
+    var esp = burbuja('MiniJuan está pensando…', 'mj-bot mj-esp');
+    fetch('/ia/consulta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pregunta: q, deal_id: ctxDeal }) })
+      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        esp.remove();
+        if (r.ok) burbuja(r.respuesta, 'mj-bot');
+        else burbuja(r.error || 'No pude responder, probá de nuevo.', 'mj-bot mj-err');
+        btn.disabled = false; ta.focus();
+      })
+      .catch(function () { esp.remove(); burbuja('Error de conexión — probá de nuevo.', 'mj-bot mj-err'); btn.disabled = false; });
+  });
+  ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+  if (mj.getAttribute('data-bienvenida') === '1') {
+    setTimeout(function () { abrir(true); fetch('/ia/bienvenida', { method: 'POST' }); }, 900);
+  }
+})();
+</script>`;
+}
+
 // Foto de perfil: imagen subida o iniciales sobre fondo de acento.
 const avatar = (u, cls = '') => (u && u.avatar
   ? `<img class="avatar ${cls}" src="/avatars/${u.id}?v=${encodeURIComponent(u.avatar)}" alt="">`
@@ -166,7 +236,6 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="${b}/pipeline" class="${active === 'pipeline' ? 'on' : ''}${dd.pipeline ? ' deuda' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
         <a href="${b}/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="${b}/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
-        <a href="/asesor" class="${active === 'asesor' ? 'on' : ''}">${IC('<path d="M3 5.5A2.5 2.5 0 015.5 3h9A2.5 2.5 0 0117 5.5v5a2.5 2.5 0 01-2.5 2.5H8.5L4.5 16.5V13H3z"/><path d="M6.8 7.9h6.4M6.8 10.4h4.2"/>')}<span>Asesor IA</span></a>
         ${user && user.role === 'admin' ? `<a href="${b}/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
         <a href="${b}/contactos" class="${active === 'contactos' ? 'on' : ''}">${IC('<path d="M4.2 3.5h2.6l1.4 3.3-1.9 1.5a11.4 11.4 0 005.4 5.4l1.5-1.9 3.3 1.4v2.6a1.4 1.4 0 01-1.5 1.4C8.8 16.7 3.3 11.2 2.8 5A1.4 1.4 0 014.2 3.5z"/>')}<span>Contactos</span></a>
         <a href="${b}/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>` : ''}`;
@@ -176,7 +245,6 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="/pipeline" class="${active === 'pipeline' ? 'on' : ''}${dd.pipeline ? ' deuda' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
         <a href="/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
-        <a href="/asesor" class="${active === 'asesor' ? 'on' : ''}">${IC('<path d="M3 5.5A2.5 2.5 0 015.5 3h9A2.5 2.5 0 0117 5.5v5a2.5 2.5 0 01-2.5 2.5H8.5L4.5 16.5V13H3z"/><path d="M6.8 7.9h6.4M6.8 10.4h4.2"/>')}<span>Asesor IA</span></a>
         ${user && user.role === 'admin' ? `<a href="/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
         <a href="/contactos" class="${active === 'contactos' ? 'on' : ''}">${IC('<path d="M4.2 3.5h2.6l1.4 3.3-1.9 1.5a11.4 11.4 0 005.4 5.4l1.5-1.9 3.3 1.4v2.6a1.4 1.4 0 01-1.5 1.4C8.8 16.7 3.3 11.2 2.8 5A1.4 1.4 0 014.2 3.5z"/>')}<span>Contactos</span></a>
         <a href="/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>
@@ -208,6 +276,7 @@ ${msg ? `<div class="flash ok">${esc(msg)}</div>` : ''}
 ${err ? `<div class="flash bad">${esc(err)}</div>` : ''}
 ${body}
 </main>
+${miniJuanWidget(user, sistema)}
 ${user && user.modalBanner ? `
 <div class="modal-back anuncio" id="anuncioModal">
   <div class="modal anuncio-box">
@@ -842,6 +911,37 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 .umenu-pop svg { width:1rem; height:1rem; color:var(--muted); flex-shrink:0; }
 .umenu-pop form { display:contents; }
 @media (max-width:640px) { .umenu-pop { position:fixed; top:3.3rem; right:.5rem; } }
+
+/* ---------- MiniJuan: burbuja flotante ---------- */
+.mj { position:fixed; right:1.1rem; bottom:1.1rem; z-index:150; }
+.mj-burbuja { width:58px; height:58px; border-radius:50%; border:2px solid rgba(255,255,255,.55); padding:0; overflow:hidden; cursor:pointer; box-shadow:var(--sh-lg); background:#0E6E66; transition:transform .15s; display:block; }
+.mj-burbuja svg { width:100%; height:100%; display:block; }
+.mj-burbuja:hover { transform:scale(1.08); }
+.mj-burbuja.mj-oculta { display:none; }
+.mj-panel { position:fixed; right:1.1rem; bottom:1.1rem; width:min(24rem, calc(100vw - 1.4rem)); max-height:min(34rem, calc(100vh - 5rem)); background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--sh-lg); display:flex; flex-direction:column; overflow:hidden; }
+.mj-head { display:flex; gap:.6rem; align-items:center; padding:.65rem .8rem; background:#0E6E66; color:#fff; }
+.mj-head svg { width:2.4rem; height:2.4rem; border-radius:50%; flex-shrink:0; border:1.5px solid rgba(255,255,255,.4); }
+.mj-head strong { font-size:.95rem; }
+.mj-head small { display:block; font-size:.64rem; opacity:.85; line-height:1.3; }
+.mj-x { margin-left:auto; background:none; border:none; color:#fff; font-size:1.35rem; cursor:pointer; line-height:1; padding:.1rem .3rem; }
+.mj-ctx { font-size:.7rem; padding:.4rem .8rem; background:var(--accent-soft); color:var(--accent-ink); font-weight:600; }
+.mj-chat { flex:1; overflow-y:auto; padding:.7rem; display:flex; flex-direction:column; gap:.5rem; min-height:9rem; }
+.mj-msj { max-width:88%; padding:.5rem .7rem; border-radius:10px; font-size:.84rem; line-height:1.5; white-space:pre-wrap; overflow-wrap:break-word; }
+.mj-bot { background:var(--surface2); border:1px solid var(--line); align-self:flex-start; }
+.mj-yo { background:var(--accent-soft); align-self:flex-end; }
+.mj-esp { color:var(--muted); font-style:italic; }
+.mj-err { color:#E05550; }
+.mj-form { display:flex; gap:.45rem; padding:.55rem; border-top:1px solid var(--line); align-items:flex-end; }
+.mj-form textarea { flex:1; margin:0; }
+.mj-uso { display:flex; gap:.7rem; align-items:center; padding:.35rem 0; border-top:1px solid var(--line); flex-wrap:wrap; }
+.mj-uso input { width:5.5rem; margin:0; }
+.uso-bar { flex:1; min-width:8rem; height:.55rem; background:var(--surface2); border:1px solid var(--line); border-radius:99px; overflow:hidden; }
+.uso-bar span { display:block; height:100%; background:#0E6E66; border-radius:99px; transition:width .3s; }
+.uso-bar span.lleno { background:#E05550; }
+@media (max-width:640px) {
+  .mj { right:.7rem; bottom:4.6rem; }
+  .mj-panel { right:.55rem; left:.55rem; width:auto; bottom:4.6rem; max-height:calc(100vh - 8rem); }
+}
 
 /* ---------- asesor IA ---------- */
 .ia-chat { display:flex; flex-direction:column; gap:.6rem; max-height:60vh; overflow-y:auto; padding:1rem; }
@@ -1557,7 +1657,7 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
         <select name="motivo_perdida"><option value="">—</option>${opt(MOTIVOS, d.motivo_perdida)}</select>
       </div>
     </div>
-    ${!isNew && ['admin', 'vendedor'].includes(user.role) ? `<p class="small" style="margin:.1rem 0 .5rem"><a href="/asesor?deal=${d.id}">💡 Pedirle ayuda al Asesor IA para responderle a este cliente →</a></p>` : ''}
+    ${!isNew && ['admin', 'vendedor'].includes(user.role) ? `<p class="small" style="margin:.1rem 0 .5rem"><a href="/asesor?deal=${d.id}" onclick="if (window.miniJuanAbrir) { miniJuanAbrir(${d.id}, '${esc(d.empresa).replace(/'/g, '')}'); return false; }">💡 Preguntale a MiniJuan cómo responderle a este cliente →</a></p>` : ''}
     <label>Agregar nota al historial <span class="muted" style="font-weight:400">· escribí <code>@</code> para mencionar a alguien del panel</span></label>
     <div class="men-wrap"><textarea name="notas" rows="3" data-menciones="${esc(JSON.stringify(mencionables))}" placeholder="Contexto, objeciones, acuerdos… Al guardar, la nota queda registrada en el historial con tu nombre y fecha, y este campo vuelve a quedar libre."></textarea></div>
     <script>
@@ -2054,8 +2154,8 @@ function adminPreferenciasPage({ user, prefs = {}, ia = null }) {
   <h1>Mis preferencias</h1>
   ${ia ? `
   <div class="card">
-    <h3 style="margin-top:0">Asesor IA del equipo</h3>
-    <p class="small muted">El asesor responde a los vendedores en <a href="/asesor">/asesor</a> usando la API de Claude. La clave vive en el servidor (variable ANTHROPIC_API_KEY): ${ia.keyOk ? '<strong style="color:#2E7D4F">configurada ✓</strong>' : '<strong style="color:#E05550">FALTA — el asesor no responde sin ella</strong>'}.</p>
+    <h3 style="margin-top:0">MiniJuan — el asesor IA del equipo</h3>
+    <p class="small muted">MiniJuan vive como burbuja abajo a la derecha de los paneles comerciales y responde usando la API de Claude. La clave vive en el servidor (variable ANTHROPIC_API_KEY): ${ia.keyOk ? '<strong style="color:#2E7D4F">configurada ✓</strong>' : '<strong style="color:#E05550">FALTA — el asesor no responde sin ella</strong>'}.</p>
     <div class="tiles" style="margin-bottom:.8rem">
       <div class="tile"><div class="v">${ia.hoy}</div><div class="l">consultas hoy (equipo)</div></div>
       <div class="tile"><div class="v">${ia.mes.n}</div><div class="l">consultas este mes</div></div>
@@ -2071,6 +2171,18 @@ function adminPreferenciasPage({ user, prefs = {}, ia = null }) {
       <label>Contexto de la empresa (el "manual" que el asesor sigue: precios orientativos, plazos, qué prometemos y qué no, tono)</label>
       <textarea name="contexto" rows="6" maxlength="8000" placeholder="Ej: Una web institucional arranca en $X y tarda ~3 semanas. Nunca prometemos SEO en primera página. Mantenimiento mensual desde $Y…">${esc(ia.contexto)}</textarea>
       <div style="margin-top:.8rem"><button class="btn">Guardar asesor</button></div>
+    </form>
+
+    <h4 style="margin:1.1rem 0 .3rem">Uso y límite por vendedor</h4>
+    <p class="small muted" style="margin:0 0 .5rem">La barra muestra cuánto usó hoy cada uno contra su tope. Poné un número para darle un límite propio; vacío = usa el tope general (${ia.limite}).</p>
+    <form method="post" action="/admin/ia/limites">
+      ${(ia.vendedores || []).map((v) => { const lim = v.ia_limite || ia.limite; const pct = Math.min(100, Math.round((v.hoy / lim) * 100)); return `
+      <div class="mj-uso">
+        <div class="ucel" style="min-width:14rem">${avatar(v)}<div><strong>${esc(v.name)}</strong><div class="small muted">hoy ${v.hoy} de ${lim} · mes: ${v.mes.n} consulta${v.mes.n === 1 ? '' : 's'} · ${v.mes.t} tokens</div></div></div>
+        <div class="uso-bar" title="${v.hoy} de ${lim} hoy"><span class="${pct >= 100 ? 'lleno' : ''}" style="width:${pct}%"></span></div>
+        <input name="limite_${v.id}" type="number" min="1" max="200" value="${v.ia_limite || ''}" placeholder="${ia.limite}" title="Límite propio (vacío = general)">
+      </div>`; }).join('')}
+      <div style="margin-top:.6rem"><button class="btn small">Guardar límites</button></div>
     </form>
     ${ia.ultimas.length ? `
     <details style="margin-top:.9rem"><summary class="small" style="cursor:pointer"><strong>Últimas ${ia.ultimas.length} consultas del equipo</strong></summary>
@@ -2633,18 +2745,18 @@ function campanasPage({ user, campanas }) {
 
 function asesorPage({ user, listo, limite, restantes, deal }) {
   return layout({
-    title: 'Asesor IA', user, active: 'asesor', sistema: 'hub',
+    title: 'MiniJuan', user, active: 'asesor', sistema: 'hub',
     body: `
   <div class="toolbar" style="margin-bottom:.2rem">
-    <h1 style="margin:0">Asesor IA</h1>
+    <h1 style="margin:0">MiniJuan — tu asesor</h1>
     <div class="sp"></div>
     ${restantes != null ? `<span class="chip" id="iaRestantes">${restantes} consulta${restantes === 1 ? '' : 's'} hoy</span>` : ''}
   </div>
-  <p class="small muted">Tu experto en desarrollo web y software a medida. Pedile ayuda para responder mensajes de clientes, explicar algo técnico o manejar una objeción. ${restantes != null ? `Tenés hasta ${limite} consultas por día.` : ''}</p>
+  <p class="small muted">MiniJuan es tu experto en desarrollo web y software a medida. Pedile ayuda para responder mensajes de clientes, explicar algo técnico o manejar una objeción. ${restantes != null ? `Tenés hasta ${limite} consultas por día.` : ''}</p>
   ${deal ? `<div class="flash ok" style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap">Preguntando sobre la lead <strong>${esc(deal.empresa)}</strong> (${esc(deal.etapa)}) — el asesor ya conoce sus datos y últimas notas. <a href="/asesor">Preguntar en general</a></div>` : ''}
   ${listo ? '' : '<div class="flash bad">El asesor está desactivado o falta configurar la clave de la API. Avisale al administrador.</div>'}
   <div class="card ia-chat" id="iaChat">
-    <div class="ia-msj ia-bot">¡Hola ${esc(user.name.split(' ')[0])}! 👋 Contame qué necesitás: pegame el mensaje del cliente y te armo la respuesta, o preguntame lo que quieras sobre desarrollo web para vender mejor.</div>
+    <div class="ia-msj ia-bot">¡Hola ${esc(user.name.split(' ')[0])}! Soy MiniJuan 👋 Contame qué necesitás: pegame el mensaje del cliente y te armo la respuesta, o preguntame lo que quieras sobre desarrollo web para vender mejor.</div>
   </div>
   <form id="iaForm" class="card" style="display:flex; gap:.6rem; align-items:flex-end; flex-wrap:wrap">
     <div style="flex:1; min-width:16rem">

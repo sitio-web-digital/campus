@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.36.0',
+    fecha: '2026-09-04',
+    cambios: [
+      { tipo: 'nuevo', texto: 'El asesor ahora es MiniJuan 👱: una burbuja flotante abajo a la derecha de los paneles comerciales, con su carita y todo. La tocás y se abre el chat para preguntarle lo que quieras sin salir de donde estás; tus charlas quedan guardadas y las retoma al abrir. La primera vez se presenta solo.' },
+      { tipo: 'nuevo', texto: 'Desde la ficha de una lead, "Preguntale a MiniJuan" abre el chat ya sabiendo de qué cliente hablás. Y en Administración → Preferencias: barra de uso por vendedor (hoy vs su tope, consultas y tokens del mes) y límite diario propio por vendedor (vacío = usa el general).' },
+    ],
+  },
+  {
     version: '2.35.0',
     fecha: '2026-09-04',
     cambios: [

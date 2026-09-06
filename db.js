@@ -287,6 +287,12 @@ db.exec(`CREATE TABLE IF NOT EXISTS ia_consultas (
   tokens_out INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );`);
+// 2.36.0: MiniJuan — bienvenida vista (una vez por usuario) y límite diario propio (NULL = usa el general).
+{
+  const cols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+  if (!cols.includes('ia_bienvenida')) db.exec('ALTER TABLE users ADD COLUMN ia_bienvenida INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('ia_limite')) db.exec('ALTER TABLE users ADD COLUMN ia_limite INTEGER');
+}
 // Migración 2.8.0: campaña de origen y ubicación de la lead.
 if (!dealCols.includes('campana_id')) {
   db.exec('ALTER TABLE deals ADD COLUMN campana_id INTEGER REFERENCES campanas(id)');

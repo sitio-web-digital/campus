@@ -71,7 +71,7 @@ if (seeded) {
 
 function currentUser(req) {
   if (!req.session.uid) return null;
-  const u = db.prepare('SELECT id, name, email, role, active, permisos, last_seen_at, last_version_vista, avatar FROM users WHERE id = ? AND active = 1').get(req.session.uid) || null;
+  const u = db.prepare('SELECT id, name, email, role, active, permisos, last_seen_at, last_version_vista, avatar, ia_bienvenida, ia_limite FROM users WHERE id = ? AND active = 1').get(req.session.uid) || null;
   if (u) { try { u.permisos = JSON.parse(u.permisos || '[]'); } catch { u.permisos = []; } }
   return u;
 }
@@ -797,6 +797,10 @@ app.get('/admin/preferencias', requireAuth, requireAdmin, (req, res) => {
     ...cfgIA, keyOk: !!process.env.ANTHROPIC_API_KEY, modelos: IA_MODELOS,
     hoy: db.prepare("SELECT COUNT(*) AS c FROM ia_consultas WHERE substr(datetime(created_at, '-3 hours'), 1, 10) = ?").get(hoyAR()).c,
     mes: mesIA, costoMes: (mesIA.ti / 1e6) * precio.entrada + (mesIA.tsal / 1e6) * precio.salida,
+    vendedores: db.prepare("SELECT id, name, avatar, ia_limite FROM users WHERE active = 1 AND role = 'vendedor' ORDER BY name").all().map((v) => ({
+      ...v, hoy: iaConsultasHoy(v.id),
+      mes: db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(tokens_in + tokens_out), 0) AS t FROM ia_consultas WHERE user_id = ? AND substr(datetime(created_at, '-3 hours'), 1, 7) = ?").get(v.id, hoyAR().slice(0, 7)),
+    })),
     ultimas: db.prepare('SELECT c.*, u.name FROM ia_consultas c JOIN users u ON u.id = c.user_id ORDER BY c.id DESC LIMIT 15').all(),
   } }));
 });
@@ -1594,10 +1598,12 @@ const iaConfig = () => ({
   contexto: getPanelConfig('_ia', 'contexto', '') || '',
 });
 const iaConsultasHoy = (uid) => db.prepare("SELECT COUNT(*) AS c FROM ia_consultas WHERE user_id = ? AND substr(datetime(created_at, '-3 hours'), 1, 10) = ?").get(uid, hoyAR()).c;
+// Límite diario efectivo: el propio del vendedor si el admin le puso uno; si no, el general de Config.
+const iaLimiteDe = (u) => Math.max(1, parseInt(u.ia_limite, 10) || iaConfig().limite);
 
 // Quién es el asesor: experto en desarrollo web/software a medida que ayuda a responder clientes.
 // Este texto es estable a propósito: se cachea (prompt caching) y baja el costo de cada consulta.
-const IA_BASE = `Sos el Asesor IA del equipo comercial de Cloud For Deploy, una empresa argentina que vende desarrollo web y software a medida (sitios, sistemas de gestión, apps, tiendas online; proyectos únicos o suscripción mensual).
+const IA_BASE = `Te llamás MiniJuan y sos el asesor IA del equipo comercial de Cloud For Deploy, una empresa argentina que vende desarrollo web y software a medida (sitios, sistemas de gestión, apps, tiendas online; proyectos únicos o suscripción mensual).
 
 Tu trabajo: ayudar a los vendedores a responder mensajes de clientes y leads, y asesorarlos técnicamente para vender mejor.
 
@@ -1618,7 +1624,8 @@ app.post('/ia/consulta', requireAuth, express.json(), async (req, res) => {
   const pregunta = String((req.body && req.body.pregunta) || '').trim().slice(0, 1500);
   if (pregunta.length < 4) return res.status(400).json({ error: 'Contame un poco más qué necesitás.' });
   const usadas = iaConsultasHoy(req.user.id);
-  if (req.user.role !== 'admin' && usadas >= cfg.limite) return res.status(429).json({ error: `Llegaste al tope de ${cfg.limite} consultas por hoy — mañana se renueva.` });
+  const lim = iaLimiteDe(req.user);
+  if (req.user.role !== 'admin' && usadas >= lim) return res.status(429).json({ error: `Llegaste al tope de ${lim} consultas por hoy — mañana se renueva.` });
 
   // Contexto real de la lead desde la que pregunta (solo si tiene acceso a ese panel).
   let extra = '';
@@ -1648,7 +1655,7 @@ app.post('/ia/consulta', requireAuth, express.json(), async (req, res) => {
     const u = r.usage || {};
     db.prepare('INSERT INTO ia_consultas (user_id, deal_id, pregunta, respuesta, modelo, tokens_in, tokens_out) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .run(req.user.id, deal ? deal.id : null, pregunta, texto, r.model || cfg.modelo, (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0), u.output_tokens || 0);
-    res.json({ ok: true, respuesta: texto, restantes: req.user.role === 'admin' ? null : Math.max(0, cfg.limite - usadas - 1) });
+    res.json({ ok: true, respuesta: texto, restantes: req.user.role === 'admin' ? null : Math.max(0, lim - usadas - 1) });
   } catch (e) {
     if (e instanceof Anthropic.AuthenticationError) return res.status(502).json({ error: 'La clave de la API no es válida — avisale al administrador.' });
     if (e instanceof Anthropic.RateLimitError) return res.status(503).json({ error: 'El asesor está saturado, esperá un minuto y probá de nuevo.' });
@@ -1656,6 +1663,17 @@ app.post('/ia/consulta', requireAuth, express.json(), async (req, res) => {
     console.error('ia:', e.message);
     res.status(500).json({ error: 'Error inesperado del asesor.' });
   }
+});
+
+// La bienvenida de MiniJuan se marca vista para no repetirla.
+app.post('/ia/bienvenida', requireAuth, (req, res) => {
+  db.prepare('UPDATE users SET ia_bienvenida = 1 WHERE id = ?').run(req.user.id);
+  res.json({ ok: true });
+});
+
+// Historial propio: al abrir la burbuja, el vendedor recupera sus últimas charlas con MiniJuan.
+app.get('/ia/historial', requireAuth, (req, res) => {
+  res.json({ items: db.prepare('SELECT pregunta, respuesta FROM ia_consultas WHERE user_id = ? ORDER BY id DESC LIMIT 15').all(req.user.id).reverse() });
 });
 
 app.get('/asesor', requireAuth, (req, res) => {
@@ -1666,8 +1684,8 @@ app.get('/asesor', requireAuth, (req, res) => {
   res.send(V.asesorPage({
     user: req.user,
     listo: cfg.activo && !!process.env.ANTHROPIC_API_KEY,
-    limite: cfg.limite,
-    restantes: req.user.role === 'admin' ? null : Math.max(0, cfg.limite - iaConsultasHoy(req.user.id)),
+    limite: iaLimiteDe(req.user),
+    restantes: req.user.role === 'admin' ? null : Math.max(0, iaLimiteDe(req.user) - iaConsultasHoy(req.user.id)),
     deal,
   }));
 });
@@ -1678,6 +1696,18 @@ app.post('/admin/ia', requireAuth, requireAdmin, (req, res) => {
   setPanelConfig('_ia', 'limite_dia', Math.min(200, Math.max(1, parseInt(req.body.limite, 10) || 20)));
   if (IA_MODELOS[req.body.modelo]) setPanelConfig('_ia', 'modelo', req.body.modelo);
   setPanelConfig('_ia', 'contexto', String(req.body.contexto || '').slice(0, 8000));
+  res.redirect('/admin/preferencias');
+});
+
+// Límite propio por vendedor (vacío = vuelve al general).
+app.post('/admin/ia/limites', requireAuth, requireAdmin, (req, res) => {
+  const up = db.prepare('UPDATE users SET ia_limite = ? WHERE id = ? AND role = ?');
+  for (const [k, v] of Object.entries(req.body)) {
+    if (!k.startsWith('limite_')) continue;
+    const uid = parseInt(k.slice(7), 10);
+    const n = parseInt(v, 10);
+    if (Number.isFinite(uid)) up.run(Number.isFinite(n) && n >= 1 ? Math.min(200, n) : null, uid, 'vendedor');
+  }
   res.redirect('/admin/preferencias');
 });
 
