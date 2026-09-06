@@ -2300,10 +2300,10 @@ function adminPreferenciasPage({ user, prefs = {}, ia = null }) {
         <div class="mj-fila mj-cab"><span>Vendedor</span><span>Uso de hoy</span><span>Este mes</span><span>Límite propio</span></div>
         ${(ia.vendedores || []).map((v) => { const lim = v.ia_limite || ia.limite; const pct = Math.min(100, Math.round((v.hoy / lim) * 100)); return `
         <div class="mj-fila">
-          <span class="ucel">${avatar(v)}<strong>${esc(v.name)}</strong></span>
-          <span class="mj-uso-celda"><span class="uso-bar"><span class="${pct >= 100 ? 'lleno' : ''}" style="width:${pct}%"></span></span><em>${v.hoy}/${lim}</em></span>
+          <span class="ucel">${avatar(v)}<strong>${esc(v.name)}</strong>${v.role === 'admin' ? '<span class="chip" style="font-size:.6rem">admin</span>' : ''}</span>
+          <span class="mj-uso-celda">${v.role === 'admin' ? `<em>${v.hoy} hoy</em><span class="small muted">sin tope</span>` : `<span class="uso-bar"><span class="${pct >= 100 ? 'lleno' : ''}" style="width:${pct}%"></span></span><em>${v.hoy}/${lim}</em>`}</span>
           <span class="small muted">${v.mes.n} consulta${v.mes.n === 1 ? '' : 's'} · ${(v.mes.t / 1000).toFixed(1)}k tokens</span>
-          <span><input name="limite_${v.id}" type="number" min="1" max="200" value="${v.ia_limite || ''}" placeholder="${ia.limite}" title="Límite diario propio (vacío = general)"></span>
+          <span>${v.role === 'admin' ? '<span class="small muted">—</span>' : `<input name="limite_${v.id}" type="number" min="1" max="200" value="${v.ia_limite || ''}" placeholder="${ia.limite}" title="Límite diario propio (vacío = general)">`}</span>
         </div>`; }).join('')}
       </div>
       <div style="margin-top:.7rem"><button class="btn small">Guardar límites</button></div>

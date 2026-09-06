@@ -804,7 +804,7 @@ app.get('/admin/preferencias', requireAuth, requireAdmin, (req, res) => {
     ...cfgIA, keyOk: !!process.env.ANTHROPIC_API_KEY, modelos: IA_MODELOS,
     hoy: db.prepare("SELECT COUNT(*) AS c FROM ia_consultas WHERE substr(datetime(created_at, '-3 hours'), 1, 10) = ?").get(hoyAR()).c,
     mes: mesIA, costoMes: mesIA.usd, gastoTotal: totalIA.usd, restante: Math.max(0, cfgIA.credito - totalIA.usd),
-    vendedores: db.prepare("SELECT id, name, avatar, ia_limite FROM users WHERE active = 1 AND role = 'vendedor' ORDER BY name").all().map((v) => ({
+    vendedores: db.prepare("SELECT id, name, avatar, role, ia_limite FROM users WHERE active = 1 AND role IN ('vendedor', 'admin') ORDER BY role = 'admin', name").all().map((v) => ({
       ...v, hoy: iaConsultasHoy(v.id),
       mes: db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(tokens_in + tokens_out), 0) AS t FROM ia_consultas WHERE user_id = ? AND substr(datetime(created_at, '-3 hours'), 1, 7) = ?").get(v.id, hoyAR().slice(0, 7)),
     })),

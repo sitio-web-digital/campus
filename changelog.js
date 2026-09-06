@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.37.2',
+    fecha: '2026-09-04',
+    cambios: [
+      { tipo: 'mejora', texto: 'La tabla de uso de MiniJuan ahora también mide a los administradores: sus consultas y tokens del mes aparecen persona por persona (marcados como admin, sin tope diario). La página de Conversaciones ya los incluía.' },
+    ],
+  },
+  {
     version: '2.37.1',
     fecha: '2026-09-04',
     cambios: [
