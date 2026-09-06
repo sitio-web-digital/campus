@@ -32,5 +32,16 @@ for (const t of tomados) {
   console.log(`- ${t.rubro}: ${t.leads} leads (${t.vendedores})`);
 }
 
+console.log('\n=== LEADS DE CLOUD FOR DEPLOY (para deducir rubros por nombre) ===\n');
+const leads = db.prepare(`SELECT d.id, d.empresa, d.etapa, d.origen, d.ciudad, d.provincia,
+    (SELECT p.rubro FROM prospectos p WHERE p.deal_id = d.id) AS rubro_maps
+  FROM deals d WHERE d.panel = 'cfd' ORDER BY d.id`).all();
+if (!leads.length) console.log('(sin leads en CFD)');
+for (const d of leads) {
+  const nota = db.prepare("SELECT detalle FROM deal_events WHERE deal_id = ? AND detalle LIKE 'Nota:%' ORDER BY id LIMIT 1").get(d.id);
+  console.log(`- ${d.empresa} | ${d.etapa} | ${d.rubro_maps ? 'rubro: ' + d.rubro_maps : 'origen: ' + (d.origen || '-')} | ${[d.ciudad, d.provincia].filter(Boolean).join(', ') || '-'}`);
+  if (nota) console.log(`    ${nota.detalle.slice(0, 150).replace(/\n/g, ' / ')}`);
+}
+
 console.log('\n=== LISTA LIMPIA PARA PLANTILLAS (copiar y pegar) ===\n');
 console.log(rubros.map((r) => r.rubro).join('\n'));
