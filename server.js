@@ -1596,6 +1596,7 @@ app.post('/developers/proyectos/:id', requireAuth, requireSistema('developers'),
 async function buscarProspectosMaps(rubro, zona, objetivo) {
   const paginas = Math.min(3, Math.ceil(objetivo / 20));
   const lugares = [];
+  lugares.consultas = 0; // llamadas reales hechas a Google (para el contador del cupo gratis)
   let pageToken = null;
   for (let i = 0; i < paginas; i++) {
     const resp = await fetch('https://places.googleapis.com/v1/places:searchText', {
@@ -1607,6 +1608,7 @@ async function buscarProspectosMaps(rubro, zona, objetivo) {
       },
       body: JSON.stringify({ textQuery: `${rubro} en ${zona}`, languageCode: 'es', ...(pageToken ? { pageToken } : {}) }),
     });
+    lugares.consultas++;
     if (!resp.ok) throw new Error(`Google Places ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
     const data = await resp.json();
     for (const p of data.places || []) lugares.push(p);
@@ -1634,6 +1636,7 @@ app.get('/clientes', requireAuth, requireSistema('clientes'), (req, res) => {
     user: req.user, prospectos, rubros, scans, misPaneles,
     fEstado, fRubro, q,
     keyOk: !!process.env.GOOGLE_MAPS_API_KEY,
+    usoMes: db.prepare("SELECT COALESCE(SUM(consultas), 0) AS c, COUNT(*) AS escaneos FROM prospecto_scans WHERE substr(datetime(created_at, '-3 hours'), 1, 7) = ?").get(hoyAR().slice(0, 7)),
     msg: clean(req.query.msg), err: clean(req.query.err),
   }));
 });
@@ -1656,7 +1659,7 @@ app.post('/clientes/scan', requireAuth, requireAdmin, async (req, res) => {
         p.rating || null, p.userRatingCount || null, p.googleMapsUri || null, rubro.toLowerCase(), zona);
       if (r.changes > 0) nuevos++;
     }
-    db.prepare('INSERT INTO prospecto_scans (user_id, rubro, zona, encontrados, nuevos) VALUES (?, ?, ?, ?, ?)').run(req.user.id, rubro, zona, lugares.length, nuevos);
+    db.prepare('INSERT INTO prospecto_scans (user_id, rubro, zona, encontrados, nuevos, consultas) VALUES (?, ?, ?, ?, ?, ?)').run(req.user.id, rubro, zona, lugares.length, nuevos, lugares.consultas || 1);
     res.redirect('/clientes?msg=' + encodeURIComponent(`Escaneo listo: ${lugares.length} resultados, ${nuevos} prospectos nuevos.`));
   } catch (e) {
     console.error('scan maps:', e.message);

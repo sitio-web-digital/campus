@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.41.1',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'mejora', texto: 'El Panel de Clientes muestra cuánto del cupo gratuito mensual de Google llevás usado: barra con las búsquedas del mes contra las ~5.000 gratis, contando las llamadas reales de cada escaneo.' },
+    ],
+  },
+  {
     version: '2.41.0',
     fecha: '2026-09-06',
     cambios: [

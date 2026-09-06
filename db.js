@@ -323,6 +323,9 @@ CREATE TABLE IF NOT EXISTS prospecto_scans (
   nuevos INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );`);
+if (!db.prepare('PRAGMA table_info(prospecto_scans)').all().some((c) => c.name === 'consultas')) {
+  db.exec('ALTER TABLE prospecto_scans ADD COLUMN consultas INTEGER NOT NULL DEFAULT 1');
+}
 
 // 2.39.0: modo negocio — se distingue el tipo de consulta ('vendedor' | 'negocio').
 if (!db.prepare('PRAGMA table_info(ia_consultas)').all().some((c) => c.name === 'tipo')) {

@@ -2980,7 +2980,7 @@ function asesorPage({ user, listo, limite, restantes, deal }) {
 
 /* --------- panel de clientes: prospectos de Google Maps --------- */
 
-function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fRubro, q, keyOk, msg, err }) {
+function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fRubro, q, keyOk, usoMes = { c: 0, escaneos: 0 }, msg, err }) {
   const esAdmin = user.role === 'admin';
   const urlBase = (cambios) => {
     const par = new URLSearchParams();
@@ -3008,6 +3008,11 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
       <select name="cantidad" style="width:auto"><option value="20">hasta 20</option><option value="40">hasta 40</option><option value="60" selected>hasta 60</option></select>
       <button class="btn" ${keyOk ? '' : 'disabled'}>Escanear</button>
     </form>
+    ${(() => { const pct = Math.min(100, Math.round((usoMes.c / 5000) * 100)); return `
+    <div class="mj-saldo" style="margin:.6rem 0 0">
+      <div class="uso-bar"><span class="${pct >= 85 ? 'lleno' : ''}" style="width:${pct}%"></span></div>
+      <span class="small muted">${usoMes.c} de ~5.000 búsquedas gratis de Google este mes (${pct}%) · ${usoMes.escaneos} escaneo${usoMes.escaneos === 1 ? '' : 's'}</span>
+    </div>`; })()}
     ${scans.length ? `<p class="caption" style="margin:.5rem 0 0">Últimos escaneos: ${scans.map((sc) => `${esc(sc.rubro)} en ${esc(sc.zona)} (${sc.nuevos} nuevos)`).join(' · ')}</p>` : ''}
   </div>` : ''}
 
