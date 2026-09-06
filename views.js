@@ -219,6 +219,21 @@ function miniJuanWidget(user, sistema) {
   });
   ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
   ta.addEventListener('input', function () { ta.style.height = ''; ta.style.height = Math.min(ta.scrollHeight, 110) + 'px'; });
+  // Cada tanto, si está minimizado, MiniJuan suelta una burbujita invitando a preguntar.
+  var FRASES = ['¿Tenés dudas para mí? 🙋', '¿Algún cliente difícil? Preguntame 💪', '¿Te ayudo a responder un mensaje? ✍️', 'Acá estoy si me necesitás 👋'];
+  var fi = Math.floor(Math.random() * FRASES.length), timerOcultar = null;
+  function avisar() {
+    if (!panel.hidden || document.hidden) return;
+    hola.textContent = FRASES[fi % FRASES.length]; fi++;
+    hola.hidden = false;
+    burb.classList.add('mj-wiggle');
+    clearTimeout(timerOcultar);
+    timerOcultar = setTimeout(function () { hola.hidden = true; burb.classList.remove('mj-wiggle'); }, 7000);
+  }
+  if (!REDUCIDO && !primeraVez) {
+    setTimeout(avisar, 25000);
+    setInterval(avisar, 90000);
+  }
 })();
 </script>`;
 }
@@ -957,6 +972,12 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 .mj-burbuja { width:60px; height:60px; border-radius:50%; border:2.5px solid rgba(255,255,255,.6); padding:0; overflow:hidden; cursor:pointer; box-shadow:0 6px 18px rgba(10,40,40,.35); background:#0E6E66; transition:transform .16s; display:block; }
 .mj-burbuja svg { width:100%; height:100%; display:block; }
 .mj-burbuja:hover { transform:scale(1.09); }
+.mj-mini .mj-burbuja { animation: mj-idle 9s ease-in-out infinite; }
+@keyframes mj-idle { 0%, 84%, 100% { transform:rotate(0); } 87% { transform:rotate(-5deg); } 90% { transform:rotate(5deg); } 93% { transform:rotate(-3deg); } 96% { transform:rotate(0); } }
+.mj-mini .mj-ojos { animation: mj-parpadeo 5.2s ease-in-out infinite; }
+@keyframes mj-parpadeo { 0%, 92%, 100% { transform:scaleY(1); } 94%, 96% { transform:scaleY(.12); } }
+.mj-burbuja.mj-wiggle { animation: mj-wiggle .75s ease-in-out 2; }
+@keyframes mj-wiggle { 0%, 100% { transform:rotate(0) scale(1); } 25% { transform:rotate(-9deg) scale(1.07); } 75% { transform:rotate(9deg) scale(1.07); } }
 .mj-salta { animation: mj-bounce 2.6s ease-in-out infinite; }
 @keyframes mj-bounce { 0%, 78%, 100% { transform:translateY(0); } 84% { transform:translateY(-8px); } 90% { transform:translateY(0); } 95% { transform:translateY(-4px); } }
 .mj-hola { position:absolute; bottom:calc(100% + .55rem); right:.2rem; background:var(--surface); color:var(--ink); border:1px solid var(--line); box-shadow:var(--sh-md); border-radius:14px 14px 3px 14px; padding:.5rem .8rem; font-size:.8rem; white-space:nowrap; animation: mj-pop .45s ease-out; }
@@ -1004,7 +1025,7 @@ html.dark .mj-yo { background:#0E6E66; }
 @keyframes mj-habla { from { transform:scaleY(.35) translateY(1px); } to { transform:scaleY(1.5); } }
 .mj.hablando .mj-head .mj-cara { animation: mj-asiente 1s ease-in-out infinite; }
 @keyframes mj-asiente { 0%, 100% { transform:translateY(0); } 50% { transform:translateY(1.1px); } }
-@media (prefers-reduced-motion: reduce) { .mj-salta, .mj.pensando .mj-head .mj-cara, .mj.pensando .mj-head .mj-ojos, .mj.hablando .mj-head .mj-boca, .mj.hablando .mj-head .mj-cara, .mj-escribiendo span, .mj-msj { animation:none; } }
+@media (prefers-reduced-motion: reduce) { .mj-salta, .mj-mini .mj-burbuja, .mj-mini .mj-ojos, .mj-burbuja.mj-wiggle, .mj.pensando .mj-head .mj-cara, .mj.pensando .mj-head .mj-ojos, .mj.hablando .mj-head .mj-boca, .mj.hablando .mj-head .mj-cara, .mj-escribiendo span, .mj-msj { animation:none; } }
 
 @media (max-width:640px) {
   .mj { right:.7rem; bottom:4.6rem; }

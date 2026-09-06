@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.37.1',
+    fecha: '2026-09-04',
+    cambios: [
+      { tipo: 'mejora', texto: 'MiniJuan minimizado tiene vida propia: parpadea, se sacude cada tanto y de vez en cuando suelta una burbujita invitando a preguntar ("¿Tenés dudas para mí? 🙋", entre otras frases) con una sacudida — desaparece sola a los segundos y nunca interrumpe si el chat está abierto o la pestaña en segundo plano.' },
+    ],
+  },
+  {
     version: '2.37.0',
     fecha: '2026-09-04',
     cambios: [
