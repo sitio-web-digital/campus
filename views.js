@@ -166,6 +166,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="${b}/pipeline" class="${active === 'pipeline' ? 'on' : ''}${dd.pipeline ? ' deuda' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
         <a href="${b}/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="${b}/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
+        <a href="/asesor" class="${active === 'asesor' ? 'on' : ''}">${IC('<path d="M3 5.5A2.5 2.5 0 015.5 3h9A2.5 2.5 0 0117 5.5v5a2.5 2.5 0 01-2.5 2.5H8.5L4.5 16.5V13H3z"/><path d="M6.8 7.9h6.4M6.8 10.4h4.2"/>')}<span>Asesor IA</span></a>
         ${user && user.role === 'admin' ? `<a href="${b}/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
         <a href="${b}/contactos" class="${active === 'contactos' ? 'on' : ''}">${IC('<path d="M4.2 3.5h2.6l1.4 3.3-1.9 1.5a11.4 11.4 0 005.4 5.4l1.5-1.9 3.3 1.4v2.6a1.4 1.4 0 01-1.5 1.4C8.8 16.7 3.3 11.2 2.8 5A1.4 1.4 0 014.2 3.5z"/>')}<span>Contactos</span></a>
         <a href="${b}/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>` : ''}`;
@@ -175,6 +176,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="/pipeline" class="${active === 'pipeline' ? 'on' : ''}${dd.pipeline ? ' deuda' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
         <a href="/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
+        <a href="/asesor" class="${active === 'asesor' ? 'on' : ''}">${IC('<path d="M3 5.5A2.5 2.5 0 015.5 3h9A2.5 2.5 0 0117 5.5v5a2.5 2.5 0 01-2.5 2.5H8.5L4.5 16.5V13H3z"/><path d="M6.8 7.9h6.4M6.8 10.4h4.2"/>')}<span>Asesor IA</span></a>
         ${user && user.role === 'admin' ? `<a href="/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
         <a href="/contactos" class="${active === 'contactos' ? 'on' : ''}">${IC('<path d="M4.2 3.5h2.6l1.4 3.3-1.9 1.5a11.4 11.4 0 005.4 5.4l1.5-1.9 3.3 1.4v2.6a1.4 1.4 0 01-1.5 1.4C8.8 16.7 3.3 11.2 2.8 5A1.4 1.4 0 014.2 3.5z"/>')}<span>Contactos</span></a>
         <a href="/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>
@@ -840,6 +842,15 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 .umenu-pop svg { width:1rem; height:1rem; color:var(--muted); flex-shrink:0; }
 .umenu-pop form { display:contents; }
 @media (max-width:640px) { .umenu-pop { position:fixed; top:3.3rem; right:.5rem; } }
+
+/* ---------- asesor IA ---------- */
+.ia-chat { display:flex; flex-direction:column; gap:.6rem; max-height:60vh; overflow-y:auto; padding:1rem; }
+.ia-msj { max-width:44rem; padding:.6rem .85rem; border-radius:12px; font-size:.88rem; line-height:1.55; white-space:pre-wrap; }
+.ia-bot { background:var(--surface2); border:1px solid var(--line); align-self:flex-start; }
+.ia-yo { background:var(--accent-soft); align-self:flex-end; }
+.ia-espera { color:var(--muted); font-style:italic; }
+.ia-error { border-color:rgba(192,84,80,.5); color:#E05550; }
+.ia-log { border-top:1px solid var(--line); padding:.5rem 0; }
 
 /* ---------- soporte (tickets) ---------- */
 .tk-row { display:flex; align-items:center; gap:.8rem; text-decoration:none; color:inherit; padding:.8rem 1rem; }
@@ -1546,6 +1557,7 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
         <select name="motivo_perdida"><option value="">—</option>${opt(MOTIVOS, d.motivo_perdida)}</select>
       </div>
     </div>
+    ${!isNew && ['admin', 'vendedor'].includes(user.role) ? `<p class="small" style="margin:.1rem 0 .5rem"><a href="/asesor?deal=${d.id}">💡 Pedirle ayuda al Asesor IA para responderle a este cliente →</a></p>` : ''}
     <label>Agregar nota al historial <span class="muted" style="font-weight:400">· escribí <code>@</code> para mencionar a alguien del panel</span></label>
     <div class="men-wrap"><textarea name="notas" rows="3" data-menciones="${esc(JSON.stringify(mencionables))}" placeholder="Contexto, objeciones, acuerdos… Al guardar, la nota queda registrada en el historial con tu nombre y fecha, y este campo vuelve a quedar libre."></textarea></div>
     <script>
@@ -2035,11 +2047,36 @@ function adminComunicacionPage({ user, users, avisos = [], banners = [], encuest
   });
 }
 
-function adminPreferenciasPage({ user, prefs = {} }) {
+function adminPreferenciasPage({ user, prefs = {}, ia = null }) {
   return layout({
     title: 'Preferencias', user, active: 'preferencias', sistema: 'admin',
     body: `
   <h1>Mis preferencias</h1>
+  ${ia ? `
+  <div class="card">
+    <h3 style="margin-top:0">Asesor IA del equipo</h3>
+    <p class="small muted">El asesor responde a los vendedores en <a href="/asesor">/asesor</a> usando la API de Claude. La clave vive en el servidor (variable ANTHROPIC_API_KEY): ${ia.keyOk ? '<strong style="color:#2E7D4F">configurada ✓</strong>' : '<strong style="color:#E05550">FALTA — el asesor no responde sin ella</strong>'}.</p>
+    <div class="tiles" style="margin-bottom:.8rem">
+      <div class="tile"><div class="v">${ia.hoy}</div><div class="l">consultas hoy (equipo)</div></div>
+      <div class="tile"><div class="v">${ia.mes.n}</div><div class="l">consultas este mes</div></div>
+      <div class="tile"><div class="v">$${ia.costoMes.toFixed(2)}</div><div class="l">gasto estimado del mes (USD)</div></div>
+    </div>
+    <form method="post" action="/admin/ia">
+      <div class="grid2">
+        <div><label>Estado</label><select name="activo"><option value="1" ${ia.activo ? 'selected' : ''}>Activo</option><option value="0" ${ia.activo ? '' : 'selected'}>Desactivado</option></select></div>
+        <div><label>Tope de consultas por vendedor por día</label><input name="limite" type="number" min="1" max="200" value="${ia.limite}"></div>
+      </div>
+      <label>Modelo</label>
+      <select name="modelo">${Object.entries(ia.modelos).map(([id, m]) => `<option value="${id}" ${id === ia.modelo ? 'selected' : ''}>${esc(m.nombre)} — $${m.entrada}/$${m.salida} por millón de tokens</option>`).join('')}</select>
+      <label>Contexto de la empresa (el "manual" que el asesor sigue: precios orientativos, plazos, qué prometemos y qué no, tono)</label>
+      <textarea name="contexto" rows="6" maxlength="8000" placeholder="Ej: Una web institucional arranca en $X y tarda ~3 semanas. Nunca prometemos SEO en primera página. Mantenimiento mensual desde $Y…">${esc(ia.contexto)}</textarea>
+      <div style="margin-top:.8rem"><button class="btn">Guardar asesor</button></div>
+    </form>
+    ${ia.ultimas.length ? `
+    <details style="margin-top:.9rem"><summary class="small" style="cursor:pointer"><strong>Últimas ${ia.ultimas.length} consultas del equipo</strong></summary>
+      ${ia.ultimas.map((c) => `<div class="ia-log"><div class="small"><strong>${esc(c.name)}</strong> <span class="muted">· ${fechaHora(c.created_at)} · ${c.tokens_in + c.tokens_out} tokens${c.deal_id ? ` · <a href="/deals/${c.deal_id}">lead #${c.deal_id}</a>` : ''}</span></div><div class="small" style="margin:.15rem 0"><span class="muted">P:</span> ${esc(c.pregunta.slice(0, 200))}</div><div class="small muted" style="white-space:pre-wrap">${esc(c.respuesta.slice(0, 400))}${c.respuesta.length > 400 ? '…' : ''}</div></div>`).join('')}
+    </details>` : ''}
+  </div>` : ''}
   <div class="card">
     <h3 style="margin-top:0">Mis notificaciones</h3>
     <p class="small muted">Elegí qué eventos del equipo te notifican. El paso a <strong>Ganado</strong> no se puede silenciar, y los avisos manuales siempre llegan a sus destinatarios.</p>
@@ -2589,6 +2626,62 @@ function campanasPage({ user, campanas }) {
   <h1>Campañas</h1>
   ${dashHeader('campanas')}
   ${campanasSection(campanas, '/campanas')}`
+  });
+}
+
+/* --------- asesor IA --------- */
+
+function asesorPage({ user, listo, limite, restantes, deal }) {
+  return layout({
+    title: 'Asesor IA', user, active: 'asesor', sistema: 'hub',
+    body: `
+  <div class="toolbar" style="margin-bottom:.2rem">
+    <h1 style="margin:0">Asesor IA</h1>
+    <div class="sp"></div>
+    ${restantes != null ? `<span class="chip" id="iaRestantes">${restantes} consulta${restantes === 1 ? '' : 's'} hoy</span>` : ''}
+  </div>
+  <p class="small muted">Tu experto en desarrollo web y software a medida. Pedile ayuda para responder mensajes de clientes, explicar algo técnico o manejar una objeción. ${restantes != null ? `Tenés hasta ${limite} consultas por día.` : ''}</p>
+  ${deal ? `<div class="flash ok" style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap">Preguntando sobre la lead <strong>${esc(deal.empresa)}</strong> (${esc(deal.etapa)}) — el asesor ya conoce sus datos y últimas notas. <a href="/asesor">Preguntar en general</a></div>` : ''}
+  ${listo ? '' : '<div class="flash bad">El asesor está desactivado o falta configurar la clave de la API. Avisale al administrador.</div>'}
+  <div class="card ia-chat" id="iaChat">
+    <div class="ia-msj ia-bot">¡Hola ${esc(user.name.split(' ')[0])}! 👋 Contame qué necesitás: pegame el mensaje del cliente y te armo la respuesta, o preguntame lo que quieras sobre desarrollo web para vender mejor.</div>
+  </div>
+  <form id="iaForm" class="card" style="display:flex; gap:.6rem; align-items:flex-end; flex-wrap:wrap">
+    <div style="flex:1; min-width:16rem">
+      <textarea id="iaPregunta" rows="3" maxlength="1500" placeholder="Ej: el cliente dice que $500.000 es caro para una web, ¿cómo le respondo?" ${listo ? '' : 'disabled'}></textarea>
+    </div>
+    <button class="btn" id="iaEnviar" ${listo ? '' : 'disabled'}>Preguntar</button>
+  </form>
+  <p class="caption">El asesor no conoce precios ni promesas de la empresa que no estén cargados: confirmá con administración antes de comprometer algo. Tus consultas quedan registradas.</p>
+  <script>
+  (function () {
+    var form = document.getElementById('iaForm'), ta = document.getElementById('iaPregunta'), btn = document.getElementById('iaEnviar'), chat = document.getElementById('iaChat');
+    var DEAL = ${deal ? deal.id : 'null'};
+    function burbuja(texto, clase) {
+      var d = document.createElement('div'); d.className = 'ia-msj ' + clase; d.textContent = texto;
+      chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return d;
+    }
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var q = ta.value.trim(); if (!q || btn.disabled) return;
+      burbuja(q, 'ia-yo'); ta.value = ''; btn.disabled = true;
+      var esp = burbuja('Pensando…', 'ia-bot ia-espera');
+      fetch('/ia/consulta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pregunta: q, deal_id: DEAL }) })
+        .then(function (r) { return r.json(); })
+        .then(function (r) {
+          esp.remove();
+          if (r.ok) {
+            burbuja(r.respuesta, 'ia-bot');
+            var ch = document.getElementById('iaRestantes');
+            if (ch && r.restantes != null) { ch.textContent = r.restantes + (r.restantes === 1 ? ' consulta hoy' : ' consultas hoy'); if (r.restantes === 0) { btn.disabled = true; ta.disabled = true; return; } }
+          } else burbuja(r.error || 'No pude responder, probá de nuevo.', 'ia-bot ia-error');
+          btn.disabled = false; ta.focus();
+        })
+        .catch(function () { esp.remove(); burbuja('Error de conexión — probá de nuevo.', 'ia-bot ia-error'); btn.disabled = false; });
+    });
+    ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+  })();
+  </script>`
   });
 }
 
@@ -3991,7 +4084,7 @@ function changelogPage({ user, versiones }) {
 }
 
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusCursoPage, campusQuizPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,

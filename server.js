@@ -9,6 +9,7 @@ const V = require('./views');
 const C = require('./comisiones');
 const F = require('./formulas');
 const multer = require('multer');
+const Anthropic = require('@anthropic-ai/sdk');
 
 const INVOICE_DIR = path.join(__dirname, 'data', 'invoices');
 if (!fs.existsSync(INVOICE_DIR)) fs.mkdirSync(INVOICE_DIR, { recursive: true });
@@ -789,7 +790,15 @@ app.get('/admin/comunicacion', requireAuth, requireAdmin, (req, res) => {
 // Sección Preferencias: notificaciones del propio admin.
 app.get('/admin/preferencias', requireAuth, requireAdmin, (req, res) => {
   let prefs = {}; try { prefs = JSON.parse(db.prepare('SELECT notif_prefs FROM users WHERE id = ?').get(req.user.id).notif_prefs || '{}'); } catch {}
-  res.send(V.adminPreferenciasPage({ user: req.user, prefs }));
+  const cfgIA = iaConfig();
+  const mesIA = db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(tokens_in),0) AS ti, COALESCE(SUM(tokens_out),0) AS tsal FROM ia_consultas WHERE substr(datetime(created_at, '-3 hours'), 1, 7) = ?").get(hoyAR().slice(0, 7));
+  const precio = IA_MODELOS[cfgIA.modelo];
+  res.send(V.adminPreferenciasPage({ user: req.user, prefs, ia: {
+    ...cfgIA, keyOk: !!process.env.ANTHROPIC_API_KEY, modelos: IA_MODELOS,
+    hoy: db.prepare("SELECT COUNT(*) AS c FROM ia_consultas WHERE substr(datetime(created_at, '-3 hours'), 1, 10) = ?").get(hoyAR()).c,
+    mes: mesIA, costoMes: (mesIA.ti / 1e6) * precio.entrada + (mesIA.tsal / 1e6) * precio.salida,
+    ultimas: db.prepare('SELECT c.*, u.name FROM ia_consultas c JOIN users u ON u.id = c.user_id ORDER BY c.id DESC LIMIT 15').all(),
+  } }));
 });
 
 // Grilla de constancia de un usuario en un panel: suma de lo cargado por día (clave = fecha).
@@ -1567,6 +1576,109 @@ app.post('/developers/proyectos/:id', requireAuth, requireSistema('developers'),
     if (p.vendedor_id !== req.user.id) notifyUser(p.vendedor_id, `El proyecto de tu venta «${p.empresa}» fue entregado 🎉`, `/deals/${p.deal_id}`, null, req.user.id);
   }
   res.redirect(`/developers?p=${p.id}`);
+});
+
+/* ---------------- asesor IA (para vendedores) ---------------- */
+
+// Config global del asesor, guardada en panel_config bajo el pseudo-panel '_ia'.
+// La clave de la API vive SOLO en la variable de entorno ANTHROPIC_API_KEY (nunca en el repo ni en la DB).
+const IA_MODELOS = {
+  'claude-opus-5': { nombre: 'Claude Opus 5 (recomendado)', entrada: 5, salida: 25 },
+  'claude-sonnet-5': { nombre: 'Claude Sonnet 5 (más barato)', entrada: 2, salida: 10 },
+  'claude-haiku-4-5': { nombre: 'Claude Haiku 4.5 (el más económico)', entrada: 1, salida: 5 },
+};
+const iaConfig = () => ({
+  activo: getPanelConfig('_ia', 'activo', '1') === '1',
+  limite: Math.max(1, parseInt(getPanelConfig('_ia', 'limite_dia'), 10) || 20),
+  modelo: IA_MODELOS[getPanelConfig('_ia', 'modelo')] ? getPanelConfig('_ia', 'modelo') : 'claude-opus-5',
+  contexto: getPanelConfig('_ia', 'contexto', '') || '',
+});
+const iaConsultasHoy = (uid) => db.prepare("SELECT COUNT(*) AS c FROM ia_consultas WHERE user_id = ? AND substr(datetime(created_at, '-3 hours'), 1, 10) = ?").get(uid, hoyAR()).c;
+
+// Quién es el asesor: experto en desarrollo web/software a medida que ayuda a responder clientes.
+// Este texto es estable a propósito: se cachea (prompt caching) y baja el costo de cada consulta.
+const IA_BASE = `Sos el Asesor IA del equipo comercial de Cloud For Deploy, una empresa argentina que vende desarrollo web y software a medida (sitios, sistemas de gestión, apps, tiendas online; proyectos únicos o suscripción mensual).
+
+Tu trabajo: ayudar a los vendedores a responder mensajes de clientes y leads, y asesorarlos técnicamente para vender mejor.
+
+Reglas:
+- Respondé en español argentino (voseo), con el tono profesional y cercano de la empresa.
+- Cuando te pidan responder a un cliente, entregá el mensaje LISTO para copiar y adaptar, y después una línea con el porqué de ese enfoque.
+- Podés explicar conceptos técnicos (hosting, dominios, SEO, mantenimiento, integraciones, plazos típicos de desarrollo) en criollo, para que el vendedor los transmita simple.
+- NUNCA inventes precios, plazos comprometidos ni funcionalidades. Si el dato depende de la empresa, decí exactamente qué tiene que confirmar el vendedor con administración antes de prometerlo.
+- Si la consulta no tiene que ver con ventas, clientes o desarrollo web/software, decliná amablemente: "para eso no te puedo ayudar, consultale al administrador".
+- Sé concreto y breve. Sin humo.`;
+
+// El vendedor pregunta (opcionalmente parado sobre una lead) y el server le consulta a Claude.
+app.post('/ia/consulta', requireAuth, express.json(), async (req, res) => {
+  if (!['admin', 'vendedor'].includes(req.user.role)) return res.status(403).json({ error: 'El asesor es para el equipo comercial.' });
+  const cfg = iaConfig();
+  if (!cfg.activo) return res.status(503).json({ error: 'El asesor está desactivado. Avisale al administrador.' });
+  if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'Falta configurar la clave de la API en el servidor. Avisale al administrador.' });
+  const pregunta = String((req.body && req.body.pregunta) || '').trim().slice(0, 1500);
+  if (pregunta.length < 4) return res.status(400).json({ error: 'Contame un poco más qué necesitás.' });
+  const usadas = iaConsultasHoy(req.user.id);
+  if (req.user.role !== 'admin' && usadas >= cfg.limite) return res.status(429).json({ error: `Llegaste al tope de ${cfg.limite} consultas por hoy — mañana se renueva.` });
+
+  // Contexto real de la lead desde la que pregunta (solo si tiene acceso a ese panel).
+  let extra = '';
+  let deal = parseInt(req.body && req.body.deal_id, 10) ? db.prepare('SELECT d.*, u.name AS vendedor FROM deals d JOIN users u ON u.id = d.user_id WHERE d.id = ?').get(parseInt(req.body.deal_id, 10)) : null;
+  if (deal && !puede(req.user, deal.panel)) deal = null;
+  if (deal) {
+    const notas = db.prepare("SELECT detalle FROM deal_events WHERE deal_id = ? AND tipo = 'edicion' AND detalle LIKE 'Nota:%' ORDER BY id DESC LIMIT 5").all(deal.id);
+    extra = `\n\n[Contexto de la lead sobre la que pregunto]\nEmpresa: ${deal.empresa}\nEtapa: ${deal.etapa}\nTipo de venta: ${deal.tipo_venta || '—'} · Valor conversado: ${deal.mrr || 'sin definir'}\nVendedor: ${deal.vendedor}\nUbicación: ${[deal.ciudad, deal.provincia].filter(Boolean).join(', ') || '—'}${notas.length ? `\nÚltimas notas:\n${notas.map((n) => '· ' + n.detalle.slice(6, 300)).join('\n')}` : ''}`;
+  }
+
+  try {
+    const params = {
+      model: cfg.modelo,
+      max_tokens: 2048,
+      system: [
+        { type: 'text', text: IA_BASE },
+        { type: 'text', text: cfg.contexto ? `Contexto de la empresa (lo escribió el administrador — seguilo al pie de la letra):\n${cfg.contexto}` : 'El administrador todavía no cargó contexto propio de la empresa.', cache_control: { type: 'ephemeral' } },
+      ],
+      messages: [{ role: 'user', content: pregunta + extra }],
+    };
+    // Opus 5 con red de seguridad: si el modelo declina por política, la API reintenta sola con un modelo alternativo.
+    const r = cfg.modelo === 'claude-opus-5'
+      ? await new Anthropic().beta.messages.create({ ...params, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' })
+      : await new Anthropic().messages.create(params);
+    if (r.stop_reason === 'refusal') return res.json({ ok: false, error: 'El asesor no puede responder esa consulta.' });
+    const texto = r.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim();
+    const u = r.usage || {};
+    db.prepare('INSERT INTO ia_consultas (user_id, deal_id, pregunta, respuesta, modelo, tokens_in, tokens_out) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(req.user.id, deal ? deal.id : null, pregunta, texto, r.model || cfg.modelo, (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0), u.output_tokens || 0);
+    res.json({ ok: true, respuesta: texto, restantes: req.user.role === 'admin' ? null : Math.max(0, cfg.limite - usadas - 1) });
+  } catch (e) {
+    if (e instanceof Anthropic.AuthenticationError) return res.status(502).json({ error: 'La clave de la API no es válida — avisale al administrador.' });
+    if (e instanceof Anthropic.RateLimitError) return res.status(503).json({ error: 'El asesor está saturado, esperá un minuto y probá de nuevo.' });
+    if (e instanceof Anthropic.APIError) { console.error('ia api:', e.status, e.message); return res.status(502).json({ error: 'El asesor no pudo responder — probá de nuevo en un rato.' }); }
+    console.error('ia:', e.message);
+    res.status(500).json({ error: 'Error inesperado del asesor.' });
+  }
+});
+
+app.get('/asesor', requireAuth, (req, res) => {
+  if (!['admin', 'vendedor'].includes(req.user.role)) return res.status(403).send('El asesor es para el equipo comercial.');
+  const cfg = iaConfig();
+  let deal = parseInt(req.query.deal, 10) ? db.prepare('SELECT id, empresa, panel, etapa FROM deals WHERE id = ?').get(parseInt(req.query.deal, 10)) : null;
+  if (deal && !puede(req.user, deal.panel)) deal = null;
+  res.send(V.asesorPage({
+    user: req.user,
+    listo: cfg.activo && !!process.env.ANTHROPIC_API_KEY,
+    limite: cfg.limite,
+    restantes: req.user.role === 'admin' ? null : Math.max(0, cfg.limite - iaConsultasHoy(req.user.id)),
+    deal,
+  }));
+});
+
+// Config del asesor (Administración → Preferencias).
+app.post('/admin/ia', requireAuth, requireAdmin, (req, res) => {
+  setPanelConfig('_ia', 'activo', req.body.activo === '1' ? '1' : '0');
+  setPanelConfig('_ia', 'limite_dia', Math.min(200, Math.max(1, parseInt(req.body.limite, 10) || 20)));
+  if (IA_MODELOS[req.body.modelo]) setPanelConfig('_ia', 'modelo', req.body.modelo);
+  setPanelConfig('_ia', 'contexto', String(req.body.contexto || '').slice(0, 8000));
+  res.redirect('/admin/preferencias');
 });
 
 /* ---------------- panel de cobranza ---------------- */

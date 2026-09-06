@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.35.0',
+    fecha: '2026-09-04',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Asesor IA para el equipo comercial (/asesor, también en la barra de cada panel): un experto en desarrollo web y software a medida que ayuda a responder mensajes de clientes, explicar temas técnicos y manejar objeciones. Desde la ficha de una lead, "Pedirle ayuda al Asesor" le pasa el contexto real (empresa, etapa, valor, últimas notas) para respuestas a medida.' },
+      { tipo: 'nuevo', texto: 'Control total desde Administración → Preferencias: activarlo/desactivarlo, tope de consultas por vendedor por día (default 20), modelo de IA a usar (con su costo), y el "manual" de la empresa que el asesor sigue (precios orientativos, qué prometemos y qué no). Con consultas de hoy, del mes, gasto estimado en USD y el log de las últimas consultas del equipo.' },
+      { tipo: 'mejora', texto: 'El asesor nunca inventa precios ni plazos: si el dato no está en el manual, le dice al vendedor qué confirmar con administración. Cada consulta queda registrada con sus tokens.' },
+    ],
+  },
+  {
     version: '2.34.1',
     fecha: '2026-09-04',
     cambios: [

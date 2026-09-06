@@ -274,6 +274,19 @@ db.exec(`CREATE TABLE IF NOT EXISTS proyectos (
 );`);
 // Backfill idempotente: las ventas de CFD que ya estaban ganadas y aprobadas entran como proyectos.
 db.exec("INSERT OR IGNORE INTO proyectos (deal_id) SELECT id FROM deals WHERE panel = 'cfd' AND etapa = 'Ganado' AND aprobacion = 'aprobado'");
+
+// Migración 2.35.0: Asesor IA — registro de consultas (sirve de log, tope diario y control de gasto).
+db.exec(`CREATE TABLE IF NOT EXISTS ia_consultas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  deal_id INTEGER,
+  pregunta TEXT NOT NULL,
+  respuesta TEXT NOT NULL,
+  modelo TEXT,
+  tokens_in INTEGER NOT NULL DEFAULT 0,
+  tokens_out INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);`);
 // Migración 2.8.0: campaña de origen y ubicación de la lead.
 if (!dealCols.includes('campana_id')) {
   db.exec('ALTER TABLE deals ADD COLUMN campana_id INTEGER REFERENCES campanas(id)');

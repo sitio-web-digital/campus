@@ -11,3 +11,6 @@ services:
       # Si no los definís, se generan y se muestran en los logs (docker compose logs panel).
       - ADMIN_EMAIL=${ADMIN_EMAIL:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      # Clave de la API de Anthropic para el Asesor IA: se define en un archivo .env
+      # junto a este compose (ANTHROPIC_API_KEY=sk-ant-...). NUNCA se commitea.
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}

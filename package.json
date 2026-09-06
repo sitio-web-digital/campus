@@ -1,6 +1,6 @@
 {
   "name": "panel-comercial",
-  "version": "2.34.1",
+  "version": "2.35.0",
   "description": "Panel comercial B2B: pipeline de ventas, actividad diaria y dashboard de KPIs",
   "main": "server.js",
   "scripts": {
@@ -10,6 +10,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.3.0",
     "cookie-session": "^2.1.0",
