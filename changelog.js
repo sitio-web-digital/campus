@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.39.1',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'mejora', texto: 'MiniJuan maneja la lista de precios oficial (Web Básica/Media/Pro y Ecommerce Básico/Medio/Pro con sus mantenimientos): cotiza exacto lo que está en lista, y todo lo que la excede — o cualquier sistema a medida — lo deriva directo a hablar con Juan, sin inventar números.' },
+    ],
+  },
+  {
     version: '2.39.0',
     fecha: '2026-09-06',
     cambios: [
