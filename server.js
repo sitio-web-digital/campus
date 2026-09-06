@@ -1720,42 +1720,90 @@ const aHora = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${Strin
 const adminsAgenda = () => db.prepare("SELECT id, name, avatar FROM users WHERE active = 1 AND role = 'admin' ORDER BY id").all()
   .map((a, i) => ({ ...a, color: AGENDA_COLORES[i % AGENDA_COLORES.length] }));
 
-// Semana estilo calendario: SIEMPRE los 7 días (lunes a domingo) con la grilla completa de 00 a 24 hs.
-// Cada día trae un carril por admin que cargó disponibilidad: su franja y sus reuniones, posicionadas por hora.
-function armarSemanaCal(off) {
-  const dur = duracionAgenda();
-  const disp = db.prepare('SELECT * FROM agenda_disponibilidad').all();
-  const admins = adminsAgenda().filter((a) => disp.some((x) => x.admin_id === a.id));
-  const hoy = hoyAR();
-  const base = new Date(hoy + 'T00:00:00Z');
-  base.setUTCDate(base.getUTCDate() - ((base.getUTCDay() + 6) % 7) + off * 7);
-  const ahoraMin = (() => { const t = new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit', hour12: false }); return aMin(t); })();
-  const dias = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(base); d.setUTCDate(d.getUTCDate() + i);
-    const fecha = d.toISOString().slice(0, 10);
-    const reuniones = db.prepare(`SELECT r.*, dl.empresa, u.name AS vendedor FROM reuniones r JOIN deals dl ON dl.id = r.deal_id JOIN users u ON u.id = r.vendedor_id
-      WHERE r.estado = 'agendada' AND r.fecha = ?`).all(fecha);
-    const lanes = admins.map((adm) => {
+// Calendario con tres vistas: día, semana y mes. En día/semana cada día trae un carril por admin
+// (su franja y sus reuniones posicionadas por hora); en mes, un resumen de reuniones por celda.
+function armarDiaCal(fecha, admins, disp, dur, hoy) {
+  const d = new Date(fecha + 'T00:00:00Z');
+  const reuniones = db.prepare(`SELECT r.*, dl.empresa, u.name AS vendedor FROM reuniones r JOIN deals dl ON dl.id = r.deal_id JOIN users u ON u.id = r.vendedor_id
+    WHERE r.estado = 'agendada' AND r.fecha = ?`).all(fecha);
+  return {
+    fecha, esHoy: fecha === hoy, pasadoDia: fecha < hoy,
+    lanes: admins.map((adm) => {
       const franja = disp.find((x) => x.admin_id === adm.id && x.dia === d.getUTCDay()) || null;
       return {
         admin: { id: adm.id, name: adm.name, color: adm.color },
         franja: franja ? { desde: franja.desde, hasta: franja.hasta } : null,
         reuniones: reuniones.filter((r) => r.admin_id === adm.id),
       };
-    });
-    dias.push({ fecha, esHoy: fecha === hoy, pasadoDia: fecha < hoy, lanes });
+    }),
+  };
+}
+
+function armarCalendario(vista, off) {
+  const dur = duracionAgenda();
+  const disp = db.prepare('SELECT * FROM agenda_disponibilidad').all();
+  const admins = adminsAgenda().filter((a) => disp.some((x) => x.admin_id === a.id));
+  const hoy = hoyAR();
+  const ahoraMin = (() => { const t = new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit', hour12: false }); return aMin(t); })();
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const colorDeAdmin = Object.fromEntries(adminsAgenda().map((a) => [a.id, a.color]));
+
+  if (vista === 'dia') {
+    const d = new Date(hoy + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + off);
+    const fecha = d.toISOString().slice(0, 10);
+    const DIA_NOMBRE = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    return { vista, dias: [armarDiaCal(fecha, admins, disp, dur, hoy)], admins, dur, ahoraMin, hoy,
+      titulo: `${DIA_NOMBRE[d.getUTCDay()]} ${d.getUTCDate()} de ${MESES[d.getUTCMonth()]}` };
   }
-  return { dias, admins, dur, ahoraMin, hoy };
+  if (vista === 'mes') {
+    const hoyD = new Date(hoy + 'T00:00:00Z');
+    const primero = new Date(Date.UTC(hoyD.getUTCFullYear(), hoyD.getUTCMonth() + off, 1));
+    const mesN = primero.getUTCMonth();
+    const cursor = new Date(primero);
+    cursor.setUTCDate(cursor.getUTCDate() - ((cursor.getUTCDay() + 6) % 7)); // lunes anterior o igual
+    const desdeF = cursor.toISOString().slice(0, 10);
+    const finMes = new Date(Date.UTC(primero.getUTCFullYear(), mesN + 1, 7));
+    const filas = db.prepare(`SELECT r.fecha, r.hora, r.deal_id, r.admin_id, dl.empresa FROM reuniones r JOIN deals dl ON dl.id = r.deal_id
+      WHERE r.estado = 'agendada' AND r.fecha >= ? AND r.fecha <= ? ORDER BY r.fecha, r.hora`).all(desdeF, finMes.toISOString().slice(0, 10));
+    const porFecha = {};
+    for (const r of filas) { (porFecha[r.fecha] = porFecha[r.fecha] || []).push({ ...r, color: colorDeAdmin[r.admin_id] || '#4A5568' }); }
+    const semanas = [];
+    for (let w = 0; w < 6; w++) {
+      const celdas = [];
+      for (let i = 0; i < 7; i++) {
+        const fecha = cursor.toISOString().slice(0, 10);
+        celdas.push({ fecha, dia: cursor.getUTCDate(), delMes: cursor.getUTCMonth() === mesN, esHoy: fecha === hoy,
+          reuniones: porFecha[fecha] || [],
+          offDia: Math.round((new Date(fecha + 'T00:00:00Z') - new Date(hoy + 'T00:00:00Z')) / 864e5) });
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+      semanas.push(celdas);
+      if (cursor.getUTCMonth() !== mesN && cursor.getUTCDay() === 1 && w >= 3) break;
+    }
+    return { vista, semanas, admins, dur, ahoraMin, hoy, titulo: `${MESES[mesN][0].toUpperCase()}${MESES[mesN].slice(1)} ${primero.getUTCFullYear()}` };
+  }
+  // semana (default)
+  const base = new Date(hoy + 'T00:00:00Z');
+  base.setUTCDate(base.getUTCDate() - ((base.getUTCDay() + 6) % 7) + off * 7);
+  const dias = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(base); d.setUTCDate(d.getUTCDate() + i);
+    dias.push(armarDiaCal(d.toISOString().slice(0, 10), admins, disp, dur, hoy));
+  }
+  const finS = new Date(base); finS.setUTCDate(finS.getUTCDate() + 6);
+  return { vista: 'semana', dias, admins, dur, ahoraMin, hoy,
+    titulo: `${base.getUTCDate()} ${MESES[base.getUTCMonth()].slice(0, 3)} – ${finS.getUTCDate()} ${MESES[finS.getUTCMonth()].slice(0, 3)} ${finS.getUTCFullYear()}` };
 }
 
 app.get('/agenda', requireAuth, requireSistema('cfd'), (req, res) => {
-  const off = Math.max(-8, Math.min(8, parseInt(req.query.semana, 10) || 0));
+  const vista = ['dia', 'semana', 'mes'].includes(req.query.vista) ? req.query.vista : 'semana';
+  const tope = vista === 'dia' ? 62 : vista === 'mes' ? 12 : 8;
+  const off = Math.max(-tope, Math.min(tope, parseInt(req.query.semana, 10) || 0));
   let deal = parseInt(req.query.deal, 10) ? db.prepare('SELECT id, empresa, panel, user_id, etapa FROM deals WHERE id = ?').get(parseInt(req.query.deal, 10)) : null;
   if (deal && (deal.panel !== 'cfd' || (req.user.role !== 'admin' && deal.user_id !== req.user.id))) deal = null;
-  const sem = armarSemanaCal(off);
+  const cal = armarCalendario(vista, off);
   const miDisp = req.user.role === 'admin' ? db.prepare('SELECT * FROM agenda_disponibilidad WHERE admin_id = ?').all(req.user.id) : [];
-  res.send(V.agendaPage({ user: req.user, ...sem, off, deal, miDisp, msg: clean(req.query.msg), err: clean(req.query.err) }));
+  res.send(V.agendaPage({ user: req.user, ...cal, off, deal, miDisp, msg: clean(req.query.msg), err: clean(req.query.err) }));
 });
 
 // Reservar un turno con un admin concreto, para una lead de CFD (su dueño o un admin).

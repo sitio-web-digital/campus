@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.46.0',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'nuevo', texto: 'La agenda ahora tiene tres vistas como Google Calendar: Día (una columna con carriles anchos), Semana y Mes (grilla mensual con las reuniones como pastillas de color; tocás un día y te lleva a su vista Día). Con el título del período y navegación ‹ Hoy › en cada vista.' },
+      { tipo: 'mejora', texto: 'El calendario ocupa toda la página con UN solo scroll (se acabó el doble scroll): la cabecera de los días queda pegada arriba mientras bajás, y al entrar te posiciona solo en la primera hora con disponibilidad.' },
+    ],
+  },
+  {
     version: '2.45.0',
     fecha: '2026-09-06',
     cambios: [
