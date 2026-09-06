@@ -117,7 +117,7 @@ function sysSwitch(sistema, user) {
 }
 
 // MiniJuan: el asesor IA del equipo comercial. Dibujo (rubio, joven) con partes animables + burbuja flotante.
-const MINIJUAN_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#0E6E66"/><g class="mj-cara"><path d="M14 66c1-13 8-19 18-19s17 6 18 19z" fill="#1D6FB8"/><path d="M27 44h10v7c0 3-10 3-10 0z" fill="#F0BE8F"/><ellipse cx="32" cy="32" rx="15" ry="16.5" fill="#F6C99F"/><path d="M17 31c-1-12 6-19 15-19s16 7 15 19c-1-7-3-9-5-11-2 3-6 4-10 4s-8-1-10-4c-2 2-4 4-5 11z" fill="#F7D774"/><path d="M17 31c0 3 .8 5 2 6M47 31c0 3-.8 5-2 6" stroke="#F7D774" stroke-width="4" stroke-linecap="round"/><g class="mj-ojos"><circle cx="26.5" cy="32" r="2" fill="#2B3A4D"/><circle cx="37.5" cy="32" r="2" fill="#2B3A4D"/></g><path class="mj-cejas" d="M23.5 27.5c1.8-1.4 4-1.4 5.6-.3M34.9 27.2c1.6-1.1 3.8-1.1 5.6.3" stroke="#D9A94E" stroke-width="1.8" fill="none" stroke-linecap="round"/><path class="mj-boca" d="M27 40c3 2.6 7 2.6 10 0" stroke="#B96A4B" stroke-width="2.2" fill="none" stroke-linecap="round"/></g></svg>`;
+const MINIJUAN_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mjg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#128A7E"/><stop offset="1" stop-color="#0A4E48"/></linearGradient></defs><circle cx="32" cy="32" r="32" fill="url(#mjg)"/><g class="mj-cara"><path d="M13 66c1.5-12.5 8.5-18.5 19-18.5S49.5 53.5 51 66z" fill="#123B66"/><path d="M25.5 49.5L32 55l6.5-5.5" fill="none" stroke="#0D2C4E" stroke-width="2" stroke-linecap="round"/><path d="M27.5 42.5h9v6c0 3-9 3-9 0z" fill="#EDB98A"/><path d="M27.5 44.4c1.6 1.1 7.4 1.1 9 0v-1.9h-9z" fill="#D9A075"/><circle cx="18.6" cy="31.5" r="2.7" fill="#F2C094"/><circle cx="45.4" cy="31.5" r="2.7" fill="#F2C094"/><path d="M18.5 30.5c0-9.6 6-16 13.5-16s13.5 6.4 13.5 16c0 8.6-6 15-13.5 15s-13.5-6.4-13.5-15z" fill="#F2C094"/><path d="M18.6 30.5c-1.4-10.8 4.6-18.2 13.4-18.2 9.3 0 14.8 7.4 13.4 18.2-.6-4.4-1.9-7.1-3.9-8.8-3 2.1-7 2.9-11.4 2.5-3.3-.3-5.9-1.2-7.7-2.8-1.9 1.8-3.2 4.7-3.8 9.1z" fill="#E8C15A"/><path d="M25.2 13.4c2-.9 4.4-1.4 6.8-1.4 2.6 0 5 .5 7 1.5-1.5 2.2-3.9 3.3-7 3.3-2.9 0-5.3-1.1-6.8-3.4z" fill="#F4D373"/><g class="mj-ojos"><circle cx="27" cy="31.3" r="1.9" fill="#26313E"/><circle cx="37" cy="31.3" r="1.9" fill="#26313E"/><circle cx="27.7" cy="30.6" r=".55" fill="#fff"/><circle cx="37.7" cy="30.6" r=".55" fill="#fff"/></g><path class="mj-cejas" d="M24.2 27.2c1.6-1.1 3.6-1.2 5.1-.4M34.7 26.8c1.5-.8 3.5-.7 5.1.4" stroke="#C99B3F" stroke-width="1.7" fill="none" stroke-linecap="round"/><path d="M31.4 33.2c.5 1.4.5 2.3 0 3" stroke="#DFA77A" stroke-width="1.2" fill="none" stroke-linecap="round"/><ellipse cx="23.9" cy="35.8" rx="1.9" ry="1.1" fill="#EFA07E" opacity=".4"/><ellipse cx="40.1" cy="35.8" rx="1.9" ry="1.1" fill="#EFA07E" opacity=".4"/><path class="mj-boca" d="M27.6 39.8c2.7 2.2 6.1 2.2 8.8 0" stroke="#B26248" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M17.3 29.5c.3-9.9 6.6-16.9 14.7-16.9s14.4 7 14.7 16.9" fill="none" stroke="#233240" stroke-width="2.1" stroke-linecap="round"/><rect x="15.4" y="28.2" width="4" height="7.6" rx="2" fill="#233240"/><rect x="44.6" y="28.2" width="4" height="7.6" rx="2" fill="#233240"/><path d="M17.4 35.8c.3 3.8 3.2 6.2 7.6 6.9" fill="none" stroke="#233240" stroke-width="1.6" stroke-linecap="round"/><circle cx="26.6" cy="42.9" r="1.7" fill="#233240"/><circle cx="26.6" cy="42.9" r=".7" fill="#3E5468"/></g></svg>`;
 
 // Solo en paneles comerciales, para vendedores y admins. Siempre arranca minimizado (solo la cara);
 // la primera vez saluda con un globito y un salto, y recién al tocarlo se presenta.
@@ -127,7 +127,7 @@ function miniJuanWidget(user, sistema) {
   return `
 <div class="mj" id="mj" data-bienvenida="${user.ia_bienvenida ? '0' : '1'}">
   <div class="mj-panel" id="mjPanel" hidden>
-    <div class="mj-head">${MINIJUAN_SVG}<div><strong>MiniJuan</strong><small id="mjEstado">Tu experto en desarrollo web y software a medida</small></div><button type="button" class="mj-x" id="mjCerrar" aria-label="Minimizar">&minus;</button></div>
+    <div class="mj-head">${MINIJUAN_SVG}<div><strong>MiniJuan</strong><small id="mjEstado">Tu experto en desarrollo web y software a medida</small></div><button type="button" class="mj-x" id="mjNueva" title="Nueva charla (limpia el chat)" aria-label="Nueva charla"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:1rem;height:1rem"><path d="M14 3.5l2.5 2.5L8 14.5l-3.5 1 1-3.5z"/><path d="M10 17h7"/></svg></button><button type="button" class="mj-x" id="mjCerrar" aria-label="Minimizar">&minus;</button></div>
     <div class="mj-ctx" id="mjCtx" hidden></div>
     <div class="mj-chat" id="mjChat"></div>
     <form class="mj-form" id="mjForm">
@@ -197,6 +197,13 @@ function miniJuanWidget(user, sistema) {
   function cerrar() { panel.hidden = true; mini.hidden = false; }
   burb.addEventListener('click', abrir);
   document.getElementById('mjCerrar').addEventListener('click', cerrar);
+  document.getElementById('mjNueva').addEventListener('click', function () {
+    fetch('/ia/nueva', { method: 'POST' }).then(function () {
+      chat.innerHTML = ''; ctxDeal = null; ctxBox.hidden = true;
+      burbuja('¡Listo, arrancamos de cero! 🧹 ¿En qué te ayudo?', 'mj-bot');
+      ta.focus();
+    }).catch(function () { burbuja('No pude crear la charla nueva, probá otra vez.', 'mj-bot mj-err'); });
+  });
   window.miniJuanAbrir = function (dealId, empresa) {
     ctxDeal = dealId || null;
     if (ctxDeal) { ctxBox.hidden = false; ctxBox.textContent = 'Hablando sobre la lead: ' + (empresa || ('#' + dealId)) + ' — MiniJuan ya conoce sus datos'; } else ctxBox.hidden = true;
@@ -972,8 +979,16 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 .mj-burbuja { width:60px; height:60px; border-radius:50%; border:2.5px solid rgba(255,255,255,.6); padding:0; overflow:hidden; cursor:pointer; box-shadow:0 6px 18px rgba(10,40,40,.35); background:#0E6E66; transition:transform .16s; display:block; }
 .mj-burbuja svg { width:100%; height:100%; display:block; }
 .mj-burbuja:hover { transform:scale(1.09); }
-.mj-mini .mj-burbuja { animation: mj-idle 9s ease-in-out infinite; }
-@keyframes mj-idle { 0%, 84%, 100% { transform:rotate(0); } 87% { transform:rotate(-5deg); } 90% { transform:rotate(5deg); } 93% { transform:rotate(-3deg); } 96% { transform:rotate(0); } }
+.mj-mini .mj-burbuja { animation: mj-idle 8s ease-in-out infinite; }
+@keyframes mj-idle {
+  0%, 100% { transform:translateY(0) rotate(0); }
+  25% { transform:translateY(-2.5px) rotate(0); }
+  50% { transform:translateY(0) rotate(0); }
+  75% { transform:translateY(-2.5px) rotate(0); }
+  86% { transform:translateY(0) rotate(-5deg); }
+  90% { transform:translateY(0) rotate(4deg); }
+  94% { transform:translateY(0) rotate(-2deg); }
+}
 .mj-mini .mj-ojos { animation: mj-parpadeo 5.2s ease-in-out infinite; }
 @keyframes mj-parpadeo { 0%, 92%, 100% { transform:scaleY(1); } 94%, 96% { transform:scaleY(.12); } }
 .mj-burbuja.mj-wiggle { animation: mj-wiggle .75s ease-in-out 2; }

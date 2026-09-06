@@ -292,6 +292,8 @@ db.exec(`CREATE TABLE IF NOT EXISTS ia_consultas (
   const cols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
   if (!cols.includes('ia_bienvenida')) db.exec('ALTER TABLE users ADD COLUMN ia_bienvenida INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('ia_limite')) db.exec('ALTER TABLE users ADD COLUMN ia_limite INTEGER');
+  // 2.38.0: "Nueva charla" — la charla actual arranca después de esta consulta (las viejas quedan guardadas igual).
+  if (!cols.includes('ia_charla_desde')) db.exec('ALTER TABLE users ADD COLUMN ia_charla_desde INTEGER NOT NULL DEFAULT 0');
 }
 // Migración 2.8.0: campaña de origen y ubicación de la lead.
 if (!dealCols.includes('campana_id')) {

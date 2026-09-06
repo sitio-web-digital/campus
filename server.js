@@ -71,7 +71,7 @@ if (seeded) {
 
 function currentUser(req) {
   if (!req.session.uid) return null;
-  const u = db.prepare('SELECT id, name, email, role, active, permisos, last_seen_at, last_version_vista, avatar, ia_bienvenida, ia_limite FROM users WHERE id = ? AND active = 1').get(req.session.uid) || null;
+  const u = db.prepare('SELECT id, name, email, role, active, permisos, last_seen_at, last_version_vista, avatar, ia_bienvenida, ia_limite, ia_charla_desde FROM users WHERE id = ? AND active = 1').get(req.session.uid) || null;
   if (u) { try { u.permisos = JSON.parse(u.permisos || '[]'); } catch { u.permisos = []; } }
   return u;
 }
@@ -1644,6 +1644,10 @@ app.post('/ia/consulta', requireAuth, express.json(), async (req, res) => {
     extra = `\n\n[Contexto de la lead sobre la que pregunto]\nEmpresa: ${deal.empresa}\nEtapa: ${deal.etapa}\nTipo de venta: ${deal.tipo_venta || '—'} · Valor conversado: ${deal.mrr || 'sin definir'}\nVendedor: ${deal.vendedor}\nUbicación: ${[deal.ciudad, deal.provincia].filter(Boolean).join(', ') || '—'}${notas.length ? `\nÚltimas notas:\n${notas.map((n) => '· ' + n.detalle.slice(6, 300)).join('\n')}` : ''}`;
   }
 
+  // Memoria de la charla actual: las últimas idas y vueltas viajan como contexto (una charla nueva arranca de cero).
+  const previas = db.prepare('SELECT pregunta, respuesta FROM ia_consultas WHERE user_id = ? AND id > ? ORDER BY id DESC LIMIT 6').all(req.user.id, req.user.ia_charla_desde || 0).reverse();
+  const mensajes = [];
+  for (const pr of previas) { mensajes.push({ role: 'user', content: pr.pregunta }); mensajes.push({ role: 'assistant', content: pr.respuesta }); }
   try {
     const params = {
       model: cfg.modelo,
@@ -1652,7 +1656,7 @@ app.post('/ia/consulta', requireAuth, express.json(), async (req, res) => {
         { type: 'text', text: IA_BASE },
         { type: 'text', text: cfg.contexto ? `Contexto de la empresa (lo escribió el administrador — seguilo al pie de la letra):\n${cfg.contexto}` : 'El administrador todavía no cargó contexto propio de la empresa.', cache_control: { type: 'ephemeral' } },
       ],
-      messages: [{ role: 'user', content: pregunta + extra }],
+      messages: [...mensajes, { role: 'user', content: pregunta + extra }],
     };
     // Opus 5 con red de seguridad: si el modelo declina por política, la API reintenta sola con un modelo alternativo.
     const r = cfg.modelo === 'claude-opus-5'
@@ -1681,7 +1685,13 @@ app.post('/ia/bienvenida', requireAuth, (req, res) => {
 
 // Historial propio: al abrir la burbuja, el vendedor recupera sus últimas charlas con MiniJuan.
 app.get('/ia/historial', requireAuth, (req, res) => {
-  res.json({ items: db.prepare('SELECT pregunta, respuesta FROM ia_consultas WHERE user_id = ? ORDER BY id DESC LIMIT 15').all(req.user.id).reverse() });
+  res.json({ items: db.prepare('SELECT pregunta, respuesta FROM ia_consultas WHERE user_id = ? AND id > ? ORDER BY id DESC LIMIT 15').all(req.user.id, req.user.ia_charla_desde || 0).reverse() });
+});
+
+// Nueva charla: limpia el chat del vendedor (las conversaciones anteriores siguen guardadas para el admin).
+app.post('/ia/nueva', requireAuth, (req, res) => {
+  db.prepare('UPDATE users SET ia_charla_desde = (SELECT COALESCE(MAX(id), 0) FROM ia_consultas WHERE user_id = ?) WHERE id = ?').run(req.user.id, req.user.id);
+  res.json({ ok: true });
 });
 
 app.get('/asesor', requireAuth, (req, res) => {

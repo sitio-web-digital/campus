@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.38.0',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Botón "Nueva charla" en el chat de MiniJuan (el lápiz de la cabecera): limpia el chat y arranca de cero. Además MiniJuan ahora tiene memoria dentro de cada charla — se acuerda de lo que venían hablando y podés repreguntarle; la charla nueva corta esa memoria. Para el admin, todas las charlas siguen guardadas.' },
+      { tipo: 'mejora', texto: 'Avatar renovado: MiniJuan ahora es un asesor profesional con auricular de headset, fondo con degradado, peinado prolijo con brillo, ojos con reflejo y rubor — y animación de reposo más fina (flota respirando y se sacude cada tanto).' },
+    ],
+  },
+  {
     version: '2.37.3',
     fecha: '2026-09-04',
     cambios: [
