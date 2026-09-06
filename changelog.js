@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.47.1',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'fix', texto: 'La burbuja de notificaciones (la que avisa "te dejaron una nota", "te mencionaron", etc.) ahora aparece arriba a la derecha: abajo a la derecha la tapaba MiniJuan en el panel de Cloud For Deploy.' },
+    ],
+  },
+  {
     version: '2.47.0',
     fecha: '2026-09-06',
     cambios: [

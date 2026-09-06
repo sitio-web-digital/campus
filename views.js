@@ -1306,9 +1306,10 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .cl-lista .chip { flex-shrink:0; }
 
 /* ---------- toast ---------- */
-.toast { position:fixed; right:1rem; bottom:1rem; z-index:100; display:block; background:var(--accent-ink); color:#fff; text-decoration:none;
+/* Arriba a la derecha: abajo a la derecha vive la burbuja de MiniJuan y la tapaba. */
+.toast { position:fixed; right:1rem; top:3.6rem; z-index:100; display:block; background:var(--accent-ink); color:#fff; text-decoration:none;
   padding:.7rem .95rem; border-radius:var(--r-lg); font-size:.85rem; font-weight:500; line-height:1.4; max-width:22rem;
-  box-shadow:var(--sh-lg); opacity:0; transform:translateY(8px); transition:opacity .25s, transform .25s; }
+  box-shadow:var(--sh-lg); opacity:0; transform:translateY(-8px); transition:opacity .25s, transform .25s; }
 .toast.show { opacity:1; transform:none; }
 .toast:hover { background:#061A2E; text-decoration:none; color:#fff; }
 @media (prefers-reduced-motion: reduce) { .toast { transition:none; } }
@@ -1477,7 +1478,7 @@ html.dark .login-bg .btn:hover { background:var(--login-ink); }
   .anuncio .modal.anuncio-box { min-height:0; border-radius:12px; }
   .cfg-inline { min-width:0; width:100%; }
   .toolbar .btn:not(.small):not(.secondary) { flex:1 0 auto; }
-  .toast { bottom:4.6rem; left:1rem; right:1rem; max-width:none; }
+  .toast { top:3.6rem; left:1rem; right:1rem; max-width:none; }
 
   /* objetivos táctiles: los controles no bajan de 40px */
   .btn { min-height:38px; }
