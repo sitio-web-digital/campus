@@ -1587,14 +1587,14 @@ app.post('/developers/proyectos/:id', requireAuth, requireSistema('developers'),
 // Config global del asesor, guardada en panel_config bajo el pseudo-panel '_ia'.
 // La clave de la API vive SOLO en la variable de entorno ANTHROPIC_API_KEY (nunca en el repo ni en la DB).
 const IA_MODELOS = {
-  'claude-opus-5': { nombre: 'Claude Opus 5 (recomendado)', entrada: 5, salida: 25 },
+  'claude-opus-5': { nombre: 'Claude Opus 5 (el más capaz)', entrada: 5, salida: 25 },
   'claude-sonnet-5': { nombre: 'Claude Sonnet 5 (más barato)', entrada: 2, salida: 10 },
-  'claude-haiku-4-5': { nombre: 'Claude Haiku 4.5 (el más económico)', entrada: 1, salida: 5 },
+  'claude-haiku-4-5': { nombre: 'Claude Haiku 4.5 (el más económico — por defecto)', entrada: 1, salida: 5 },
 };
 const iaConfig = () => ({
   activo: getPanelConfig('_ia', 'activo', '1') === '1',
   limite: Math.max(1, parseInt(getPanelConfig('_ia', 'limite_dia'), 10) || 20),
-  modelo: IA_MODELOS[getPanelConfig('_ia', 'modelo')] ? getPanelConfig('_ia', 'modelo') : 'claude-opus-5',
+  modelo: IA_MODELOS[getPanelConfig('_ia', 'modelo')] ? getPanelConfig('_ia', 'modelo') : 'claude-haiku-4-5',
   contexto: getPanelConfig('_ia', 'contexto', '') || '',
 });
 const iaConsultasHoy = (uid) => db.prepare("SELECT COUNT(*) AS c FROM ia_consultas WHERE user_id = ? AND substr(datetime(created_at, '-3 hours'), 1, 10) = ?").get(uid, hoyAR()).c;

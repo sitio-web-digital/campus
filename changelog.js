@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.36.2',
+    fecha: '2026-09-04',
+    cambios: [
+      { tipo: 'mejora', texto: 'MiniJuan usa por defecto Claude Haiku 4.5, el modelo más económico de Anthropic (~medio centavo de dólar por consulta). El modelo se puede subir cuando quieras desde Administración → Preferencias.' },
+    ],
+  },
+  {
     version: '2.36.1',
     fecha: '2026-09-04',
     cambios: [
