@@ -985,6 +985,19 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 @media (max-width:640px) { .umenu-pop { position:fixed; top:3.3rem; right:.5rem; } }
 
 /* ---------- panel de clientes ---------- */
+.pc-filtros { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin:0 0 .9rem; }
+.pc-filtros .seg { flex-shrink:0; }
+.pc-busca { display:flex; gap:.45rem; align-items:center; flex-wrap:wrap; margin-left:auto; min-width:0; }
+.pc-busca select, .pc-busca input { margin:0; width:auto; padding:.42rem .55rem; font-size:.82rem; }
+.pc-busca input[name="q"] { min-width:11rem; }
+.pc-busca .btn { flex-shrink:0; }
+@media (max-width: 760px) {
+  .pc-filtros { flex-direction:column; align-items:stretch; }
+  .pc-filtros .seg { align-self:flex-start; }
+  .pc-busca { margin-left:0; width:100%; }
+  .pc-busca select { flex:1; min-width:8.5rem; }
+  .pc-busca input[name="q"] { flex:1 1 100%; }
+}
 .pc-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(20rem, 1fr)); gap:.75rem; }
 @media (max-width: 480px) { .pc-grid { grid-template-columns:1fr; } }
 .pc-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--sh); padding:.85rem .95rem; display:flex; flex-direction:column; gap:.55rem; }
@@ -3040,24 +3053,23 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
     ${scans.length ? `<p class="caption" style="margin:.5rem 0 0">Últimos escaneos: ${scans.map((sc) => `${esc(sc.rubro)} en ${esc(sc.zona)} (${sc.nuevos} nuevos)`).join(' · ')}</p>` : ''}
   </div>` : ''}
 
-  <div class="toolbar">
+  <div class="pc-filtros">
     <div class="seg">
       <a href="${urlBase({ estado: '' })}" class="${fEstado === '' ? 'on' : ''}">Todos</a>
       <a href="${urlBase({ estado: 'nuevo' })}" class="${fEstado === 'nuevo' ? 'on' : ''}">Disponibles</a>
       <a href="${urlBase({ estado: 'tomado' })}" class="${fEstado === 'tomado' ? 'on' : ''}">Tomados</a>
       <a href="${urlBase({ estado: 'descartado' })}" class="${fEstado === 'descartado' ? 'on' : ''}">Descartados</a>
     </div>
-    <div class="sp"></div>
-    <form method="get" action="/clientes" class="cfg-inline" style="flex:0">
+    <form method="get" action="/clientes" class="pc-busca">
       ${fEstado ? `<input type="hidden" name="estado" value="${esc(fEstado)}">` : ''}
-      <select name="rubro" onchange="this.form.submit()" style="width:auto"><option value="">Rubro: todos</option>${rubros.map((r) => `<option value="${esc(r)}" ${r === fRubro ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
-      <select name="web" onchange="this.form.submit()" style="width:auto">
+      <select name="rubro" onchange="this.form.submit()"><option value="">Rubro: todos</option>${rubros.map((r) => `<option value="${esc(r)}" ${r === fRubro ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
+      <select name="web" onchange="this.form.submit()">
         <option value="">Web: todos</option>
         <option value="sin" ${fWeb === 'sin' ? 'selected' : ''}>Sin web (oportunidad)</option>
         <option value="redes" ${fWeb === 'redes' ? 'selected' : ''}>Solo redes sociales</option>
         <option value="con" ${fWeb === 'con' ? 'selected' : ''}>Con web propia</option>
       </select>
-      <input name="q" value="${esc(q)}" placeholder="Buscar nombre o dirección" style="width:auto">
+      <input name="q" value="${esc(q)}" placeholder="Buscar nombre o dirección">
       <button class="btn secondary small">Buscar</button>
     </form>
   </div>
