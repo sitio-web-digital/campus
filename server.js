@@ -1724,8 +1724,14 @@ const adminsAgenda = () => db.prepare("SELECT id, name, avatar FROM users WHERE 
 // (su franja y sus reuniones posicionadas por hora); en mes, un resumen de reuniones por celda.
 function armarDiaCal(fecha, admins, disp, dur, hoy) {
   const d = new Date(fecha + 'T00:00:00Z');
-  const reuniones = db.prepare(`SELECT r.*, dl.empresa, u.name AS vendedor FROM reuniones r JOIN deals dl ON dl.id = r.deal_id JOIN users u ON u.id = r.vendedor_id
+  const reuniones = db.prepare(`SELECT r.*, dl.empresa, dl.telefono, dl.mrr, dl.tipo_venta, dl.etapa AS etapa_lead, dl.origen, dl.ciudad, dl.provincia, dl.calificacion, u.name AS vendedor
+    FROM reuniones r JOIN deals dl ON dl.id = r.deal_id JOIN users u ON u.id = r.vendedor_id
     WHERE r.estado = 'agendada' AND r.fecha = ?`).all(fecha);
+  // Las últimas notas de la lead acompañan a la reunión: el admin ve el contexto sin salir del calendario.
+  for (const r of reuniones) {
+    r.notas = db.prepare("SELECT detalle FROM deal_events WHERE deal_id = ? AND tipo = 'edicion' AND detalle LIKE 'Nota:%' ORDER BY id DESC LIMIT 3").all(r.deal_id)
+      .map((n) => n.detalle.slice(6).trim()).join('¶');
+  }
   return {
     fecha, esHoy: fecha === hoy, pasadoDia: fecha < hoy,
     lanes: admins.map((adm) => {
@@ -1801,13 +1807,18 @@ app.get('/agenda', requireAuth, requireSistema('cfd'), (req, res) => {
   const off = Math.max(-tope, Math.min(tope, parseInt(req.query.semana, 10) || 0));
   let deal = parseInt(req.query.deal, 10) ? db.prepare('SELECT id, empresa, panel, user_id, etapa FROM deals WHERE id = ?').get(parseInt(req.query.deal, 10)) : null;
   if (deal && (deal.panel !== 'cfd' || (req.user.role !== 'admin' && deal.user_id !== req.user.id))) deal = null;
+  // Reprogramar: se elige un turno nuevo y el viejo se cancela solo al confirmar.
+  let repro = parseInt(req.query.repro, 10) ? db.prepare(`SELECT r.*, d.empresa, d.panel, d.user_id AS duenio FROM reuniones r JOIN deals d ON d.id = r.deal_id
+    WHERE r.id = ? AND r.estado = 'agendada'`).get(parseInt(req.query.repro, 10)) : null;
+  if (repro && (repro.panel !== 'cfd' || (req.user.role !== 'admin' && repro.duenio !== req.user.id))) repro = null;
+  if (repro && !deal) deal = db.prepare('SELECT id, empresa, panel, user_id, etapa FROM deals WHERE id = ?').get(repro.deal_id);
   const cal = armarCalendario(vista, off);
   const miDisp = req.user.role === 'admin' ? db.prepare('SELECT * FROM agenda_disponibilidad WHERE admin_id = ?').all(req.user.id) : [];
   // Para agendar directo desde el calendario (sin venir de la ficha): las leads abiertas de CFD que puede tocar.
   const leadsCFD = req.user.role === 'admin'
     ? db.prepare("SELECT d.id, d.empresa, u.name AS vendedor FROM deals d JOIN users u ON u.id = d.user_id WHERE d.panel = 'cfd' AND d.etapa NOT IN ('Ganado', 'Perdido') ORDER BY d.empresa").all()
     : db.prepare("SELECT d.id, d.empresa, NULL AS vendedor FROM deals d WHERE d.panel = 'cfd' AND d.user_id = ? AND d.etapa NOT IN ('Ganado', 'Perdido') ORDER BY d.empresa").all(req.user.id);
-  res.send(V.agendaPage({ user: req.user, ...cal, off, deal, miDisp, leadsCFD, msg: clean(req.query.msg), err: clean(req.query.err) }));
+  res.send(V.agendaPage({ user: req.user, ...cal, off, deal, repro, miDisp, leadsCFD, msg: clean(req.query.msg), err: clean(req.query.err) }));
 });
 
 // Reservar un turno con un admin concreto, para una lead de CFD (su dueño o un admin).
@@ -1829,11 +1840,29 @@ app.post('/agenda/reservar', requireAuth, requireSistema('cfd'), (req, res) => {
   const modalidad = ['meet', 'presencial', 'oficina'].includes(req.body.modalidad) ? req.body.modalidad : 'meet';
   const modTxt = { meet: 'por Meet', presencial: 'presencial (vamos nosotros)', oficina: 'en la oficina' }[modalidad];
   const linda = fecha.split('-').reverse().join('/');
-  db.prepare('INSERT INTO reuniones (deal_id, vendedor_id, admin_id, fecha, hora, duracion, modalidad) VALUES (?, ?, ?, ?, ?, ?, ?)').run(deal.id, deal.user_id, adminElegido.id, fecha, hora, dur, modalidad);
-  logDealEvent(deal.id, req.user.id, 'edicion', `Nota: Reunión agendada con ${adminElegido.name} para el ${linda} a las ${hora} hs, ${modTxt}`);
+  const linkMeet = (() => { const l = clean(req.body.link); return l && /^https?:\/\//i.test(l) ? l.slice(0, 300) : null; })();
+  db.prepare('INSERT INTO reuniones (deal_id, vendedor_id, admin_id, fecha, hora, duracion, modalidad, link) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(deal.id, deal.user_id, adminElegido.id, fecha, hora, dur, modalidad, linkMeet);
+  logDealEvent(deal.id, req.user.id, 'edicion', `Nota: Reunión agendada con ${adminElegido.name} para el ${linda} a las ${hora} hs, ${modTxt}${linkMeet ? ` — ${linkMeet}` : ''}`);
+  // Si esto era una reprogramación, el turno anterior se cancela recién ahora (nunca queda la lead sin reunión).
+  const viejaR = parseInt(req.body.repro, 10) ? db.prepare(`SELECT r.*, d.user_id AS duenio FROM reuniones r JOIN deals d ON d.id = r.deal_id
+    WHERE r.id = ? AND r.estado = 'agendada'`).get(parseInt(req.body.repro, 10)) : null;
+  if (viejaR && (req.user.role === 'admin' || viejaR.duenio === req.user.id)) {
+    db.prepare("UPDATE reuniones SET estado = 'cancelada' WHERE id = ?").run(viejaR.id);
+    logDealEvent(viejaR.deal_id, req.user.id, 'edicion', `Nota: Reunión reprogramada — del ${viejaR.fecha.split('-').reverse().join('/')} ${viejaR.hora} hs al ${linda} ${hora} hs`);
+  }
   notifyAdmins(req.user.id, `Agendó reunión ${modTxt} con «${deal.empresa}» para el ${linda} ${hora} hs (con ${adminElegido.name})`, '/agenda');
   if (deal.user_id !== req.user.id) notifyUser(deal.user_id, `Te agendaron reunión ${modTxt} con «${deal.empresa}» para el ${linda} ${hora} hs (con ${adminElegido.name})`, '/agenda', null, req.user.id);
   res.redirect('/agenda?msg=' + encodeURIComponent(`Reunión con «${deal.empresa}» agendada con ${adminElegido.name}: ${linda} a las ${hora} hs, ${modTxt}.`));
+});
+
+// Cargar o cambiar el link del Meet de una reunión (dueño de la lead o un admin).
+app.post('/agenda/reuniones/:id/link', requireAuth, requireSistema('cfd'), (req, res) => {
+  const r = db.prepare('SELECT r.*, d.user_id AS duenio FROM reuniones r JOIN deals d ON d.id = r.deal_id WHERE r.id = ?').get(req.params.id);
+  if (r && r.estado === 'agendada' && (req.user.role === 'admin' || r.duenio === req.user.id)) {
+    const l = clean(req.body.link);
+    db.prepare('UPDATE reuniones SET link = ? WHERE id = ?').run(l && /^https?:\/\//i.test(l) ? l.slice(0, 300) : null, r.id);
+  }
+  res.redirect('/agenda');
 });
 
 app.post('/agenda/reuniones/:id/cancelar', requireAuth, requireSistema('cfd'), (req, res) => {

@@ -861,6 +861,12 @@ tr.inactivo td { opacity:.5; }
 .kcard-w { font-size:.62rem; margin-top:.18rem; line-height:1.35; overflow-wrap:anywhere; }
 .kcard-w.ok { color:var(--faint); }
 .kcard-w.aprob { color:#8A5A0B; font-weight:600; }
+.kcard-w.aviso-reunion { background:rgba(230, 162, 60, .18); color:#A8791F; font-weight:800; border-radius:6px; padding:.3rem .5rem; margin-top:.35rem; font-size:.66rem; }
+.kcard-w.aviso-reunion a { color:inherit; font-weight:800; text-decoration:underline; }
+html.dark .kcard-w.aviso-reunion { color:#EEC272; }
+.kcard-sinreu { border:1.5px solid rgba(230, 162, 60, .55); animation: sinreu-late 2.2s ease-in-out infinite; }
+@keyframes sinreu-late { 0%, 100% { border-color:rgba(230, 162, 60, .4); box-shadow:var(--sh); } 50% { border-color:#E6A23C; box-shadow:0 0 8px rgba(230, 162, 60, .5); } }
+@media (prefers-reduced-motion: reduce) { .kcard-sinreu { animation:none; border-color:#E6A23C; } }
 .aprob-box { background:var(--warn-soft); border:1px solid #E8D4A6; border-radius:var(--r-lg); padding:.8rem .95rem; margin-bottom:.8rem; }
 .aprob-box p { margin:0 0 .55rem; font-size:.85rem; }
 
@@ -1029,6 +1035,7 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 .mes-hoy .mes-num { display:inline-grid; place-items:center; width:1.5rem; height:1.5rem; border-radius:50%; background:var(--accent); color:#fff; }
 .mes-evento { font-size:.6rem; font-weight:600; color:#fff; background:var(--ac); border-radius:4px; padding:.06rem .3rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .mes-mas { font-size:.58rem; color:var(--muted); font-weight:700; }
+.cm-nota { background:var(--surface2); border-left:3px solid var(--line2); border-radius:0 8px 8px 0; padding:.35rem .55rem; margin-top:.3rem; font-size:.78rem; line-height:1.45; white-space:pre-wrap; }
 @media (max-width: 760px) {
   .cal-cabecera { top:2.9rem; }
   .cal-cabecera, .cal-cuerpo { grid-template-columns:2.6rem repeat(var(--ncols, 7), minmax(5.2rem, 1fr)); }
@@ -1671,11 +1678,11 @@ function pipelinePage({ user, deals, scope, closed, modal, err = null, robo = nu
       : d.etapa === 'Ganado' && d.aprobacion !== 'aprobado' ? `<div class="kcard-w aprob">Por aprobar</div>`
       : d.etapa === 'Ganado' && d.fecha_cierre ? `<div class="kcard-w ok">Cerrado ${fecha(d.fecha_cierre)}</div>` : '';
     return `
-    <div class="kcard ${d.disponible ? 'kcard-libre' : ''} ${d.destacada ? 'kcard-star' : ''}" ${puedeMover(d) ? 'draggable="true"' : ''} data-id="${d.id}">
+    <div class="kcard ${d.disponible ? 'kcard-libre' : ''} ${d.destacada ? 'kcard-star' : ''} ${d.sinReunion ? 'kcard-sinreu' : ''}" ${puedeMover(d) ? 'draggable="true"' : ''} data-id="${d.id}">
       ${puedeMover(d) ? `<form method="post" action="/deals/${d.id}/destacar" class="star-f" onsubmit="this.volver.value = location.pathname + location.search"><input type="hidden" name="volver" value=""><button type="submit" class="star ${d.destacada ? 'on' : ''}" title="${d.destacada ? 'Quitar estrella' : 'Marcar con estrella: importante a cerrar / mejor seguimiento'}" aria-label="Destacar">${STAR_SVG}</button></form>` : (d.destacada ? `<span class="star on star-fija" title="Lead destacada">${STAR_SVG}</span>` : '')}
       <a class="kcard-t" href="/deals/${d.id}">${esc(d.empresa)}</a>
       <div class="kcard-m"><span class="mrr">${money(d.mrr)}${d.tipo_venta === 'Suscripción mensual' ? '<span style="font-weight:400">/mes</span>' : ''}</span><span>${d.ciudad ? esc(d.ciudad) + ' · ' : ''}${esc(d.vendedor_name.split(' ')[0])}</span></div>
-      ${d.sinReunion ? `<div class="kcard-w aviso-reunion">Sin reunión agendada — <a href="/agenda?deal=${d.id}">agendar</a></div>` : d.reunion ? `<div class="kcard-w ok">Reunión: ${+d.reunion.fecha.slice(8, 10)}/${+d.reunion.fecha.slice(5, 7)} ${d.reunion.hora} hs${d.reunion.admin ? ' · ' + esc(d.reunion.admin.split(' ')[0]) : ''}</div>` : ''}
+      ${d.sinReunion ? `<div class="kcard-w aviso-reunion">⚠ FALTA AGENDAR LA REUNIÓN — <a href="/agenda?deal=${d.id}">agendar ahora</a></div>` : d.reunion ? `<div class="kcard-w ok">Reunión: ${+d.reunion.fecha.slice(8, 10)}/${+d.reunion.fecha.slice(5, 7)} ${d.reunion.hora} hs${d.reunion.admin ? ' · ' + esc(d.reunion.admin.split(' ')[0]) : ''}</div>` : ''}
       ${pie}
     </div>`;
   };
@@ -3067,7 +3074,7 @@ function asesorPage({ user, listo, limite, restantes, deal }) {
 
 /* --------- agenda de reuniones (CFD): calendario estilo Google --------- */
 
-function agendaPage({ user, vista, dias = [], semanas = [], admins, dur, ahoraMin, hoy, titulo, off, deal, miDisp = [], leadsCFD = [], msg, err }) {
+function agendaPage({ user, vista, dias = [], semanas = [], admins, dur, ahoraMin, hoy, titulo, off, deal, repro = null, miDisp = [], leadsCFD = [], msg, err }) {
   const esAdmin = user.role === 'admin';
   const DIA_CORTO = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
   const diaCorto = (f) => DIA_CORTO[new Date(f + 'T00:00:00Z').getUTCDay()];
@@ -3102,7 +3109,8 @@ function agendaPage({ user, vista, dias = [], semanas = [], admins, dur, ahoraMi
     ${admins.map((a) => `<span class="ag2-quien" style="--ac:${a.color}">${avatar(a)}<span>${esc(a.name)}</span></span>`).join('')}
     <span class="small muted">· turnos de ${dur} min</span>
   </div>` : ''}
-  ${deal ? `<div class="flash ok">Agendando para <strong>${esc(deal.empresa)}</strong> — ${grilla ? 'tocá un hueco libre de la persona con quien va la reunión' : 'elegí un día para ver sus horarios'}. <a href="/agenda${vista !== 'semana' ? `?vista=${vista}` : ''}" class="small">cancelar</a></div>` : ''}
+  ${repro ? `<div class="flash ok">Reprogramando la reunión de <strong>${esc(repro.empresa)}</strong> (era el ${repro.fecha.split('-').reverse().join('/')} a las ${repro.hora} hs) — tocá el nuevo horario; el viejo se libera al confirmar. <a href="/agenda" class="small">cancelar</a></div>`
+  : deal ? `<div class="flash ok">Agendando para <strong>${esc(deal.empresa)}</strong> — ${grilla ? 'tocá un hueco libre de la persona con quien va la reunión' : 'elegí un día para ver sus horarios'}. <a href="/agenda${vista !== 'semana' ? `?vista=${vista}` : ''}" class="small">cancelar</a></div>` : ''}
 
   ${!admins.length ? `<div class="card"><p class="muted" style="margin:0">Nadie cargó disponibilidad todavía. ${esAdmin ? 'Cargá la tuya acá abajo y el calendario aparece solo.' : 'Pedile a un administrador que cargue sus horarios.'}</p></div>`
   : grilla ? `
@@ -3126,7 +3134,8 @@ function agendaPage({ user, vista, dias = [], semanas = [], admins, dur, ahoraMi
               data-admin="${ln.admin.id}" data-nombre="${esc(ln.admin.name)}" data-fecha="${d.fecha}" data-hora="${hora}" title="${esc(ln.admin.name)} · ${hora}"></button>`);
           } return botones.join(''); })() : ''}
           ${ln.reuniones.map((r) => `<div class="cal-reu" style="top:${px(min(r.hora))}px; height:${px(r.duracion || dur)}px; left:${izq}%; width:${ancho}%; --ac:${ln.admin.color}"
-            data-id="${r.id}" data-empresa="${esc(r.empresa)}" data-deal="${r.deal_id}" data-vendedor="${esc(r.vendedor)}" data-mod="${MOD[r.modalidad] || 'Meet'}" data-admin="${esc(ln.admin.name)}" data-hora="${r.hora}" data-fecha="${d.fecha}" data-puede="${esAdmin || r.vendedor_id === user.id ? '1' : '0'}">
+            data-id="${r.id}" data-empresa="${esc(r.empresa)}" data-deal="${r.deal_id}" data-vendedor="${esc(r.vendedor)}" data-mod="${MOD[r.modalidad] || 'Meet'}" data-admin="${esc(ln.admin.name)}" data-hora="${r.hora}" data-fecha="${d.fecha}" data-puede="${esAdmin || r.vendedor_id === user.id ? '1' : '0'}"
+            data-tel="${esc(r.telefono || '')}" data-valor="${r.mrr ? money(r.mrr) + (r.tipo_venta === 'Suscripción mensual' ? '/mes' : '') : ''}" data-etapa="${esc(r.etapa_lead || '')}" data-origen="${esc(r.origen || '')}" data-ubic="${esc([r.ciudad, r.provincia].filter(Boolean).join(', '))}" data-calif="${esc(r.calificacion || '')}" data-notas="${esc(r.notas || '')}" data-link="${esc(r.link || '')}">
             <strong>${esc(r.empresa)}</strong><span>${esc(nombreCorto(r.vendedor))} · ${MOD[r.modalidad] || 'Meet'}</span>
           </div>`).join('')}`; }).join('')}
       </div>`).join('')}
@@ -3158,20 +3167,36 @@ function agendaPage({ user, vista, dias = [], semanas = [], admins, dur, ahoraMi
           ${leadsCFD.map((l) => `<option value="${l.id}">${esc(l.empresa)}${l.vendedor ? ` — ${esc(l.vendedor.split(' ')[0])}` : ''}</option>`).join('')}
         </select>`}
         <input type="hidden" name="admin_id" id="cmAdmin"><input type="hidden" name="fecha" id="cmFecha"><input type="hidden" name="hora" id="cmHora">
+        <input type="hidden" name="repro" value="${repro ? repro.id : ''}">
         <label>Modalidad</label>
-        <select name="modalidad">
+        <select name="modalidad" id="cmModalidad">
           <option value="meet">Por Meet (videollamada)</option>
           <option value="presencial">Presencial (vamos nosotros)</option>
           <option value="oficina">En la oficina</option>
         </select>
-        <div style="margin-top:.9rem"><button class="btn" style="width:100%">Agendar</button></div>
+        <div id="cmLinkRow">
+          <label>Link del Meet <span class="muted" style="font-weight:400">(opcional, se puede cargar después)</span></label>
+          <input name="link" placeholder="https://meet.google.com/xxx-xxxx-xxx">
+        </div>
+        <div style="margin-top:.9rem"><button class="btn" style="width:100%">${repro ? 'Reprogramar acá' : 'Agendar'}</button></div>
       </form>
       <div id="cmSinDeal" hidden>
         <p class="small muted">No tenés leads abiertas en Cloud For Deploy para agendarles reunión.</p>
       </div>
       <div id="cmDetalle" hidden>
-        <a class="btn secondary small" id="cmVerLead" href="#">Ver la lead</a>
-        <form method="post" action="#" id="cmCancelar" style="display:inline" onsubmit="return confirm('¿Cancelar esta reunión?')"><button class="btn danger small">Cancelar reunión</button></form>
+        <div id="cmNotas" class="small" style="margin:.2rem 0 .7rem" hidden></div>
+        <div style="display:flex; gap:.45rem; flex-wrap:wrap; align-items:center">
+          <a class="btn small" id="cmMeet" href="#" target="_blank" rel="noopener" hidden>Entrar al Meet</a>
+          <a class="btn small" id="cmVerLead" href="#">Abrir la lead</a>
+          <a class="btn secondary small" id="cmWa" href="#" target="_blank" rel="noopener" hidden>WhatsApp al cliente</a>
+          <a class="btn secondary small" id="cmRepro" href="#" hidden>Reprogramar</a>
+          <form method="post" action="#" id="cmCancelar" style="display:inline" onsubmit="return confirm('¿Cancelar esta reunión?')"><button class="btn danger small">Cancelar reunión</button></form>
+        </div>
+        <form method="post" action="#" id="cmLinkForm" class="cfg-inline" style="margin-top:.55rem" hidden>
+          <input name="link" id="cmLinkEdit" placeholder="https://meet.google.com/xxx-xxxx-xxx" style="flex:1; min-width:12rem; margin:0">
+          <button class="btn secondary small">Guardar link</button>
+        </form>
+        <p class="caption" style="margin:.5rem 0 0">¿Te falta info? Abrí la lead y dejale una nota mencionando con @ al vendedor — le llega la notificación al instante.</p>
       </div>
     </div>
   </div>
@@ -3182,6 +3207,9 @@ function agendaPage({ user, vista, dias = [], semanas = [], admins, dur, ahoraMi
     if (cuerpo && window.scrollY < 60) window.scrollTo(0, Math.max(0, cuerpo.getBoundingClientRect().top + window.scrollY + ${inicioScroll} - 190));
     var modal = document.getElementById('calModal'), titulo = document.getElementById('cmTitulo'), info = document.getElementById('cmInfo');
     var fReservar = document.getElementById('cmReservar'), sinDeal = document.getElementById('cmSinDeal'), detalle = document.getElementById('cmDetalle');
+    var selMod = document.getElementById('cmModalidad'), linkRow = document.getElementById('cmLinkRow');
+    function toggleLink() { if (selMod && linkRow) linkRow.hidden = selMod.value !== 'meet'; }
+    if (selMod) { selMod.addEventListener('change', toggleLink); toggleLink(); }
     var PUEDE_AGENDAR = ${deal || leadsCFD.length ? 'true' : 'false'};
     function linea(k, v) { return '<strong>' + k + ':</strong> ' + v + '<br>'; }
     Array.prototype.forEach.call(document.querySelectorAll('.cal-slot'), function (b) {
@@ -3199,13 +3227,38 @@ function agendaPage({ user, vista, dias = [], semanas = [], admins, dur, ahoraMi
     Array.prototype.forEach.call(document.querySelectorAll('.cal-reu'), function (r) {
       r.addEventListener('click', function () {
         var f = r.getAttribute('data-fecha').split('-');
-        titulo.textContent = r.getAttribute('data-empresa');
-        info.innerHTML = linea('Día', f[2] + '/' + f[1] + '/' + f[0]) + linea('Hora', r.getAttribute('data-hora') + ' hs') + linea('Vendedor', r.getAttribute('data-vendedor')) + linea('Modalidad', r.getAttribute('data-mod')) + linea('Con', r.getAttribute('data-admin'));
+        var at = function (k) { return r.getAttribute('data-' + k) || ''; };
+        titulo.textContent = at('empresa');
+        var html = linea('Día', f[2] + '/' + f[1] + '/' + f[0] + ' · ' + at('hora') + ' hs') + linea('Modalidad', at('mod')) + linea('Con', at('admin')) + linea('Vendedor', at('vendedor'));
+        if (at('etapa')) html += linea('Etapa de la lead', at('etapa'));
+        if (at('valor')) html += linea('Valor conversado', at('valor'));
+        if (at('tel')) html += linea('Teléfono', at('tel'));
+        if (at('ubic')) html += linea('Ubicación', at('ubic'));
+        if (at('origen')) html += linea('Origen', at('origen'));
+        if (at('calif')) html += linea('Calificación', at('calif'));
+        info.innerHTML = html;
+        var notas = document.getElementById('cmNotas');
+        if (at('notas')) {
+          notas.hidden = false; notas.innerHTML = '<strong>Últimas notas de la lead:</strong>';
+          at('notas').split('¶').forEach(function (n) { var p = document.createElement('div'); p.className = 'cm-nota'; p.textContent = n; notas.appendChild(p); });
+        } else { notas.hidden = true; notas.innerHTML = ''; }
         fReservar.hidden = true; sinDeal.hidden = true; detalle.hidden = false;
-        document.getElementById('cmVerLead').href = '/deals/' + r.getAttribute('data-deal');
+        document.getElementById('cmVerLead').href = '/deals/' + at('deal');
+        var wa = document.getElementById('cmWa');
+        if (at('tel')) { wa.hidden = false; wa.href = 'https://wa.me/' + at('tel').replace(/[^0-9]/g, ''); } else wa.hidden = true;
+        var meet = document.getElementById('cmMeet');
+        if (at('link')) { meet.hidden = false; meet.href = at('link'); } else meet.hidden = true;
+        var rep = document.getElementById('cmRepro');
+        rep.hidden = at('puede') !== '1';
+        rep.href = '/agenda?repro=' + at('id');
+        var fl = document.getElementById('cmLinkForm');
+        if (at('puede') === '1' && at('mod') === 'Meet') {
+          fl.hidden = false; fl.action = '/agenda/reuniones/' + at('id') + '/link';
+          document.getElementById('cmLinkEdit').value = at('link');
+        } else fl.hidden = true;
         var fc = document.getElementById('cmCancelar');
-        fc.action = '/agenda/reuniones/' + r.getAttribute('data-id') + '/cancelar';
-        fc.style.display = r.getAttribute('data-puede') === '1' ? 'inline' : 'none';
+        fc.action = '/agenda/reuniones/' + at('id') + '/cancelar';
+        fc.style.display = at('puede') === '1' ? 'inline' : 'none';
         modal.classList.add('abierto');
       });
     });

@@ -2,6 +2,16 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.47.0',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'mejora', texto: 'Al tocar una reunión en el calendario ahora se ve TODA la info de la lead sin salir de ahí: etapa, valor conversado, teléfono (con botón de WhatsApp al cliente), ubicación, origen, calificación y las últimas 3 notas. Con botón "Abrir la lead" para pedirle más info al vendedor mencionándolo con @.' },
+      { tipo: 'mejora', texto: 'Las leads de Cloud For Deploy que llegan a "Reunión agendada" sin turno ahora se marcan bien llamativas en el pipeline: borde ámbar que late y banda "⚠ FALTA AGENDAR LA REUNIÓN" con el link para agendar — se ven de un vistazo.' },
+      { tipo: 'nuevo', texto: 'Reprogramar reuniones: desde el detalle de una reunión, el botón "Reprogramar" lleva al calendario para elegir el nuevo horario; el turno viejo se libera recién al confirmar el nuevo y queda la nota "Reunión reprogramada — del ... al ..." en el historial de la lead.' },
+      { tipo: 'nuevo', texto: 'Link del Meet: si la modalidad es Meet, al agendar se puede cargar el link de la videollamada (o después, desde el detalle de la reunión). Queda el botón "Entrar al Meet" en la reunión y el link también va a la nota del historial.' },
+    ],
+  },
+  {
     version: '2.46.1',
     fecha: '2026-09-06',
     cambios: [

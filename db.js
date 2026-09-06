@@ -344,6 +344,9 @@ if (!db.prepare('PRAGMA table_info(reuniones)').all().some((c) => c.name === 'mo
 if (!db.prepare('PRAGMA table_info(reuniones)').all().some((c) => c.name === 'admin_id')) {
   db.exec('ALTER TABLE reuniones ADD COLUMN admin_id INTEGER REFERENCES users(id)');
 }
+if (!db.prepare('PRAGMA table_info(reuniones)').all().some((c) => c.name === 'link')) {
+  db.exec('ALTER TABLE reuniones ADD COLUMN link TEXT');
+}
 db.exec(`CREATE TABLE IF NOT EXISTS agenda_disponibilidad (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   admin_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
