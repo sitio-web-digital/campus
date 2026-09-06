@@ -936,6 +936,8 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 
 /* ---------- MiniJuan: burbuja flotante ---------- */
 .mj { position:fixed; right:1.1rem; bottom:1.1rem; z-index:150; }
+/* el atributo hidden SIEMPRE gana dentro del widget (el display:flex del panel lo pisaba) */
+.mj [hidden], .mj[hidden] { display:none !important; }
 .mj-mini { position:relative; }
 .mj-burbuja { width:60px; height:60px; border-radius:50%; border:2.5px solid rgba(255,255,255,.6); padding:0; overflow:hidden; cursor:pointer; box-shadow:0 6px 18px rgba(10,40,40,.35); background:#0E6E66; transition:transform .16s; display:block; }
 .mj-burbuja svg { width:100%; height:100%; display:block; }
