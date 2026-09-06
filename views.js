@@ -985,12 +985,25 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 @media (max-width:640px) { .umenu-pop { position:fixed; top:3.3rem; right:.5rem; } }
 
 /* ---------- panel de clientes ---------- */
-.pr-sinweb { display:inline-block; font-size:.68rem; font-weight:800; color:#1D6F42; background:rgba(46, 125, 79, .14); border-radius:99px; padding:.12rem .5rem; }
+.pc-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(20rem, 1fr)); gap:.75rem; }
+@media (max-width: 480px) { .pc-grid { grid-template-columns:1fr; } }
+.pc-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--sh); padding:.85rem .95rem; display:flex; flex-direction:column; gap:.55rem; }
+.pc-card.pc-tomado { border-color:rgba(192, 84, 80, .55); box-shadow:inset 4px 0 0 #C05450, var(--sh); }
+.pc-card.pc-descartado { opacity:.55; }
+.pc-top { display:flex; gap:.45rem; align-items:center; flex-wrap:wrap; }
+.pc-top strong { font-size:.95rem; }
+.pc-chip-rojo { font-size:.62rem; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:#fff; background:#C05450; border-radius:99px; padding:.15rem .55rem; }
+.pc-chip-gris { font-size:.62rem; font-weight:700; color:var(--muted); border:1px solid var(--line); border-radius:99px; padding:.13rem .5rem; }
+.pc-datos { margin:0; display:flex; flex-direction:column; gap:.35rem; }
+.pc-datos > div { display:grid; grid-template-columns:8.5rem 1fr; gap:.6rem; align-items:baseline; }
+.pc-datos dt { font-size:.62rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--faint); }
+.pc-datos dd { margin:0; font-size:.82rem; line-height:1.45; overflow-wrap:anywhere; }
+@media (max-width: 380px) { .pc-datos > div { grid-template-columns:1fr; gap:.05rem; } }
+.pc-acciones { display:flex; gap:.45rem; align-items:center; flex-wrap:wrap; margin-top:auto; padding-top:.35rem; border-top:1px solid var(--line); }
+.pc-tomar { display:flex; gap:.4rem; align-items:center; flex:1; min-width:0; }
+.pc-tomar select { flex:1; min-width:8rem; margin:0; padding:.35rem .45rem; }
+.pr-sinweb { display:inline-block; font-size:.72rem; font-weight:800; color:#1D6F42; background:rgba(46, 125, 79, .14); border-radius:99px; padding:.14rem .55rem; }
 html.dark .pr-sinweb { color:#8FD6AC; }
-tr.pr-tomado td { background:rgba(192, 84, 80, .09); }
-tr.pr-tomado td:first-child { box-shadow:inset 3px 0 0 #C05450; }
-tr.pr-descartado td { opacity:.55; }
-.pr-chip-tomado { display:inline-block; font-size:.68rem; font-weight:700; color:#fff; background:#C05450; border-radius:99px; padding:.18rem .55rem; margin-right:.3rem; }
 
 /* ---------- MiniJuan: burbuja flotante ---------- */
 .mj { position:fixed; right:1.1rem; bottom:1.1rem; z-index:150; }
@@ -2986,10 +2999,10 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
   // ¿La "web" del negocio es una web real o una red social? (muchos negocios ponen su Face/Insta como sitio)
   const webInfo = (w) => {
     if (!w) return null;
-    if (/facebook\.com|fb\.com/i.test(w)) return { etiqueta: '📘 Facebook', url: w };
-    if (/instagram\.com/i.test(w)) return { etiqueta: '📸 Instagram', url: w };
-    if (/linktr\.ee/i.test(w)) return { etiqueta: '🔗 Linktree', url: w };
-    return { etiqueta: '🌐 ' + w.replace(/^https?:[/][/](www[.])?/i, '').split('/')[0].slice(0, 30), url: w, esWeb: true };
+    if (/facebook\.com|fb\.com/i.test(w)) return { etiqueta: 'Facebook', url: w };
+    if (/instagram\.com/i.test(w)) return { etiqueta: 'Instagram', url: w };
+    if (/linktr\.ee/i.test(w)) return { etiqueta: 'Linktree', url: w };
+    return { etiqueta: 'Web propia: ' + w.replace(/^https?:[/][/](www[.])?/i, '').split('/')[0].slice(0, 30), url: w, esWeb: true };
   };
   const esAdmin = user.role === 'admin';
   const urlBase = (cambios) => {
@@ -3040,7 +3053,7 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
       <select name="rubro" onchange="this.form.submit()" style="width:auto"><option value="">Rubro: todos</option>${rubros.map((r) => `<option value="${esc(r)}" ${r === fRubro ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
       <select name="web" onchange="this.form.submit()" style="width:auto">
         <option value="">Web: todos</option>
-        <option value="sin" ${fWeb === 'sin' ? 'selected' : ''}>⚡ Sin web (oportunidad)</option>
+        <option value="sin" ${fWeb === 'sin' ? 'selected' : ''}>Sin web (oportunidad)</option>
         <option value="redes" ${fWeb === 'redes' ? 'selected' : ''}>Solo redes sociales</option>
         <option value="con" ${fWeb === 'con' ? 'selected' : ''}>Con web propia</option>
       </select>
@@ -3049,40 +3062,35 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
     </form>
   </div>
 
-  ${prospectos.length ? `<div class="tablewrap"><table>
-    <thead><tr><th>Prospecto</th><th>Contacto</th><th>Valoración</th><th>Estado</th></tr></thead>
-    <tbody>
-      ${prospectos.map((pr) => `
-      <tr class="${pr.estado === 'tomado' ? 'pr-tomado' : pr.estado === 'descartado' ? 'pr-descartado' : ''}">
-        <td>
-          <strong>${esc(pr.nombre)}</strong>${pr.maps_url ? ` <a href="${esc(pr.maps_url)}" target="_blank" rel="noopener" class="small">mapa ↗</a>` : ''}
-          <div class="small muted">${esc(pr.direccion || 'Sin dirección')} · <span class="chip" style="font-size:.6rem">${esc(pr.rubro || '')}</span>${pr.estado_negocio === 'CLOSED_TEMPORARILY' ? ' <span class="chip chip-pend" style="font-size:.6rem">cerrado temporalmente</span>' : ''}</div>
-        </td>
-        <td class="small">
-          ${pr.telefono ? `<a href="https://wa.me/${esc(String(pr.telefono).replace(/[^0-9]/g, ''))}" target="_blank" rel="noopener">📱 ${esc(pr.telefono)}</a>` : '<span class="muted">sin teléfono</span>'}
-          ${(() => { const w = webInfo(pr.sitio_web); return w
-            ? `<br><a href="${esc(w.url)}" target="_blank" rel="noopener" class="${w.esWeb ? 'muted' : ''}">${esc(w.etiqueta)}</a>`
-            : '<br><span class="pr-sinweb">⚡ SIN WEB — oportunidad</span>'; })()}
-        </td>
-        <td class="small">${pr.rating ? `⭐ ${pr.rating} <span class="muted">(${pr.resenas || 0})</span>` : '<span class="muted">—</span>'}</td>
-        <td>
-          ${pr.estado === 'nuevo' ? `
-          <div style="display:flex; gap:.35rem; align-items:center; flex-wrap:wrap">
-            <form method="post" action="/clientes/${pr.id}/tomar" class="cfg-inline" style="gap:.35rem">
-              <select name="panel" style="width:auto; padding:.3rem .4rem">${misPaneles.map((mp) => `<option value="${mp.slug}">${esc(mp.nombre)}</option>`).join('')}</select>
-              <button class="btn small">Tomar</button>
-            </form>
-            <form method="post" action="/clientes/${pr.id}/estado" style="display:inline"><input type="hidden" name="accion" value="descartar"><button class="btn secondary small" title="No sirve como prospecto">✕</button></form>
-          </div>`
-          : pr.estado === 'tomado' ? `
-          <span class="pr-chip-tomado">Tomada por ${esc(pr.tomado_nombre || '—')} · ${tiempoRel(pr.tomado_at)}</span>
-          ${pr.deal_id ? `<a class="small" href="/deals/${pr.deal_id}">ver la lead</a>` : ''}
-          ${esAdmin ? `<form method="post" action="/clientes/${pr.id}/estado" style="display:inline"><input type="hidden" name="accion" value="liberar"><button class="btn secondary small" title="Volver a disponible">liberar</button></form>` : ''}`
-          : `<span class="muted small">descartado</span>${esAdmin ? ` <form method="post" action="/clientes/${pr.id}/estado" style="display:inline"><input type="hidden" name="accion" value="liberar"><button class="btn secondary small">recuperar</button></form>` : ''}`}
-        </td>
-      </tr>`).join('')}
-    </tbody>
-  </table></div>`
+  ${prospectos.length ? `<div class="pc-grid">
+    ${prospectos.map((pr) => { const w = webInfo(pr.sitio_web); const tel = pr.telefono ? String(pr.telefono).replace(/[^0-9]/g, '') : ''; return `
+    <div class="pc-card ${pr.estado === 'tomado' ? 'pc-tomado' : pr.estado === 'descartado' ? 'pc-descartado' : ''}">
+      <div class="pc-top">
+        <strong>${esc(pr.nombre)}</strong>
+        ${pr.estado === 'tomado' ? `<span class="pc-chip-rojo">Tomada</span>` : pr.estado === 'descartado' ? '<span class="pc-chip-gris">Descartada</span>' : ''}
+        ${pr.estado_negocio === 'CLOSED_TEMPORARILY' ? '<span class="pc-chip-gris">Cerrado temporalmente</span>' : ''}
+      </div>
+      <dl class="pc-datos">
+        <div><dt>Dirección</dt><dd>${esc(pr.direccion || 'Sin dato')}</dd></div>
+        <div><dt>Teléfono</dt><dd>${pr.telefono ? `${esc(pr.telefono)} · <a href="https://wa.me/${tel}" target="_blank" rel="noopener">WhatsApp</a> · <a href="tel:${tel}">llamar</a>` : '<span class="muted">Sin dato</span>'}</dd></div>
+        <div><dt>Presencia web</dt><dd>${w ? `${esc(w.etiqueta)} · <a href="${esc(w.url)}" target="_blank" rel="noopener">abrir</a>` : '<span class="pr-sinweb">Sin sitio web — oportunidad</span>'}</dd></div>
+        <div><dt>Valoración en Google</dt><dd>${pr.rating ? `${pr.rating} de 5 · ${pr.resenas || 0} reseña${(pr.resenas || 0) === 1 ? '' : 's'}` : '<span class="muted">Sin reseñas</span>'}</dd></div>
+        <div><dt>Rubro y zona</dt><dd>${esc(pr.rubro || '—')} · ${esc(pr.zona || '—')}</dd></div>
+        <div><dt>Fuente</dt><dd>${pr.maps_url ? `<a href="${esc(pr.maps_url)}" target="_blank" rel="noopener">Ver en Google Maps</a> · ` : ''}cargado ${fecha(String(pr.created_at).slice(0, 10))}</dd></div>
+        ${pr.estado === 'tomado' ? `<div><dt>Tomada por</dt><dd><strong>${esc(pr.tomado_nombre || '—')}</strong> · ${tiempoRel(pr.tomado_at)}${pr.deal_id ? ` · <a href="/deals/${pr.deal_id}">ver la lead</a>` : ''}</dd></div>` : ''}
+      </dl>
+      <div class="pc-acciones">
+        ${pr.estado === 'nuevo' ? `
+        <form method="post" action="/clientes/${pr.id}/tomar" class="pc-tomar">
+          <select name="panel">${misPaneles.map((mp) => `<option value="${mp.slug}">${esc(mp.nombre)}</option>`).join('')}</select>
+          <button class="btn small">Tomar</button>
+        </form>
+        <form method="post" action="/clientes/${pr.id}/estado"><input type="hidden" name="accion" value="descartar"><button class="btn secondary small">Descartar</button></form>`
+        : pr.estado === 'tomado' && esAdmin ? `<form method="post" action="/clientes/${pr.id}/estado"><input type="hidden" name="accion" value="liberar"><button class="btn secondary small">Liberar</button></form>`
+        : pr.estado === 'descartado' && esAdmin ? `<form method="post" action="/clientes/${pr.id}/estado"><input type="hidden" name="accion" value="liberar"><button class="btn secondary small">Recuperar</button></form>` : ''}
+      </div>
+    </div>`; }).join('')}
+  </div>`
   : '<div class="card"><p class="muted" style="margin:0">Todavía no hay prospectos con esos filtros. ' + (esAdmin ? 'Lanzá un escaneo arriba: rubro + zona y listo.' : 'Pedile al administrador que lance un escaneo.') + '</p></div>'}`
   });
 }

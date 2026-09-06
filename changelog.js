@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.42.1',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'mejora', texto: 'Panel de Clientes remaquetado: tarjetas limpias por prospecto con todos los datos ordenados (dirección, teléfono con WhatsApp y llamar, presencia web, valoración y reseñas, rubro/zona, link a Maps, fecha de carga y quién la tomó), casi sin iconos y totalmente responsive en celular.' },
+    ],
+  },
+  {
     version: '2.42.0',
     fecha: '2026-09-06',
     cambios: [
