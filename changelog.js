@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.37.3',
+    fecha: '2026-09-04',
+    cambios: [
+      { tipo: 'mejora', texto: 'Conversaciones con MiniJuan, ahora como índice cómodo: elegís el día y ves un bloque por persona con cada charla como renglón (hora + título del tema + lead si la hubo); tocás el título y se despliega la charla completa. Se acabó el scrollear todo para encontrar una.' },
+    ],
+  },
+  {
     version: '2.37.2',
     fecha: '2026-09-04',
     cambios: [

@@ -1052,6 +1052,16 @@ html.dark .mj-yo { background:#0E6E66; }
   .mj-fila .ucel { grid-column:1 / -1; }
 }
 
+.conv-item { border-top:1px solid var(--line); }
+.conv-item:first-of-type { border-top:none; }
+.conv-item summary { display:flex; gap:.6rem; align-items:baseline; padding:.45rem .15rem; cursor:pointer; list-style:none; font-size:.85rem; min-width:0; }
+.conv-item summary::-webkit-details-marker { display:none; }
+.conv-item summary:hover .conv-tit { color:var(--accent-ink); }
+.conv-item[open] summary .conv-tit { color:var(--accent-ink); }
+.conv-hora { font-size:.68rem; color:var(--faint); font-variant-numeric:tabular-nums; flex-shrink:0; }
+.conv-tit { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.conv-lead { font-size:.66rem; color:var(--accent-ink); background:var(--accent-soft); border-radius:99px; padding:.08rem .45rem; flex-shrink:0; white-space:nowrap; }
+.conv-cuerpo { padding:.15rem .15rem .65rem; }
 .conv-p { font-size:.86rem; font-weight:600; padding:.45rem .65rem; background:var(--accent-soft); border-radius:10px 10px 10px 3px; margin-bottom:.4rem; white-space:pre-wrap; }
 .conv-r { font-size:.84rem; color:var(--muted); padding:.45rem .65rem; background:var(--surface2); border:1px solid var(--line); border-radius:10px 10px 3px 10px; white-space:pre-wrap; }
 
@@ -2925,6 +2935,15 @@ function asesorPage({ user, listo, limite, restantes, deal }) {
 
 function iaConversacionesPage({ user, fecha: fechaSel, vendedorId, filas, dias, vendedores, hoy }) {
   const totalTokens = filas.reduce((acu, c) => acu + c.tokens_in + c.tokens_out, 0);
+  // Índice cómodo: un bloque por persona, cada charla como renglón-título desplegable.
+  const grupos = [];
+  for (const c of filas) {
+    let g = grupos.find((x) => x.uid === c.user_id);
+    if (!g) { g = { uid: c.user_id, name: c.name, avatar: c.avatar, items: [] }; grupos.push(g); }
+    g.items.push(c);
+  }
+  const horaDe = (dt) => { const fh = fechaHora(dt); const i = fh.indexOf(','); return i >= 0 ? fh.slice(i + 1).trim() : fh; };
+  const titulo = (t) => { const una = String(t).replace(/\s+/g, ' ').trim(); return una.length > 95 ? una.slice(0, 95) + '…' : una; };
   return layout({
     title: 'Conversaciones con MiniJuan', user, active: 'preferencias', sistema: 'admin',
     body: `
@@ -2942,15 +2961,22 @@ function iaConversacionesPage({ user, fecha: fechaSel, vendedorId, filas, dias, 
       </select>
     </form>
   </div>
-  <p class="small muted">${filas.length} consulta${filas.length === 1 ? '' : 's'} el ${fechaSel === hoy ? 'día de hoy' : fecha(fechaSel)}${vendedorId ? '' : ' (todo el equipo)'} · ${(totalTokens / 1000).toFixed(1)}k tokens. Leerlas te dice qué les falta al equipo: lo que le preguntan mucho a MiniJuan es lo que conviene reforzar en el Campus.</p>
-  ${filas.length ? filas.map((c) => `
-  <div class="card" style="padding:.75rem .95rem">
-    <div class="small" style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin-bottom:.4rem">
-      <span class="ucel">${avatar({ id: c.user_id, name: c.name, avatar: c.avatar })}<strong>${esc(c.name)}</strong></span>
-      <span class="muted">· ${fechaHora(c.created_at)}${c.deal_id ? ` · sobre la lead <a href="/deals/${c.deal_id}">${esc(c.empresa || '#' + c.deal_id)}</a>` : ''} · ${c.tokens_in + c.tokens_out} tokens</span>
+  <p class="small muted">${filas.length} consulta${filas.length === 1 ? '' : 's'} el ${fechaSel === hoy ? 'día de hoy' : fecha(fechaSel)}${vendedorId ? '' : ' (todo el equipo)'} · ${(totalTokens / 1000).toFixed(1)}k tokens. Tocá un título para desplegar la charla completa. Lo que le preguntan mucho a MiniJuan es lo que conviene reforzar en el Campus.</p>
+  ${grupos.length ? grupos.map((g) => `
+  <div class="card" style="padding:.65rem .85rem">
+    <div style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin-bottom:.25rem">
+      <span class="ucel">${avatar({ id: g.uid, name: g.name, avatar: g.avatar })}<strong>${esc(g.name)}</strong></span>
+      <span class="small muted">${g.items.length} charla${g.items.length === 1 ? '' : 's'} · ${(g.items.reduce((acu, c) => acu + c.tokens_in + c.tokens_out, 0) / 1000).toFixed(1)}k tokens</span>
     </div>
-    <div class="conv-p">${esc(c.pregunta)}</div>
-    <div class="conv-r">${esc(c.respuesta)}</div>
+    ${g.items.map((c) => `
+    <details class="conv-item">
+      <summary><span class="conv-hora">${horaDe(c.created_at)}</span><span class="conv-tit">${esc(titulo(c.pregunta))}</span>${c.deal_id ? `<span class="conv-lead">📌 ${esc(String(c.empresa || '#' + c.deal_id).slice(0, 22))}</span>` : ''}</summary>
+      <div class="conv-cuerpo">
+        <div class="conv-p">${esc(c.pregunta)}</div>
+        <div class="conv-r">${esc(c.respuesta)}</div>
+        <div class="caption" style="margin-top:.35rem">${fechaHora(c.created_at)} · ${c.tokens_in + c.tokens_out} tokens${c.deal_id ? ` · <a href="/deals/${c.deal_id}">abrir la lead</a>` : ''}</div>
+      </div>
+    </details>`).join('')}
   </div>`).join('') : '<div class="card"><p class="muted" style="margin:0">No hubo consultas ese día.</p></div>'}`
   });
 }
