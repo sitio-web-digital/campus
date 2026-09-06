@@ -438,6 +438,7 @@ app.get('/deals/:id', requireAuth, (req, res) => {
     errAprob: req.query.err === 'valor', errCalif: req.query.err === 'calificacion', errMigrar: req.query.err === 'migrar-ganado',
     tiempos: tiemposDeLead(deal), companeros: companerosDe(deal, req.user), mencionables: mencionablesDe(deal.panel),
     tomar: (() => { const robo = configRobo(deal.panel); return leadDisponible(deal, robo) && deal.user_id !== req.user.id ? { horas: robo.horas } : null; })(),
+    reunionAgendada: deal.panel === 'cfd' ? db.prepare("SELECT fecha, hora FROM reuniones WHERE deal_id = ? AND estado = 'agendada' AND fecha >= ? ORDER BY fecha, hora LIMIT 1").get(deal.id, hoyAR()) || null : null,
     panel: deal.panel, etapas: etapasDePanel(deal.panel), backHref: homeDePanel(deal.panel),
     campanas: db.prepare('SELECT id, nombre FROM campanas WHERE panel = ? AND (activa = 1 OR id = ?) ORDER BY nombre').all(deal.panel, deal.campana_id || 0),
   });
@@ -1242,6 +1243,17 @@ function panelPipelineData(req, slug) {
     WHERE ${where.join(' AND ')} ORDER BY d.destacada DESC, d.fecha_proximo_paso IS NULL DESC, d.fecha_proximo_paso ASC, d.updated_at DESC`).all(...params);
   const robo = configRobo(slug);
   for (const d of deals) d.disponible = leadDisponible(d, robo) && d.user_id !== req.user.id;
+  // CFD: las leads en "Reunión agendada" marcan si tienen (o les falta) la reunión en la agenda.
+  if (slug === 'cfd') {
+    const proximas = {};
+    for (const r of db.prepare("SELECT deal_id, fecha, hora FROM reuniones WHERE estado = 'agendada' AND fecha >= ? ORDER BY fecha, hora").all(hoyAR())) {
+      if (!proximas[r.deal_id]) proximas[r.deal_id] = r;
+    }
+    for (const d of deals) {
+      if (d.etapa !== 'Reunión agendada' || ['Ganado', 'Perdido'].includes(d.etapa)) continue;
+      if (proximas[d.id]) d.reunion = proximas[d.id]; else d.sinReunion = true;
+    }
+  }
   return { scope, closed, robo, ...filtrarPipeline(req, deals) };
 }
 
@@ -1696,6 +1708,94 @@ app.post('/clientes/:id/estado', requireAuth, requireSistema('clientes'), (req, 
     if (req.body.accion === 'liberar' && req.user.role === 'admin' && p.estado !== 'nuevo') db.prepare("UPDATE prospectos SET estado = 'nuevo', tomado_por = NULL, tomado_at = NULL WHERE id = ?").run(p.id);
   }
   res.redirect('/clientes');
+});
+
+/* ---------------- agenda de reuniones (Cloud For Deploy) ---------------- */
+
+// Disponibilidad del equipo admin, configurable: días hábiles, franja horaria y duración del turno.
+const agendaConfig = () => ({
+  dias: String(getPanelConfig('_agenda', 'dias', '1,2,3,4,5')).split(',').map((n) => parseInt(n, 10)).filter((n) => n >= 0 && n <= 6),
+  desde: getPanelConfig('_agenda', 'desde', '09:00'),
+  hasta: getPanelConfig('_agenda', 'hasta', '18:00'),
+  duracion: Math.max(15, parseInt(getPanelConfig('_agenda', 'duracion'), 10) || 45),
+});
+
+const aMin = (hhmm) => { const [h, m] = String(hhmm).split(':').map(Number); return h * 60 + (m || 0); };
+const aHora = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+
+// Semana de la agenda (lunes a domingo) con offset: cada día trae sus turnos libre/ocupado/pasado.
+function armarSemana(off) {
+  const cfg = agendaConfig();
+  const hoy = hoyAR();
+  const base = new Date(hoy + 'T00:00:00Z');
+  base.setUTCDate(base.getUTCDate() - ((base.getUTCDay() + 6) % 7) + off * 7); // lunes de la semana
+  const ahoraMin = (() => { const t = new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit', hour12: false }); return aMin(t); })();
+  const dias = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(base); d.setUTCDate(d.getUTCDate() + i);
+    const fecha = d.toISOString().slice(0, 10);
+    if (!cfg.dias.includes((d.getUTCDay() + 7) % 7 === 0 ? 0 : d.getUTCDay())) continue;
+    const reuniones = db.prepare(`SELECT r.*, dl.empresa, u.name AS vendedor FROM reuniones r JOIN deals dl ON dl.id = r.deal_id JOIN users u ON u.id = r.vendedor_id
+      WHERE r.estado = 'agendada' AND r.fecha = ?`).all(fecha);
+    const slots = [];
+    for (let m = aMin(cfg.desde); m + cfg.duracion <= aMin(cfg.hasta); m += cfg.duracion) {
+      const hora = aHora(m);
+      const ocupado = reuniones.find((r) => r.hora === hora);
+      const pasado = fecha < hoy || (fecha === hoy && m <= ahoraMin);
+      slots.push({ hora, reunion: ocupado || null, pasado });
+    }
+    dias.push({ fecha, slots });
+  }
+  return { dias, cfg };
+}
+
+app.get('/agenda', requireAuth, requireSistema('cfd'), (req, res) => {
+  const off = Math.max(-8, Math.min(8, parseInt(req.query.semana, 10) || 0));
+  let deal = parseInt(req.query.deal, 10) ? db.prepare('SELECT id, empresa, panel, user_id, etapa FROM deals WHERE id = ?').get(parseInt(req.query.deal, 10)) : null;
+  if (deal && (deal.panel !== 'cfd' || (req.user.role !== 'admin' && deal.user_id !== req.user.id))) deal = null;
+  const { dias, cfg } = armarSemana(off);
+  res.send(V.agendaPage({ user: req.user, dias, cfg, off, deal, hoy: hoyAR(), msg: clean(req.query.msg), err: clean(req.query.err) }));
+});
+
+// Reservar un turno para una lead de CFD (su dueño o un admin).
+app.post('/agenda/reservar', requireAuth, requireSistema('cfd'), (req, res) => {
+  const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(parseInt(req.body.deal_id, 10));
+  if (!deal || deal.panel !== 'cfd') return res.redirect('/agenda?err=' + encodeURIComponent('Elegí una lead de Cloud For Deploy para agendar.'));
+  if (req.user.role !== 'admin' && deal.user_id !== req.user.id) return res.status(403).send('Solo el dueño de la lead o un admin pueden agendarle reunión.');
+  const fecha = cleanDate(req.body.fecha); const hora = /^\d{2}:\d{2}$/.test(req.body.hora || '') ? req.body.hora : null;
+  const cfg = agendaConfig();
+  const valido = fecha && hora && fecha >= hoyAR() && aMin(hora) >= aMin(cfg.desde) && aMin(hora) + cfg.duracion <= aMin(cfg.hasta) && (aMin(hora) - aMin(cfg.desde)) % cfg.duracion === 0;
+  if (!valido) return res.redirect(`/agenda?deal=${deal.id}&err=` + encodeURIComponent('Ese horario no está dentro de la disponibilidad.'));
+  const ocupado = db.prepare("SELECT 1 FROM reuniones WHERE estado = 'agendada' AND fecha = ? AND hora = ?").get(fecha, hora);
+  if (ocupado) return res.redirect(`/agenda?deal=${deal.id}&err=` + encodeURIComponent('Ese turno ya lo tomó otro — elegí otro horario.'));
+  const modalidad = ['meet', 'presencial', 'oficina'].includes(req.body.modalidad) ? req.body.modalidad : 'meet';
+  const modTxt = { meet: 'por Meet', presencial: 'presencial (vamos nosotros)', oficina: 'en la oficina' }[modalidad];
+  db.prepare('INSERT INTO reuniones (deal_id, vendedor_id, fecha, hora, duracion, modalidad) VALUES (?, ?, ?, ?, ?, ?)').run(deal.id, deal.user_id, fecha, hora, cfg.duracion, modalidad);
+  logDealEvent(deal.id, req.user.id, 'edicion', `Nota: Reunión agendada para el ${fecha.split('-').reverse().join('/')} a las ${hora} hs, ${modTxt}`);
+  notifyAdmins(req.user.id, `Agendó reunión ${modTxt} con «${deal.empresa}» para el ${fecha.split('-').reverse().join('/')} ${hora} hs`, '/agenda');
+  if (deal.user_id !== req.user.id) notifyUser(deal.user_id, `Te agendaron reunión ${modTxt} con «${deal.empresa}» para el ${fecha.split('-').reverse().join('/')} ${hora} hs`, '/agenda', null, req.user.id);
+  res.redirect('/agenda?msg=' + encodeURIComponent(`Reunión con «${deal.empresa}» agendada: ${fecha.split('-').reverse().join('/')} a las ${hora} hs.`));
+});
+
+app.post('/agenda/reuniones/:id/cancelar', requireAuth, requireSistema('cfd'), (req, res) => {
+  const r = db.prepare('SELECT r.*, d.empresa, d.user_id AS duenio FROM reuniones r JOIN deals d ON d.id = r.deal_id WHERE r.id = ?').get(req.params.id);
+  if (r && r.estado === 'agendada' && (req.user.role === 'admin' || r.duenio === req.user.id)) {
+    db.prepare("UPDATE reuniones SET estado = 'cancelada' WHERE id = ?").run(r.id);
+    logDealEvent(r.deal_id, req.user.id, 'edicion', `Nota: Reunión del ${r.fecha.split('-').reverse().join('/')} ${r.hora} hs cancelada`);
+    notifyAdmins(req.user.id, `Canceló la reunión con «${r.empresa}» del ${r.fecha.split('-').reverse().join('/')} ${r.hora} hs`, '/agenda');
+  }
+  res.redirect('/agenda');
+});
+
+// Disponibilidad (solo admins): días hábiles, franja y duración del turno.
+app.post('/agenda/config', requireAuth, requireAdmin, (req, res) => {
+  let dias = req.body.dias || []; if (!Array.isArray(dias)) dias = [dias];
+  dias = [...new Set(dias.map((x) => parseInt(x, 10)).filter((x) => x >= 0 && x <= 6))];
+  if (dias.length) setPanelConfig('_agenda', 'dias', dias.join(','));
+  if (/^\d{2}:\d{2}$/.test(req.body.desde || '')) setPanelConfig('_agenda', 'desde', req.body.desde);
+  if (/^\d{2}:\d{2}$/.test(req.body.hasta || '')) setPanelConfig('_agenda', 'hasta', req.body.hasta);
+  setPanelConfig('_agenda', 'duracion', Math.min(180, Math.max(15, parseInt(req.body.duracion, 10) || 45)));
+  res.redirect('/agenda');
 });
 
 /* ---------------- asesor IA (para vendedores) ---------------- */

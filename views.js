@@ -315,6 +315,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
     links = `
         <a href="/pipeline" class="${active === 'pipeline' ? 'on' : ''}${dd.pipeline ? ' deuda' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
         <a href="/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
+        <a href="/agenda" class="${active === 'agenda' ? 'on' : ''}">${IC('<rect x="3" y="4.5" width="14" height="12" rx="2"/><path d="M3 8.5h14M7 3v3M13 3v3"/>')}<span>Agenda</span></a>
         <a href="/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
         ${user && user.role === 'admin' ? `<a href="/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
         <a href="/ia/negocio" class="${active === 'ianegocio' ? 'on' : ''}">${IC('<path d="M4 16V9M10 16V4M16 16v-5"/><circle cx="10" cy="10" r="8.2"/>')}<span>IA Negocio</span></a>
@@ -984,6 +985,29 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 .umenu-pop form { display:contents; }
 @media (max-width:640px) { .umenu-pop { position:fixed; top:3.3rem; right:.5rem; } }
 
+/* ---------- agenda de reuniones ---------- */
+.ag-grid { display:grid; grid-template-columns:repeat(var(--agcols, 5), 1fr); gap:.55rem; }
+@media (max-width: 900px) { .ag-grid { grid-template-columns:repeat(2, 1fr); } }
+@media (max-width: 520px) { .ag-grid { grid-template-columns:1fr; } }
+.ag-dia { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:.5rem; display:flex; flex-direction:column; gap:.3rem; }
+.ag-dia.ag-hoy { border-color:var(--accent); }
+.ag-cab { display:flex; justify-content:space-between; align-items:baseline; padding:.1rem .2rem .35rem; border-bottom:1px solid var(--line); }
+.ag-cab span { font-size:.72rem; color:var(--muted); }
+.ag-slot { border:1px solid var(--line); border-radius:8px; padding:.35rem .5rem; font-size:.76rem; display:flex; flex-direction:column; gap:.05rem; }
+.ag-hora { font-size:.66rem; font-weight:700; color:var(--faint); font-variant-numeric:tabular-nums; }
+.ag-pasado { opacity:.4; }
+.ag-libre { border-style:dashed; }
+.ag-ocupado { background:var(--accent-soft); border-color:transparent; }
+.ag-ocupado a { font-size:.78rem; }
+.ag-cancelar { background:none; border:none; color:#E05550; font-size:.66rem; cursor:pointer; padding:0; text-align:left; }
+.ag-mod-tag { font-weight:700; color:var(--accent-ink); }
+.ag-reservable { padding:0; border-color:rgba(46, 125, 79, .5); }
+.ag-reservable button { width:100%; background:none; border:none; cursor:pointer; font:inherit; color:#1D6F42; padding:.35rem .5rem; display:flex; flex-direction:column; gap:.05rem; text-align:left; font-weight:700; font-size:.76rem; border-radius:8px; }
+.ag-reservable button:hover { background:rgba(46, 125, 79, .12); }
+html.dark .ag-reservable button { color:#8FD6AC; }
+.aviso-reunion { color:#A8791F; font-weight:600; }
+.aviso-reunion a { font-weight:700; }
+
 /* ---------- panel de clientes ---------- */
 .pc-filtros { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin:0 0 .9rem; }
 .pc-filtros .seg { flex-shrink:0; }
@@ -1621,6 +1645,7 @@ function pipelinePage({ user, deals, scope, closed, modal, err = null, robo = nu
       ${puedeMover(d) ? `<form method="post" action="/deals/${d.id}/destacar" class="star-f" onsubmit="this.volver.value = location.pathname + location.search"><input type="hidden" name="volver" value=""><button type="submit" class="star ${d.destacada ? 'on' : ''}" title="${d.destacada ? 'Quitar estrella' : 'Marcar con estrella: importante a cerrar / mejor seguimiento'}" aria-label="Destacar">${STAR_SVG}</button></form>` : (d.destacada ? `<span class="star on star-fija" title="Lead destacada">${STAR_SVG}</span>` : '')}
       <a class="kcard-t" href="/deals/${d.id}">${esc(d.empresa)}</a>
       <div class="kcard-m"><span class="mrr">${money(d.mrr)}${d.tipo_venta === 'Suscripción mensual' ? '<span style="font-weight:400">/mes</span>' : ''}</span><span>${d.ciudad ? esc(d.ciudad) + ' · ' : ''}${esc(d.vendedor_name.split(' ')[0])}</span></div>
+      ${d.sinReunion ? `<div class="kcard-w aviso-reunion">Sin reunión agendada — <a href="/agenda?deal=${d.id}">agendar</a></div>` : d.reunion ? `<div class="kcard-w ok">Reunión: ${+d.reunion.fecha.slice(8, 10)}/${+d.reunion.fecha.slice(5, 7)} ${d.reunion.hora} hs</div>` : ''}
       ${pie}
     </div>`;
   };
@@ -1736,7 +1761,7 @@ function conMenciones(texto, personas) {
 
 const STAR_SVG = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.8l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 8.1l5-.7z"/></svg>';
 
-function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, errCalif, errMigrar, tiempos, companeros = [], tomar = null, mencionables = [], panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
+function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, errCalif, errMigrar, tiempos, companeros = [], tomar = null, mencionables = [], reunionAgendada = null, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
   const d = deal || {};
   const isNew = !deal;
   const opt = (list, sel) => list.map((o) => `<option value="${esc(o)}" ${o === sel ? 'selected' : ''}>${esc(o)}</option>`).join('');
@@ -1747,6 +1772,10 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
   <div class="modal">
   <div class="modal-h"><h2 style="display:flex; align-items:center; gap:.4rem">${isNew ? 'Nuevo deal' : `${esc(d.empresa)}${isAdmin || d.user_id === user.id ? `<form method="post" action="/deals/${d.id}/destacar" class="star-f"><input type="hidden" name="volver" value="/deals/${d.id}"><button type="submit" class="star ${d.destacada ? 'on' : ''}" title="${d.destacada ? 'Quitar estrella' : 'Marcar con estrella: importante a cerrar / mejor seguimiento'}" aria-label="Destacar">${STAR_SVG}</button></form>` : (d.destacada ? `<span class="star on star-fija" title="Lead destacada">${STAR_SVG}</span>` : '')}`}</h2><a class="modal-x" href="${backHref}" aria-label="Cerrar">&times;</a></div>
   ${!isNew && ultimaEd ? `<p class="small muted" style="margin:-.3rem 0 .7rem">Última edición: <strong>${esc(ultimaEd.nombre)}</strong> · ${fechaHora(ultimaEd.fecha)}${tiempos ? ` &nbsp;·&nbsp; Último movimiento de etapa: <strong>${tiempoRel(tiempos.ultima)}</strong> &nbsp;·&nbsp; Promedio entre etapas: <strong>${tiempos.promedio != null ? durLegible(tiempos.promedio) : '—'}</strong>` : ''}</p>` : ''}
+  ${!isNew && panel === 'cfd' && !['Ganado', 'Perdido'].includes(d.etapa) ? (reunionAgendada
+    ? `<div class="flash ok" style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap">Reunión agendada: <strong>${reunionAgendada.fecha.split('-').reverse().join('/')} a las ${reunionAgendada.hora} hs</strong> <a class="btn secondary small" href="/agenda">Ver agenda</a></div>`
+    : (d.etapa === 'Reunión agendada' ? `<div class="flash bad" style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap">Esta lead está en Reunión agendada pero <strong>no tiene turno en la agenda</strong>. <a class="btn small" href="/agenda?deal=${d.id}">Agendar reunión</a></div>`
+    : `<p class="small" style="margin:.1rem 0 .6rem"><a href="/agenda?deal=${d.id}">Agendar reunión con el equipo →</a></p>`)) : ''}
   ${errAprob ? `<div class="flash bad">No se pudo aprobar: falta cargar el <strong>valor del deal</strong>, que es la base para calcular la comisión del vendedor. Completalo, guardá y volvé a aprobar.</div>` : ''}
   ${errCalif ? `<div class="flash bad">No se pudo aprobar: falta la <strong>calificación del cliente</strong> (Calificado / Descalificado / Cliente / Cliente de Alto Valor). Elegila abajo, guardá y volvé a aprobar.</div>` : ''}
   ${errMigrar ? `<div class="flash bad">Una venta <strong>Ganada y aprobada</strong> no se puede migrar: sus comisiones se generaron con las reglas de este panel. Si corresponde migrarla igual, primero reabrila (movela de etapa).</div>` : ''}
@@ -3003,6 +3032,72 @@ function asesorPage({ user, listo, limite, restantes, deal }) {
     ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
   })();
   </script>`
+  });
+}
+
+/* --------- agenda de reuniones (CFD) --------- */
+
+function agendaPage({ user, dias, cfg, off, deal, hoy, msg, err }) {
+  const esAdmin = user.role === 'admin';
+  const DIA_NOMBRE = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const nombreDia = (f) => DIA_NOMBRE[new Date(f + 'T00:00:00Z').getUTCDay()];
+  const ddmm = (f) => `${+f.slice(8, 10)}/${+f.slice(5, 7)}`;
+  return layout({
+    title: 'Agenda', user, active: 'agenda', sistema: 'comercial', msg, err,
+    body: `
+  <div class="toolbar" style="margin-bottom:.2rem">
+    <h1 style="margin:0">Agenda de reuniones</h1>
+    <div class="sp"></div>
+    <a class="btn secondary small" href="/agenda?semana=${off - 1}${deal ? `&deal=${deal.id}` : ''}">‹ Semana anterior</a>
+    ${off !== 0 ? `<a class="btn secondary small" href="/agenda${deal ? `?deal=${deal.id}` : ''}">Hoy</a>` : ''}
+    <a class="btn secondary small" href="/agenda?semana=${off + 1}${deal ? `&deal=${deal.id}` : ''}">Semana siguiente ›</a>
+  </div>
+  <p class="small muted">Turnos de ${cfg.duracion} minutos sobre la disponibilidad del equipo (${esc(cfg.desde)} a ${esc(cfg.hasta)}). ${deal ? '' : 'Para agendar, entrá desde la lead ("Agendar reunión") o tocá un turno libre y elegí la lead.'}</p>
+  ${deal ? `<div class="flash ok" style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap">Agendando reunión para <strong>${esc(deal.empresa)}</strong> — elegí la modalidad y tocá un turno libre.
+    <select id="agModalidad" style="width:auto; margin:0; padding:.3rem .45rem">
+      <option value="meet">Por Meet (videollamada)</option>
+      <option value="presencial">Presencial (vamos nosotros)</option>
+      <option value="oficina">En la oficina</option>
+    </select>
+    <a href="/agenda" class="small">cancelar</a></div>` : ''}
+
+  <div class="ag-grid" style="--agcols:${dias.length}">
+    ${dias.map((d) => `
+    <div class="ag-dia ${d.fecha === hoy ? 'ag-hoy' : ''}">
+      <div class="ag-cab"><strong>${nombreDia(d.fecha)}</strong><span>${ddmm(d.fecha)}</span></div>
+      ${d.slots.map((sl) => sl.reunion ? `
+      <div class="ag-slot ag-ocupado" title="${esc(sl.reunion.empresa)} — ${esc(sl.reunion.vendedor)}">
+        <span class="ag-hora">${sl.hora}</span>
+        <a href="/deals/${sl.reunion.deal_id}"><strong>${esc(sl.reunion.empresa)}</strong></a>
+        <span class="small muted">${esc(sl.reunion.vendedor)} · <span class="ag-mod-tag">${{ meet: 'Meet', presencial: 'Presencial', oficina: 'En la oficina' }[sl.reunion.modalidad] || 'Meet'}</span></span>
+        ${esAdmin || sl.reunion.vendedor_id === user.id ? `<form method="post" action="/agenda/reuniones/${sl.reunion.id}/cancelar" onsubmit="return confirm('¿Cancelar la reunión con ${esc(sl.reunion.empresa)}?')"><button class="ag-cancelar">cancelar</button></form>` : ''}
+      </div>` : sl.pasado ? `
+      <div class="ag-slot ag-pasado"><span class="ag-hora">${sl.hora}</span><span class="small muted">—</span></div>` : deal ? `
+      <form method="post" action="/agenda/reservar" class="ag-slot ag-libre ag-reservable" onsubmit="return confirm('¿Agendar a ${esc(deal.empresa)} el ${nombreDia(d.fecha)} ${ddmm(d.fecha)} a las ${sl.hora} hs?')">
+        <input type="hidden" name="deal_id" value="${deal.id}"><input type="hidden" name="fecha" value="${d.fecha}"><input type="hidden" name="hora" value="${sl.hora}"><input type="hidden" name="modalidad" value="meet" class="ag-mod">
+        <button><span class="ag-hora">${sl.hora}</span><span>Agendar acá</span></button>
+      </form>` : `
+      <div class="ag-slot ag-libre"><span class="ag-hora">${sl.hora}</span><span class="small muted">libre</span></div>`).join('')}
+    </div>`).join('')}
+  </div>
+
+  <script>
+  (function () {
+    var sel = document.getElementById('agModalidad'); if (!sel) return;
+    function aplicar() { Array.prototype.forEach.call(document.querySelectorAll('.ag-mod'), function (i) { i.value = sel.value; }); }
+    sel.addEventListener('change', aplicar); aplicar();
+  })();
+  </script>
+  ${esAdmin ? `
+  <div class="card" style="margin-top:1rem">
+    <h3 style="margin-top:0">Disponibilidad del equipo</h3>
+    <form method="post" action="/agenda/config" class="perm-row" style="align-items:center">
+      ${[[1, 'Lun'], [2, 'Mar'], [3, 'Mié'], [4, 'Jue'], [5, 'Vie'], [6, 'Sáb'], [0, 'Dom']].map(([n, lbl]) => `<label class="perm" style="text-transform:none;letter-spacing:0"><input type="checkbox" name="dias" value="${n}" ${cfg.dias.includes(n) ? 'checked' : ''}> ${lbl}</label>`).join('')}
+      <label class="perm" style="text-transform:none;letter-spacing:0">De <input type="time" name="desde" value="${esc(cfg.desde)}" style="width:auto;display:inline-block;margin:0 .3rem"> a <input type="time" name="hasta" value="${esc(cfg.hasta)}" style="width:auto;display:inline-block;margin-left:.3rem"></label>
+      <label class="perm" style="text-transform:none;letter-spacing:0">Turnos de <input type="number" name="duracion" min="15" max="180" step="15" value="${cfg.duracion}" style="width:4.5rem;display:inline-block;margin:0 .3rem"> min</label>
+      <button class="btn small">Guardar</button>
+    </form>
+  </div>` : ''}`
   });
 }
 
@@ -4629,7 +4724,7 @@ function changelogPage({ user, versiones }) {
 }
 
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage, agendaPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusCursoPage, campusQuizPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,

@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.43.0',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Agenda de reuniones para Cloud For Deploy ("Agenda" en la barra): calendario semanal con los turnos disponibles del equipo admin. Desde la ficha de una lead, "Agendar reunión" abre la agenda, elegís modalidad (Meet / presencial / en la oficina) y tocás un turno libre — queda reservado, con nota en el historial de la lead y aviso a los admins.' },
+      { tipo: 'nuevo', texto: 'Las leads de CFD en etapa "Reunión agendada" sin turno quedan marcadas en la tarjeta y en la ficha ("Sin reunión agendada — agendar"); con turno muestran fecha y hora. Nadie puede pisar un turno ocupado, se pueden cancelar (dueño o admin) y la disponibilidad (días, franja horaria y duración del turno) se configura al pie de la agenda.' },
+    ],
+  },
+  {
     version: '2.42.1',
     fecha: '2026-09-06',
     cambios: [

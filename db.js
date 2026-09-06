@@ -326,6 +326,21 @@ CREATE TABLE IF NOT EXISTS prospecto_scans (
 if (!db.prepare('PRAGMA table_info(prospecto_scans)').all().some((c) => c.name === 'consultas')) {
   db.exec('ALTER TABLE prospecto_scans ADD COLUMN consultas INTEGER NOT NULL DEFAULT 1');
 }
+// 2.43.0: agenda de reuniones (Cloud For Deploy): los vendedores reservan turnos sobre la disponibilidad del equipo admin.
+db.exec(`CREATE TABLE IF NOT EXISTS reuniones (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  deal_id INTEGER NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
+  vendedor_id INTEGER NOT NULL REFERENCES users(id),
+  fecha TEXT NOT NULL,
+  hora TEXT NOT NULL,
+  duracion INTEGER NOT NULL DEFAULT 45,
+  estado TEXT NOT NULL DEFAULT 'agendada' CHECK (estado IN ('agendada', 'cancelada')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);`);
+if (!db.prepare('PRAGMA table_info(reuniones)').all().some((c) => c.name === 'modalidad')) {
+  db.exec("ALTER TABLE reuniones ADD COLUMN modalidad TEXT NOT NULL DEFAULT 'meet'");
+}
+
 // 2.42.0: estado del negocio según Google (operativo / cerrado temporal; los cerrados definitivos no se cargan).
 if (!db.prepare('PRAGMA table_info(prospectos)').all().some((c) => c.name === 'estado_negocio')) {
   db.exec('ALTER TABLE prospectos ADD COLUMN estado_negocio TEXT');
