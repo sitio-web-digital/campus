@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.40.0',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Cuando MiniJuan cotiza (o detecta algo que debe cotizar Juan), debajo de la respuesta aparece el botón "💬 ¿Querés comentarle el presupuesto a Juan?" que abre WhatsApp con el resumen de la cotización ya escrito, listo para mandar.' },
+      { tipo: 'nuevo', texto: 'Extras sobre una web de la lista (un módulo puntual, superar un tope de fotos): MiniJuan los cotiza él mismo con criterio, estimando horas de desarrollo × tarifa en USD (configurable en Preferencias, default 25), aclarando que es estimado y sujeto a confirmación de Juan. Los sistemas a medida completos siguen yendo directo a Juan sin números.' },
+    ],
+  },
+  {
     version: '2.39.1',
     fecha: '2026-09-06',
     cambios: [

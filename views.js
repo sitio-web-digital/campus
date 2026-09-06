@@ -218,8 +218,15 @@ function miniJuanWidget(user, sistema) {
       .then(function (r) { return r.json(); })
       .then(function (r) {
         esp.remove(); pensar(false);
-        if (r.ok) tipear(r.respuesta);
-        else burbuja(r.error || 'No pude responder, probá de nuevo.', 'mj-bot mj-err');
+        if (r.ok) {
+          tipear(r.respuesta);
+          if (r.wa) {
+            var wa = document.createElement('a');
+            wa.className = 'mj-wa'; wa.href = r.wa; wa.target = '_blank'; wa.rel = 'noopener';
+            wa.textContent = '💬 ¿Querés comentarle el presupuesto a Juan?';
+            chat.appendChild(wa); chat.scrollTop = chat.scrollHeight;
+          }
+        } else burbuja(r.error || 'No pude responder, probá de nuevo.', 'mj-bot mj-err');
         btn.disabled = false; ta.focus();
       })
       .catch(function () { esp.remove(); pensar(false); burbuja('Error de conexión — probá de nuevo.', 'mj-bot mj-err'); btn.disabled = false; });
@@ -1023,6 +1030,9 @@ html.dark .mj-yo { background:#0E6E66; }
 .mj-enviar svg { width:1.15rem; height:1.15rem; }
 .mj-enviar:hover { transform:scale(1.08); background:#0A544E; }
 .mj-enviar:disabled { opacity:.55; cursor:default; transform:none; }
+
+.mj-wa { display:inline-flex; align-items:center; gap:.35rem; align-self:flex-start; background:#1FAF5A; color:#fff; font-size:.8rem; font-weight:600; padding:.45rem .8rem; border-radius:99px; text-decoration:none; box-shadow:var(--sh); }
+.mj-wa:hover { background:#178F49; color:#fff; text-decoration:none; }
 
 /* burbuja "escribiendo" (tres puntitos) */
 .mj-escribiendo { display:inline-flex; gap:.3rem; padding:.7rem .85rem; align-items:center; }
@@ -2315,6 +2325,7 @@ function adminPreferenciasPage({ user, prefs = {}, ia = null }) {
         <div><label>Tope de consultas por admin por día</label><input name="limite_admin" type="number" min="1" max="500" value="${ia.limiteAdmin}"></div>
         <div><label>Tope mensual de tokens por admin (en miles, 0 = sin tope)</label><input name="tokens_mes_admin" type="number" min="0" value="${ia.tokensMesAdmin || 0}"></div>
         <div><label>Modelo del modo negocio (IA Negocio)</label><select name="modelo_negocio">${Object.entries(ia.modelos).map(([id, m]) => `<option value="${id}" ${id === ia.modeloNegocio ? 'selected' : ''}>${esc(m.nombre)}</option>`).join('')}</select></div>
+        <div><label>Tarifa hora de desarrollo para extras (USD)</label><input name="usd_hora" type="number" min="1" step="0.5" value="${ia.usdHora}"></div>
       </div>
       <label>Modelo</label>
       <select name="modelo">${Object.entries(ia.modelos).map(([id, m]) => `<option value="${id}" ${id === ia.modelo ? 'selected' : ''}>${esc(m.nombre)} — $${m.entrada}/$${m.salida} por millón de tokens</option>`).join('')}</select>
@@ -2938,6 +2949,12 @@ function asesorPage({ user, listo, limite, restantes, deal }) {
           esp.remove();
           if (r.ok) {
             burbuja(r.respuesta, 'ia-bot');
+            if (r.wa) {
+              var wa = document.createElement('a');
+              wa.className = 'mj-wa'; wa.href = r.wa; wa.target = '_blank'; wa.rel = 'noopener';
+              wa.textContent = '💬 ¿Querés comentarle el presupuesto a Juan?';
+              chat.appendChild(wa); chat.scrollTop = chat.scrollHeight;
+            }
             var ch = document.getElementById('iaRestantes');
             if (ch && r.restantes != null) { ch.textContent = r.restantes + (r.restantes === 1 ? ' consulta hoy' : ' consultas hoy'); if (r.restantes === 0) { btn.disabled = true; ta.disabled = true; return; } }
           } else burbuja(r.error || 'No pude responder, probá de nuevo.', 'ia-bot ia-error');

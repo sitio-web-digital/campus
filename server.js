@@ -1605,6 +1605,7 @@ const iaConfig = () => ({
   limiteAdmin: Math.max(1, parseInt(getPanelConfig('_ia', 'limite_admin'), 10) || 40),
   tokensMesAdmin: Math.max(0, parseInt(getPanelConfig('_ia', 'tokens_mes_admin'), 10) || 0),
   modeloNegocio: IA_MODELOS[getPanelConfig('_ia', 'modelo_negocio')] ? getPanelConfig('_ia', 'modelo_negocio') : 'claude-opus-5',
+  usdHora: Math.max(1, parseFloat(getPanelConfig('_ia', 'usd_hora')) || 25),
   modelo: IA_MODELOS[getPanelConfig('_ia', 'modelo')] ? getPanelConfig('_ia', 'modelo') : 'claude-haiku-4-5',
   contexto: getPanelConfig('_ia', 'contexto', '') || '',
 });
@@ -1625,7 +1626,7 @@ function iaTopeDe(u) {
 
 // Quién es el asesor: experto en desarrollo web/software a medida que ayuda a responder clientes.
 // Este texto es estable a propósito: se cachea (prompt caching) y baja el costo de cada consulta.
-const IA_BASE = `Te llamás MiniJuan y sos el asesor IA del equipo comercial de Cloud For Deploy, una empresa argentina. Si te preguntan quién sos, presentate como MiniJuan.
+const IA_BASE = (usdHora) => `Te llamás MiniJuan y sos el asesor IA del equipo comercial de Cloud For Deploy, una empresa argentina. Si te preguntan quién sos, presentate como MiniJuan.
 
 Sos EXPERTO EN VENDER exactamente tres cosas: páginas web, tiendas online (ecommerce) y sistemas/software a medida. Tu trabajo: ayudar a los vendedores a cerrar esas ventas — armarles respuestas a mensajes de clientes, resolver dudas de clientes sobre esos servicios (qué incluye una web, hosting, dominio, mantenimiento, medios de pago y envíos en un ecommerce, plazos e integraciones de un sistema a medida), y darles argumentos y manejo de objeciones (precio, "lo hago gratis con una plantilla", "para qué quiero una web si tengo Instagram", plazos, confianza).
 
@@ -1639,8 +1640,11 @@ LISTA DE PRECIOS OFICIAL (pesos argentinos) — guiate SOLO por esta lista:
 
 Reglas de precios:
 - Si lo que pide el cliente entra en un plan, recomendá ese plan con su precio y mantenimiento EXACTOS de la lista. Si duda entre dos planes, marcá la diferencia concreta.
-- Si lo que pide EXCEDE la lista (más fotos o videos que el tope del plan, funcionalidades que ningún plan incluye, combinaciones especiales): NO inventes ni estimes precio — respondé que eso hay que hablarlo con Juan para cotizarlo.
-- SISTEMAS A MEDIDA (software, apps, sistemas de gestión, integraciones): nunca des precio ni plazo — eso se habla directamente con Juan, siempre.
+- EXTRAS sobre una web/ecommerce de la lista (una funcionalidad puntual que ningún plan incluye, o superar un tope: más fotos, un módulo de reservas simple, una sección especial): cotizá VOS el extra con criterio, estimando las horas de desarrollo y pasándolas a dólares a USD ${usdHora} por hora. Mostrá el cálculo (ej: "unas 10-14 horas ≈ USD ${usdHora * 10}-${usdHora * 14}") y aclarás que es estimado, sujeto a confirmación de Juan. El plan base se cobra igual en pesos según la lista.
+- SISTEMAS A MEDIDA completos (software, apps, sistemas de gestión, integraciones grandes): nunca des precio ni plazo — eso se habla directamente con Juan, siempre. Usá criterio para distinguir: un módulo chico sobre una web de la lista es un EXTRA cotizable en horas; un sistema entero es A MEDIDA y va con Juan.
+- WHATSAPP A JUAN: cuando tu respuesta incluya una cotización (de lista o de extras) o algo que Juan deba cotizar, terminá el mensaje con una línea EXACTA en este formato (y nada después):
+WHATSAPP_JUAN: <resumen corto para mandarle a Juan: qué pide el cliente y qué se cotizó o falta cotizar>
+No agregues esa línea en respuestas que no hablan de precios. El sistema la convierte en un botón para escribirle a Juan.
 
 Reglas:
 - Respondé en español argentino (voseo), con el tono profesional y cercano de la empresa.
@@ -1681,7 +1685,7 @@ app.post('/ia/consulta', requireAuth, express.json(), async (req, res) => {
       model: cfg.modelo,
       max_tokens: 1024,
       system: [
-        { type: 'text', text: IA_BASE },
+        { type: 'text', text: IA_BASE(cfg.usdHora) },
         { type: 'text', text: cfg.contexto ? `Contexto de la empresa (lo escribió el administrador — seguilo al pie de la letra):\n${cfg.contexto}` : 'El administrador todavía no cargó contexto propio de la empresa.', cache_control: { type: 'ephemeral' } },
       ],
       messages: [...mensajes, { role: 'user', content: pregunta + extra }],
@@ -1691,11 +1695,15 @@ app.post('/ia/consulta', requireAuth, express.json(), async (req, res) => {
       ? await new Anthropic().beta.messages.create({ ...params, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' })
       : await new Anthropic().messages.create(params);
     if (r.stop_reason === 'refusal') return res.json({ ok: false, error: 'El asesor no puede responder esa consulta.' });
-    const texto = r.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim();
+    let texto = r.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim();
+    // Si MiniJuan cerró con la línea WHATSAPP_JUAN, se convierte en botón para escribirle a Juan.
+    let waJuan = null;
+    const mWa = texto.match(/(?:^|\n)\s*\**WHATSAPP_JUAN\**\s*:\s*([\s\S]+)$/);
+    if (mWa) { waJuan = mWa[1].trim().replace(/\*+/g, '').slice(0, 500); texto = texto.slice(0, mWa.index).trim(); }
     const u = r.usage || {};
     db.prepare('INSERT INTO ia_consultas (user_id, deal_id, pregunta, respuesta, modelo, tokens_in, tokens_out) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .run(req.user.id, deal ? deal.id : null, pregunta, texto, r.model || cfg.modelo, (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0), u.output_tokens || 0);
-    res.json({ ok: true, respuesta: texto, restantes: Math.max(0, lim - usadas - 1) });
+    res.json({ ok: true, respuesta: texto, restantes: Math.max(0, lim - usadas - 1), wa: waJuan ? 'https://wa.me/5493816238790?text=' + encodeURIComponent('Hola Juan! ' + waJuan) : null });
   } catch (e) {
     if (e instanceof Anthropic.AuthenticationError) return res.status(502).json({ error: 'La clave de la API no es válida — avisale al administrador.' });
     if (e instanceof Anthropic.RateLimitError) return res.status(503).json({ error: 'El asesor está saturado, esperá un minuto y probá de nuevo.' });
@@ -1887,6 +1895,7 @@ app.post('/admin/ia', requireAuth, requireAdmin, (req, res) => {
   setPanelConfig('_ia', 'limite_admin', Math.min(500, Math.max(1, parseInt(req.body.limite_admin, 10) || 40)));
   setPanelConfig('_ia', 'tokens_mes_admin', Math.max(0, parseInt(req.body.tokens_mes_admin, 10) || 0));
   if (IA_MODELOS[req.body.modelo_negocio]) setPanelConfig('_ia', 'modelo_negocio', req.body.modelo_negocio);
+  setPanelConfig('_ia', 'usd_hora', Math.max(1, parseFloat(req.body.usd_hora) || 25));
   res.redirect('/admin/preferencias');
 });
 
