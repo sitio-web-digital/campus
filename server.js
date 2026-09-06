@@ -1604,7 +1604,7 @@ async function buscarProspectosMaps(rubro, zona, objetivo) {
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': process.env.GOOGLE_MAPS_API_KEY,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.googleMapsUri,nextPageToken',
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.googleMapsUri,places.businessStatus,nextPageToken',
       },
       body: JSON.stringify({ textQuery: `${rubro} en ${zona}`, languageCode: 'es', ...(pageToken ? { pageToken } : {}) }),
     });
@@ -1622,8 +1622,12 @@ async function buscarProspectosMaps(rubro, zona, objetivo) {
 app.get('/clientes', requireAuth, requireSistema('clientes'), (req, res) => {
   const fEstado = ['nuevo', 'tomado', 'descartado'].includes(req.query.estado) ? req.query.estado : '';
   const fRubro = clean(req.query.rubro) || '';
+  const fWeb = ['sin', 'con', 'redes'].includes(req.query.web) ? req.query.web : '';
   const q = clean(req.query.q) || '';
   const where = ['1=1']; const params = [];
+  if (fWeb === 'sin') where.push("(p.sitio_web IS NULL OR p.sitio_web = '')");
+  if (fWeb === 'con') where.push("p.sitio_web IS NOT NULL AND p.sitio_web != '' AND p.sitio_web NOT LIKE '%facebook.com%' AND p.sitio_web NOT LIKE '%instagram.com%' AND p.sitio_web NOT LIKE '%linktr.ee%'");
+  if (fWeb === 'redes') where.push("(p.sitio_web LIKE '%facebook.com%' OR p.sitio_web LIKE '%instagram.com%' OR p.sitio_web LIKE '%linktr.ee%')");
   if (fEstado) { where.push('p.estado = ?'); params.push(fEstado); }
   if (fRubro) { where.push('p.rubro = ?'); params.push(fRubro); }
   if (q) { where.push('(p.nombre LIKE ? OR p.direccion LIKE ?)'); params.push(`%${q}%`, `%${q}%`); }
@@ -1634,7 +1638,7 @@ app.get('/clientes', requireAuth, requireSistema('clientes'), (req, res) => {
   const misPaneles = PANELES_COMERCIALES.filter((P) => puede(req.user, P.slug)).map((P) => ({ slug: P.slug, nombre: P.nombre }));
   res.send(V.clientesPage({
     user: req.user, prospectos, rubros, scans, misPaneles,
-    fEstado, fRubro, q,
+    fEstado, fRubro, fWeb, q,
     keyOk: !!process.env.GOOGLE_MAPS_API_KEY,
     usoMes: db.prepare("SELECT COALESCE(SUM(consultas), 0) AS c, COUNT(*) AS escaneos FROM prospecto_scans WHERE substr(datetime(created_at, '-3 hours'), 1, 7) = ?").get(hoyAR().slice(0, 7)),
     msg: clean(req.query.msg), err: clean(req.query.err),
@@ -1650,13 +1654,14 @@ app.post('/clientes/scan', requireAuth, requireAdmin, async (req, res) => {
   if (!process.env.GOOGLE_MAPS_API_KEY) return res.redirect('/clientes?err=' + encodeURIComponent('Falta la clave GOOGLE_MAPS_API_KEY en el servidor.'));
   try {
     const lugares = await buscarProspectosMaps(rubro, zona, objetivo);
-    const ins = db.prepare(`INSERT OR IGNORE INTO prospectos (place_id, nombre, direccion, telefono, sitio_web, rating, resenas, maps_url, rubro, zona)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const ins = db.prepare(`INSERT OR IGNORE INTO prospectos (place_id, nombre, direccion, telefono, sitio_web, rating, resenas, maps_url, rubro, zona, estado_negocio)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
     let nuevos = 0;
     for (const p of lugares) {
+      if (p.businessStatus === 'CLOSED_PERMANENTLY') continue; // negocios que cerraron: ni cargarlos
       const r = ins.run(p.id || null, (p.displayName && p.displayName.text) || 'Sin nombre', p.formattedAddress || null,
         p.nationalPhoneNumber || p.internationalPhoneNumber || null, p.websiteUri || null,
-        p.rating || null, p.userRatingCount || null, p.googleMapsUri || null, rubro.toLowerCase(), zona);
+        p.rating || null, p.userRatingCount || null, p.googleMapsUri || null, rubro.toLowerCase(), zona, p.businessStatus || null);
       if (r.changes > 0) nuevos++;
     }
     db.prepare('INSERT INTO prospecto_scans (user_id, rubro, zona, encontrados, nuevos, consultas) VALUES (?, ?, ?, ?, ?, ?)').run(req.user.id, rubro, zona, lugares.length, nuevos, lugares.consultas || 1);

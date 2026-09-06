@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.42.0',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'mejora', texto: 'Prospectos con más inteligencia: se etiqueta si su "web" es en realidad Facebook, Instagram o Linktree; los que no tienen nada muestran "⚡ SIN WEB — oportunidad" en verde (el candidato ideal), y hay filtro por presencia web (sin web / solo redes / con web propia).' },
+      { tipo: 'mejora', texto: 'Estado del negocio según Google: los que cerraron definitivamente ni se cargan, y los cerrados temporalmente aparecen marcados. Las búsquedas quedan guardadas y compartidas para que todo el equipo vaya tomando.' },
+    ],
+  },
+  {
     version: '2.41.1',
     fecha: '2026-09-06',
     cambios: [

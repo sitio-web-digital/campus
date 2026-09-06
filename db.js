@@ -326,6 +326,10 @@ CREATE TABLE IF NOT EXISTS prospecto_scans (
 if (!db.prepare('PRAGMA table_info(prospecto_scans)').all().some((c) => c.name === 'consultas')) {
   db.exec('ALTER TABLE prospecto_scans ADD COLUMN consultas INTEGER NOT NULL DEFAULT 1');
 }
+// 2.42.0: estado del negocio según Google (operativo / cerrado temporal; los cerrados definitivos no se cargan).
+if (!db.prepare('PRAGMA table_info(prospectos)').all().some((c) => c.name === 'estado_negocio')) {
+  db.exec('ALTER TABLE prospectos ADD COLUMN estado_negocio TEXT');
+}
 
 // 2.39.0: modo negocio — se distingue el tipo de consulta ('vendedor' | 'negocio').
 if (!db.prepare('PRAGMA table_info(ia_consultas)').all().some((c) => c.name === 'tipo')) {

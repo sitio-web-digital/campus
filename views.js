@@ -985,6 +985,8 @@ code { font-family:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; fo
 @media (max-width:640px) { .umenu-pop { position:fixed; top:3.3rem; right:.5rem; } }
 
 /* ---------- panel de clientes ---------- */
+.pr-sinweb { display:inline-block; font-size:.68rem; font-weight:800; color:#1D6F42; background:rgba(46, 125, 79, .14); border-radius:99px; padding:.12rem .5rem; }
+html.dark .pr-sinweb { color:#8FD6AC; }
 tr.pr-tomado td { background:rgba(192, 84, 80, .09); }
 tr.pr-tomado td:first-child { box-shadow:inset 3px 0 0 #C05450; }
 tr.pr-descartado td { opacity:.55; }
@@ -2980,7 +2982,15 @@ function asesorPage({ user, listo, limite, restantes, deal }) {
 
 /* --------- panel de clientes: prospectos de Google Maps --------- */
 
-function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fRubro, q, keyOk, usoMes = { c: 0, escaneos: 0 }, msg, err }) {
+function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fRubro, fWeb = '', q, keyOk, usoMes = { c: 0, escaneos: 0 }, msg, err }) {
+  // ¿La "web" del negocio es una web real o una red social? (muchos negocios ponen su Face/Insta como sitio)
+  const webInfo = (w) => {
+    if (!w) return null;
+    if (/facebook\.com|fb\.com/i.test(w)) return { etiqueta: '📘 Facebook', url: w };
+    if (/instagram\.com/i.test(w)) return { etiqueta: '📸 Instagram', url: w };
+    if (/linktr\.ee/i.test(w)) return { etiqueta: '🔗 Linktree', url: w };
+    return { etiqueta: '🌐 ' + w.replace(/^https?:[/][/](www[.])?/i, '').split('/')[0].slice(0, 30), url: w, esWeb: true };
+  };
   const esAdmin = user.role === 'admin';
   const urlBase = (cambios) => {
     const par = new URLSearchParams();
@@ -2988,6 +2998,7 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
     const rub = 'rubro' in cambios ? cambios.rubro : fRubro;
     if (est) par.set('estado', est);
     if (rub) par.set('rubro', rub);
+    if (fWeb) par.set('web', fWeb);
     if (q) par.set('q', q);
     const t = par.toString();
     return '/clientes' + (t ? '?' + t : '');
@@ -3027,6 +3038,12 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
     <form method="get" action="/clientes" class="cfg-inline" style="flex:0">
       ${fEstado ? `<input type="hidden" name="estado" value="${esc(fEstado)}">` : ''}
       <select name="rubro" onchange="this.form.submit()" style="width:auto"><option value="">Rubro: todos</option>${rubros.map((r) => `<option value="${esc(r)}" ${r === fRubro ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
+      <select name="web" onchange="this.form.submit()" style="width:auto">
+        <option value="">Web: todos</option>
+        <option value="sin" ${fWeb === 'sin' ? 'selected' : ''}>⚡ Sin web (oportunidad)</option>
+        <option value="redes" ${fWeb === 'redes' ? 'selected' : ''}>Solo redes sociales</option>
+        <option value="con" ${fWeb === 'con' ? 'selected' : ''}>Con web propia</option>
+      </select>
       <input name="q" value="${esc(q)}" placeholder="Buscar nombre o dirección" style="width:auto">
       <button class="btn secondary small">Buscar</button>
     </form>
@@ -3039,11 +3056,13 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
       <tr class="${pr.estado === 'tomado' ? 'pr-tomado' : pr.estado === 'descartado' ? 'pr-descartado' : ''}">
         <td>
           <strong>${esc(pr.nombre)}</strong>${pr.maps_url ? ` <a href="${esc(pr.maps_url)}" target="_blank" rel="noopener" class="small">mapa ↗</a>` : ''}
-          <div class="small muted">${esc(pr.direccion || 'Sin dirección')} · <span class="chip" style="font-size:.6rem">${esc(pr.rubro || '')}</span></div>
+          <div class="small muted">${esc(pr.direccion || 'Sin dirección')} · <span class="chip" style="font-size:.6rem">${esc(pr.rubro || '')}</span>${pr.estado_negocio === 'CLOSED_TEMPORARILY' ? ' <span class="chip chip-pend" style="font-size:.6rem">cerrado temporalmente</span>' : ''}</div>
         </td>
         <td class="small">
           ${pr.telefono ? `<a href="https://wa.me/${esc(String(pr.telefono).replace(/[^0-9]/g, ''))}" target="_blank" rel="noopener">📱 ${esc(pr.telefono)}</a>` : '<span class="muted">sin teléfono</span>'}
-          ${pr.sitio_web ? `<br><a href="${esc(pr.sitio_web)}" target="_blank" rel="noopener" class="muted">${esc(pr.sitio_web.replace(/^https?:[/][/](www[.])?/, '').slice(0, 30))}</a>` : ''}
+          ${(() => { const w = webInfo(pr.sitio_web); return w
+            ? `<br><a href="${esc(w.url)}" target="_blank" rel="noopener" class="${w.esWeb ? 'muted' : ''}">${esc(w.etiqueta)}</a>`
+            : '<br><span class="pr-sinweb">⚡ SIN WEB — oportunidad</span>'; })()}
         </td>
         <td class="small">${pr.rating ? `⭐ ${pr.rating} <span class="muted">(${pr.resenas || 0})</span>` : '<span class="muted">—</span>'}</td>
         <td>
