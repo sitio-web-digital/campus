@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.48.2',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'mejora', texto: 'El menú superior de los paneles comerciales se reacomodó: en computadora ahora se ven TODAS las opciones (si no entran en una fila, bajan a una segunda — se acabó el scroll escondido).' },
+      { tipo: 'mejora', texto: 'En celular la barra de abajo quedó cómoda: Pipeline, Actividad, Agenda y Metas a mano, y un botón "Más" que abre un panel con el resto (Dashboard, IA Negocio, Contactos, Config, Equipo). El "Más" se ilumina cuando estás parado en una de sus opciones.' },
+    ],
+  },
+  {
     version: '2.48.1',
     fecha: '2026-09-06',
     cambios: [

@@ -303,26 +303,38 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
   } else if (sistema === 'gondolas' || sistema === 'estanterias' || sistema === 'sitioweb') {
     const b = '/' + sistema;
     const dd = (user && user.deudas) || {};
+    const enMas = ['dashboard', 'ianegocio', 'contactos', 'config'].includes(active);
     links = `
         <a href="${b}/pipeline" class="${active === 'pipeline' ? 'on' : ''}${dd.pipeline ? ' deuda' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
         <a href="${b}/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="${b}/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
-        ${user && user.role === 'admin' ? `<a href="${b}/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
+        ${user && user.role === 'admin' ? `<div class="nav-mas${enMas ? ' tiene-on' : ''}">
+        <button type="button" class="nav-mas-btn">${IC('<circle cx="4.2" cy="10" r="1.7"/><circle cx="10" cy="10" r="1.7"/><circle cx="15.8" cy="10" r="1.7"/>')}<span>Más</span></button>
+        <div class="nav-extra">
+        <a href="${b}/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
         <a href="/ia/negocio" class="${active === 'ianegocio' ? 'on' : ''}">${IC('<path d="M4 16V9M10 16V4M16 16v-5"/><circle cx="10" cy="10" r="8.2"/>')}<span>IA Negocio</span></a>
         <a href="${b}/contactos" class="${active === 'contactos' ? 'on' : ''}">${IC('<path d="M4.2 3.5h2.6l1.4 3.3-1.9 1.5a11.4 11.4 0 005.4 5.4l1.5-1.9 3.3 1.4v2.6a1.4 1.4 0 01-1.5 1.4C8.8 16.7 3.3 11.2 2.8 5A1.4 1.4 0 014.2 3.5z"/>')}<span>Contactos</span></a>
-        <a href="${b}/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>` : ''}`;
+        <a href="${b}/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>
+        </div>
+        </div>` : ''}`;
   } else {
     const dd = (user && user.deudas) || {};
+    const enMas = ['dashboard', 'ianegocio', 'contactos', 'config', 'equipo'].includes(active);
     links = `
         <a href="/pipeline" class="${active === 'pipeline' ? 'on' : ''}${dd.pipeline ? ' deuda' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
         <a href="/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="/agenda" class="${active === 'agenda' ? 'on' : ''}">${IC('<rect x="3" y="4.5" width="14" height="12" rx="2"/><path d="M3 8.5h14M7 3v3M13 3v3"/>')}<span>Agenda</span></a>
         <a href="/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
-        ${user && user.role === 'admin' ? `<a href="/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
+        ${user && user.role === 'admin' ? `<div class="nav-mas${enMas ? ' tiene-on' : ''}">
+        <button type="button" class="nav-mas-btn">${IC('<circle cx="4.2" cy="10" r="1.7"/><circle cx="10" cy="10" r="1.7"/><circle cx="15.8" cy="10" r="1.7"/>')}<span>Más</span></button>
+        <div class="nav-extra">
+        <a href="/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
         <a href="/ia/negocio" class="${active === 'ianegocio' ? 'on' : ''}">${IC('<path d="M4 16V9M10 16V4M16 16v-5"/><circle cx="10" cy="10" r="8.2"/>')}<span>IA Negocio</span></a>
         <a href="/contactos" class="${active === 'contactos' ? 'on' : ''}">${IC('<path d="M4.2 3.5h2.6l1.4 3.3-1.9 1.5a11.4 11.4 0 005.4 5.4l1.5-1.9 3.3 1.4v2.6a1.4 1.4 0 01-1.5 1.4C8.8 16.7 3.3 11.2 2.8 5A1.4 1.4 0 014.2 3.5z"/>')}<span>Contactos</span></a>
         <a href="/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>
-        <a href="/admin" class="${active === 'equipo' ? 'on' : ''}">${ICONS.equipo}<span>Equipo</span></a>` : ''}`;
+        <a href="/admin" class="${active === 'equipo' ? 'on' : ''}">${ICONS.equipo}<span>Equipo</span></a>
+        </div>
+        </div>` : ''}`;
   }
   const nav = user ? `
   <nav class="nav">
@@ -332,7 +344,16 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
       </div>
       ${perfilLink}
     </div>
-  </nav>` : '';
+  </nav>
+  <script>
+  (function () {
+    var m = document.querySelector('.nav-mas');
+    if (!m) return;
+    var btn = m.querySelector('.nav-mas-btn');
+    btn.addEventListener('click', function (e) { e.stopPropagation(); m.classList.toggle('abierto'); });
+    document.addEventListener('click', function (ev) { if (!m.contains(ev.target)) m.classList.remove('abierto'); });
+  })();
+  </script>` : '';
   return `<!doctype html>
 <html lang="es">
 <head>
@@ -668,8 +689,10 @@ a:hover { color:var(--accent-ink); text-decoration:underline; }
 .brand-txt, .brand-txt .sub { white-space:nowrap; }
 .brand-txt .sub { font-size:.55rem; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:rgba(255,255,255,.5); }
 
-.nav-links { display:flex; gap:.05rem; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; max-width:100%; }
-.nav-links::-webkit-scrollbar { display:none; }
+.nav-links { display:flex; gap:.12rem; flex-wrap:wrap; row-gap:.1rem; max-width:100%; justify-content:flex-end; }
+/* En escritorio el grupo "Más" no existe como tal: sus opciones se ven directo en la fila. */
+.nav-mas, .nav-mas .nav-extra { display:contents; }
+.nav-mas-btn { display:none; }
 .nav-links a { display:inline-flex; align-items:center; gap:.34rem; flex-shrink:0; text-decoration:none;
   color:rgba(255,255,255,.72); font-weight:500; font-size:.79rem; letter-spacing:.005em;
   padding:.36rem .55rem; border-radius:6px; transition:background .12s, color .12s; }
@@ -1474,6 +1497,22 @@ html.dark .login-bg .btn:hover { background:var(--login-ink); }
   .nav-links a:hover { background:transparent; color:var(--accent); }
   .nav-links a.on { background:var(--accent-soft); color:var(--accent); font-weight:600; }
   .nav-links .ic { width:1.15rem; height:1.15rem; opacity:.9; }
+
+  /* "Más": en celular es un botón más de la barra y abre un panel con el resto de opciones */
+  .nav-mas { display:block; flex:1 0 auto; min-width:4.2rem; }
+  .nav-mas-btn { display:flex; flex-direction:column; gap:.15rem; align-items:center; justify-content:center; width:100%;
+    min-height:44px; font-size:.66rem; font-weight:500; color:var(--muted); border-radius:8px; padding:.25rem .2rem;
+    cursor:pointer; background:none; border:none; font-family:inherit; }
+  .nav-mas-btn .ic { width:1.15rem; height:1.15rem; opacity:.9; }
+  .nav-mas.tiene-on .nav-mas-btn, .nav-mas.abierto .nav-mas-btn { background:var(--accent-soft); color:var(--accent); font-weight:600; }
+  .nav-mas .nav-extra { display:none; }
+  .nav-mas.abierto .nav-extra { display:grid; grid-template-columns:1fr 1fr; gap:.35rem;
+    position:fixed; left:.6rem; right:.6rem; bottom:calc(4.4rem + env(safe-area-inset-bottom)); z-index:30;
+    background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:0 -4px 24px rgba(15,29,46,.18); padding:.55rem; }
+  .nav-mas .nav-extra a { flex:none; flex-direction:row; justify-content:flex-start; gap:.55rem;
+    font-size:.82rem; font-weight:500; min-height:44px; padding:.4rem .65rem; color:var(--ink); text-align:left; }
+  .nav-mas .nav-extra a.on { background:var(--accent-soft); color:var(--accent); font-weight:600; }
+  .nav-mas .nav-extra .ic { width:1.05rem; height:1.05rem; }
 
   .noti-pop { position:fixed; top:3.4rem; left:.5rem; right:.5rem; width:auto; max-height:70vh; }
   .sys-menu { position:fixed; top:3.2rem; left:.5rem; right:.5rem; min-width:0; max-height:74vh; overflow:auto; }
