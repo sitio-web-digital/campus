@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.48.0',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Generador de Propuestas: nueva opción del campus para armar propuestas PDF por rubro. Elegís la plantilla (arranca con Hoteles, basada en la de El Castillo), cargás nombre y nombre corto del cliente, su paleta de colores (con selectores de color), el logo, quién la firma y qué plan se marca como "Recomendado" — y sale la propuesta completa con todo aplicado.' },
+      { tipo: 'nuevo', texto: 'Vista previa con edición de textos: sobre la propuesta generada tocás cualquier texto y lo corregís ahí mismo (la disposición no se puede romper), guardás los cambios y con "Descargar PDF" sale lista para mandar. Se puede ligar a una lead de Cloud For Deploy y queda anotado en su historial.' },
+      { tipo: 'mejora', texto: 'El permiso "Generador de Propuestas" se habilita por usuario desde Administración, igual que el resto de los sistemas.' },
+    ],
+  },
+  {
     version: '2.47.1',
     fecha: '2026-09-06',
     cambios: [

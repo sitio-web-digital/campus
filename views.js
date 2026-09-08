@@ -40,7 +40,7 @@ const ICONS = {
 };
 const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F3459'/%3E%3Ctext x='16' y='21' font-size='12' font-family='Helvetica,Arial' font-weight='bold' fill='white' text-anchor='middle'%3EC4D%3C/text%3E%3C/svg%3E";
 
-const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', developers: 'Panel de Developers', clientes: 'Panel de Clientes', hub: 'Campus C4D' };
+const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', developers: 'Panel de Developers', clientes: 'Panel de Clientes', propuestas: 'Generador de Propuestas', hub: 'Campus C4D' };
 const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permisos || []).includes(s));
 
 // Ícono hoja para PuntoCO2 (plataforma de huella de carbono).
@@ -104,6 +104,7 @@ function sysSwitch(sistema, user) {
       ${tieneSistema(user, 'estanterias') ? `<a href="/estanterias/pipeline"><span>Comercial Estanterías Reforzadas</span>${infoPanel('estanterias')}</a>` : ''}
       ${tieneSistema(user, 'sitioweb') ? `<a href="/sitioweb/pipeline"><span>Comercial SitioWeb Digital</span>${infoPanel('sitioweb')}</a>` : ''}
       ${tieneSistema(user, 'clientes') ? `<a href="/clientes"><span>Panel de Clientes</span></a>` : ''}
+      ${tieneSistema(user, 'propuestas') ? `<a href="/propuestas"><span>Generador de Propuestas</span></a>` : ''}
       ${tieneSistema(user, 'cobranza') ? `<a href="/cobranza"><span>Panel de Cobranza</span>${infoCobranza()}</a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
       ${tieneSistema(user, 'developers') ? '<a href="/developers"><span>Panel de Developers</span></a>' : '<span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>'}
@@ -1304,6 +1305,13 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .cl-lista { list-style:none; margin:.35rem 0 0; padding:0; display:grid; gap:.5rem; }
 .cl-lista li { display:flex; gap:.5rem; align-items:baseline; font-size:.85rem; line-height:1.5; }
 .cl-lista .chip { flex-shrink:0; }
+
+/* ---------- generador de propuestas ---------- */
+.prop-toolbar { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+.prop-marco { width:100%; height:calc(100vh - 10.5rem); min-height:24rem; border:1px solid var(--line); border-radius:12px; background:#e9e5e0; }
+.prop-colores { display:flex; gap:1.1rem; flex-wrap:wrap; margin:.2rem 0 .4rem; }
+.prop-colores label { font-size:.72rem; }
+.prop-colores input[type="color"] { width:3.4rem; height:2.2rem; padding:.15rem; border:1px solid var(--line); border-radius:8px; background:var(--surface); cursor:pointer; }
 
 /* ---------- toast ---------- */
 /* Arriba a la derecha: abajo a la derecha vive la burbuja de MiniJuan y la tapaba. */
@@ -3708,6 +3716,12 @@ function hubPage({ user }) {
         <h3>Panel de Clientes</h3>
         <p>Generador de prospectos: escanea Google Maps por rubro y zona, y las tomás como leads.</p>
       </a>` : ''}
+      ${tieneSistema(user, 'propuestas') ? `
+      <a class="hub-card" href="/propuestas">
+        <span class="hc-ic">${IC('<path d="M6 2.5h6l3.5 3.5V17a.9.9 0 01-.9.9H6a.9.9 0 01-.9-.9V3.4a.9.9 0 01.9-.9z"/><path d="M12 2.5V6h3.5M7.8 10h4.4M7.8 13h4.4"/>')}</span>
+        <h3>Generador de Propuestas</h3>
+        <p>Propuestas PDF por rubro: plantilla + nombre, colores y logo del cliente, textos retocables y descarga lista para mandar.</p>
+      </a>` : ''}
       ${tieneSistema(user, 'cobranza') ? `
       <a class="hub-card" href="/cobranza">
         <span class="hc-ic">${ICONS.cobranza}</span>
@@ -4902,8 +4916,116 @@ function changelogPage({ user, versiones }) {
   });
 }
 
+/* ---------------- generador de propuestas ---------------- */
+
+function propuestasPage({ user, filas, plantillas, msg, err }) {
+  const body = `
+  <h1>Generador de Propuestas</h1>
+  <p class="small muted">Propuestas PDF por rubro: elegís la plantilla, cargás el nombre y los colores del cliente, ajustás los textos y descargás el PDF listo para mandar.${plantillas.length ? ` Plantillas disponibles: ${plantillas.map((p) => `<strong>${esc(p.nombre)}</strong>`).join(' · ')}.` : ''}</p>
+  <div class="toolbar"><a class="btn" href="/propuestas/nueva">+ Nueva propuesta</a></div>
+  ${filas.length ? `
+  <div class="tablewrap"><table>
+    <thead><tr><th>Empresa</th><th>Plantilla</th><th>Lead</th><th>Autor</th><th>Creada</th><th></th></tr></thead>
+    <tbody>${filas.map((f) => `
+      <tr>
+        <td><strong>${esc(f.empresa)}</strong></td>
+        <td>${esc(f.plantilla)}</td>
+        <td>${f.deal_id ? `<a href="/deals/${f.deal_id}">${esc(f.lead || 'ver lead')}</a>` : '<span class="muted">—</span>'}</td>
+        <td>${esc(f.autor)}</td>
+        <td class="small muted">${fecha(f.created_at.slice(0, 10))}</td>
+        <td><a class="btn secondary small" href="/propuestas/${f.id}">Abrir</a></td>
+      </tr>`).join('')}</tbody>
+  </table></div>` : '<div class="card"><p class="muted" style="margin:0">Todavía no generaste propuestas. Arrancá con <a href="/propuestas/nueva">+ Nueva propuesta</a>.</p></div>'}`;
+  return layout({ title: 'Generador de Propuestas', user, active: 'propuestas', sistema: 'propuestas', body, msg, err });
+}
+
+function propuestaNuevaPage({ user, plantillas, leads = [], dealSel = null }) {
+  const body = `
+  <h1>Nueva propuesta</h1>
+  <p class="small muted">El contenido ya está escrito por rubro. Acá se cambia lo del cliente: nombre, colores, logo y plan a destacar. Después vas a poder retocar cualquier texto sobre la vista previa.</p>
+  <div class="toolbar"><a class="btn secondary small" href="/propuestas">← Volver</a></div>
+  <form method="post" action="/propuestas" enctype="multipart/form-data" class="card" style="max-width:44rem" onsubmit="var b = this.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Generando…';">
+    <label>Plantilla (rubro)</label>
+    <select name="plantilla" id="selPlantilla">${plantillas.map((p, i) => `<option value="${p.slug}" ${i === 0 ? 'selected' : ''}>${esc(p.nombre)} — ${esc(p.descripcion || '')}</option>`).join('')}</select>
+    <label>Nombre completo de la empresa</label>
+    <input name="empresa" required placeholder="${esc(plantillas[0].empresaOriginal || 'Nombre de la empresa')}">
+    <label>Nombre corto <span class="muted" style="font-weight:400">(como lo llaman en el día a día; si queda vacío se usa el completo)</span></label>
+    <input name="alias" placeholder="${esc(plantillas[0].aliasOriginal || '')}">
+    ${plantillas.map((p, i) => `
+    <div class="pl-campos" data-pl="${p.slug}" ${i === 0 ? '' : 'hidden'}>
+      <div class="prop-colores">${(p.colores || []).map((c) => `
+        <div><label>${esc(c.label)}</label><input type="color" name="color_${c.clave}" value="${c.hex}" ${i === 0 ? '' : 'disabled'}></div>`).join('')}
+      </div>
+      ${(p.planes || []).length ? `<label>Plan a destacar como "Recomendado"</label>
+      <select name="plan" ${i === 0 ? '' : 'disabled'}>${p.planes.map((n) => `<option ${n === p.planDefault ? 'selected' : ''}>${n}</option>`).join('')}</select>` : ''}
+    </div>`).join('')}
+    <label>Logo del cliente <span class="muted" style="font-weight:400">(opcional — va arriba del título)</span></label>
+    <input type="file" name="logo" accept="image/*">
+    <label>Firma <span class="muted" style="font-weight:400">(quién manda la propuesta)</span></label>
+    <input name="firma" value="${esc(user.name)}">
+    <label>Ligar a una lead de Cloud For Deploy <span class="muted" style="font-weight:400">(opcional — queda anotado en su historial)</span></label>
+    <select name="deal_id"><option value="">— Sin lead —</option>${leads.map((l) => `<option value="${l.id}" ${l.id === dealSel ? 'selected' : ''}>${esc(l.empresa)}</option>`).join('')}</select>
+    <div style="margin-top:1rem"><button type="submit" class="btn" style="width:100%">Generar propuesta</button></div>
+  </form>
+  <script>
+    var sel = document.getElementById('selPlantilla');
+    sel.addEventListener('change', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.pl-campos'), function (b) {
+        var activo = b.getAttribute('data-pl') === sel.value;
+        b.hidden = !activo;
+        Array.prototype.forEach.call(b.querySelectorAll('input, select'), function (c) { c.disabled = !activo; });
+      });
+    });
+  </script>`;
+  return layout({ title: 'Nueva propuesta', user, active: 'propuestas', sistema: 'propuestas', body });
+}
+
+function propuestaVerPage({ user, p }) {
+  const body = `
+  <div class="prop-toolbar">
+    <a class="btn secondary small" href="/propuestas">← Volver</a>
+    <strong style="margin-right:auto">${esc(p.empresa)}</strong>
+    <button class="btn secondary small" id="btnEditar" type="button">✏️ Editar textos</button>
+    <button class="btn small" id="btnGuardar" type="button" hidden>Guardar cambios</button>
+    <button class="btn small" id="btnPdf" type="button">⬇ Descargar PDF</button>
+    <form method="post" action="/propuestas/${p.id}/borrar" onsubmit="return confirm('¿Eliminar esta propuesta definitivamente?')" style="display:inline; margin:0"><button class="btn danger small">Eliminar</button></form>
+  </div>
+  <p class="caption" id="propAyuda" style="margin:.35rem 0 .5rem">Con <strong>Editar textos</strong> tocás cualquier texto del documento y lo corregís ahí mismo (la disposición no se mueve). <strong>Descargar PDF</strong> abre la impresión: elegí "Guardar como PDF".</p>
+  <iframe id="marco" class="prop-marco" src="/propuestas/${p.id}/doc" title="Propuesta"></iframe>
+  <script>
+    var marco = document.getElementById('marco');
+    var bE = document.getElementById('btnEditar'), bG = document.getElementById('btnGuardar'), bP = document.getElementById('btnPdf');
+    var editando = false;
+    bE.addEventListener('click', function () {
+      editando = !editando;
+      marco.src = '/propuestas/${p.id}/doc' + (editando ? '?editar=1' : '');
+      bE.textContent = editando ? 'Salir de edición' : '✏️ Editar textos';
+      bG.hidden = !editando;
+    });
+    bG.addEventListener('click', function () {
+      bG.disabled = true; bG.textContent = 'Guardando…';
+      marco.contentWindow.postMessage({ tipo: 'pedirHtml' }, '*');
+    });
+    window.addEventListener('message', function (ev) {
+      if (!ev.data || ev.data.tipo !== 'htmlEditado') return;
+      fetch('/propuestas/${p.id}/guardar', { method: 'POST', headers: { 'content-type': 'text/plain' }, body: ev.data.html })
+        .then(function (r) {
+          bG.disabled = false; bG.textContent = 'Guardar cambios';
+          if (r.ok) { bG.textContent = 'Guardado ✓'; setTimeout(function () { bG.textContent = 'Guardar cambios'; }, 1600); }
+          else alert('No se pudo guardar, probá de nuevo.');
+        })
+        .catch(function () { bG.disabled = false; bG.textContent = 'Guardar cambios'; alert('Error de conexión al guardar.'); });
+    });
+    bP.addEventListener('click', function () {
+      marco.contentWindow.focus();
+      marco.contentWindow.print();
+    });
+  </script>`;
+  return layout({ title: 'Propuesta — ' + p.empresa, user, active: 'propuestas', sistema: 'propuestas', body, bodyClass: 'prop-full' });
+}
+
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage, agendaPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage, agendaPage, propuestasPage, propuestaNuevaPage, propuestaVerPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusCursoPage, campusQuizPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,

@@ -1710,6 +1710,192 @@ app.post('/clientes/:id/estado', requireAuth, requireSistema('clientes'), (req, 
   res.redirect('/clientes');
 });
 
+/* ---------------- generador de propuestas (PDF por rubro) ---------------- */
+
+// Las plantillas viven en plantillas-propuestas/<slug>/ (template.html + meta.json + assets/).
+// El contenido lo arma el equipo por rubro; acá solo se cambian colores, nombres, logo y plan.
+const PLANTILLAS_PROP_DIR = path.join(__dirname, 'plantillas-propuestas');
+const LOGOS_PROP_DIR = path.join(__dirname, 'data', 'propuestas');
+if (!fs.existsSync(LOGOS_PROP_DIR)) fs.mkdirSync(LOGOS_PROP_DIR, { recursive: true });
+const uploadLogoProp = multer({
+  storage: multer.diskStorage({
+    destination: LOGOS_PROP_DIR,
+    filename: (req, file, cb) => cb(null, 'tmp-' + Date.now() + (path.extname(file.originalname || '') || '.png').toLowerCase()),
+  }),
+  limits: { fileSize: 4 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
+});
+
+function plantillasPropuestas() {
+  if (!fs.existsSync(PLANTILLAS_PROP_DIR)) return [];
+  return fs.readdirSync(PLANTILLAS_PROP_DIR)
+    .filter((d) => fs.existsSync(path.join(PLANTILLAS_PROP_DIR, d, 'meta.json')))
+    .map((d) => ({ slug: d, ...JSON.parse(fs.readFileSync(path.join(PLANTILLAS_PROP_DIR, d, 'meta.json'), 'utf8')) }));
+}
+const plantillaProp = (slug) => plantillasPropuestas().find((p) => p.slug === slug) || null;
+
+// Tono derivado de un color elegido (f negativo = más oscuro): para hovers y variantes.
+function tonoHex(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  const c = (v) => Math.max(0, Math.min(255, Math.round(v * (1 + f))));
+  return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => c(v).toString(16).padStart(2, '0')).join('');
+}
+
+function renderPropuesta(pl, d) {
+  let h = fs.readFileSync(path.join(PLANTILLAS_PROP_DIR, pl.slug, 'template.html'), 'utf8');
+  const escp = (x) => String(x || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  // 1) Paleta: cada color original de la plantilla (y sus derivados) pasa al elegido.
+  for (const c of pl.colores) {
+    const elegido = /^#[0-9a-fA-F]{6}$/.test(d.colores[c.clave] || '') ? d.colores[c.clave].toLowerCase() : c.hex;
+    for (const [der, f] of Object.entries(c.derivados || {})) h = h.split(der).join(tonoHex(elegido, f));
+    h = h.split(c.hex).join(elegido);
+  }
+  // 2) Nombres y firma (primero el nombre completo, después el alias que es substring).
+  h = h.split(pl.empresaOriginal).join(escp(d.empresa));
+  if (pl.aliasOriginal) h = h.split(pl.aliasOriginal).join(escp(d.alias || d.empresa));
+  if (pl.firmaOriginal && d.firma) h = h.split(pl.firmaOriginal).join(escp(d.firma));
+  // 3) Plan destacado: cada sc-if muestra su contenido solo si es el plan elegido.
+  const plan = (pl.planes || []).includes(d.plan) ? d.plan : pl.planDefault;
+  h = h.replace(/<sc-if value="\{\{ dest(\w+) \}\}"[^>]*>([\s\S]*?)<\/sc-if>/g, (m, cual, inner) => (cual === plan ? inner : ''));
+  h = h.replace(/\{\{[^}]*\}\}/g, '');
+  // 4) Logo del cliente arriba del título principal.
+  if (d.logoUrl && pl.heroTexto) {
+    const i = h.indexOf(pl.heroTexto);
+    if (i >= 0) {
+      const j = h.lastIndexOf('<h1', i);
+      if (j >= 0) h = h.slice(0, j) + `<img src="${d.logoUrl}" alt="" style="height:58px;width:auto;display:block;margin:26px 0 -16px">` + h.slice(j);
+    }
+  }
+  return h;
+}
+
+const propuestaDe = (req) => {
+  const p = db.prepare('SELECT * FROM propuestas WHERE id = ?').get(req.params.id);
+  return p && (req.user.role === 'admin' || p.user_id === req.user.id) ? p : null;
+};
+
+app.get('/propuestas', requireAuth, requireSistema('propuestas'), (req, res) => {
+  const sql = `SELECT p.id, p.plantilla, p.empresa, p.deal_id, p.created_at, p.updated_at, u.name AS autor, dl.empresa AS lead
+    FROM propuestas p JOIN users u ON u.id = p.user_id LEFT JOIN deals dl ON dl.id = p.deal_id`;
+  const filas = req.user.role === 'admin'
+    ? db.prepare(sql + ' ORDER BY p.id DESC LIMIT 300').all()
+    : db.prepare(sql + ' WHERE p.user_id = ? ORDER BY p.id DESC LIMIT 300').all(req.user.id);
+  res.send(V.propuestasPage({ user: req.user, filas, plantillas: plantillasPropuestas(), msg: clean(req.query.msg), err: clean(req.query.err) }));
+});
+
+app.get('/propuestas/nueva', requireAuth, requireSistema('propuestas'), (req, res) => {
+  const pls = plantillasPropuestas();
+  if (!pls.length) return res.redirect('/propuestas?err=' + encodeURIComponent('Todavía no hay plantillas cargadas en el servidor.'));
+  const leads = req.user.role === 'admin'
+    ? db.prepare("SELECT id, empresa FROM deals WHERE panel = 'cfd' AND etapa NOT IN ('Ganado', 'Perdido') ORDER BY empresa").all()
+    : db.prepare("SELECT id, empresa FROM deals WHERE panel = 'cfd' AND etapa NOT IN ('Ganado', 'Perdido') AND user_id = ? ORDER BY empresa").all(req.user.id);
+  res.send(V.propuestaNuevaPage({ user: req.user, plantillas: pls, leads, dealSel: parseInt(req.query.deal, 10) || null }));
+});
+
+app.post('/propuestas', requireAuth, requireSistema('propuestas'), uploadLogoProp.single('logo'), (req, res) => {
+  const uno = (v) => (Array.isArray(v) ? v[0] : v);
+  const pl = plantillaProp(clean(uno(req.body.plantilla)));
+  const empresa = clean(uno(req.body.empresa));
+  if (!pl || !empresa) {
+    if (req.file) fs.unlinkSync(req.file.path);
+    return res.redirect('/propuestas?err=' + encodeURIComponent('Elegí la plantilla y cargá el nombre de la empresa.'));
+  }
+  const colores = {};
+  for (const c of pl.colores) colores[c.clave] = clean(uno(req.body['color_' + c.clave]));
+  const plan = (pl.planes || []).includes(uno(req.body.plan)) ? uno(req.body.plan) : pl.planDefault;
+  const dealRaw = parseInt(uno(req.body.deal_id), 10) || null;
+  const dealFila = dealRaw ? db.prepare('SELECT id, user_id, panel FROM deals WHERE id = ?').get(dealRaw) : null;
+  const dealId = dealFila && dealFila.panel === 'cfd' && (req.user.role === 'admin' || dealFila.user_id === req.user.id) ? dealFila.id : null;
+  const alias = clean(uno(req.body.alias)) || null;
+  const firma = clean(uno(req.body.firma)) || req.user.name;
+  const r = db.prepare('INSERT INTO propuestas (user_id, deal_id, plantilla, empresa, alias, datos, html) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(req.user.id, dealId, pl.slug, empresa, alias, JSON.stringify({ colores, plan, firma }), '');
+  const id = r.lastInsertRowid;
+  let logo = null;
+  if (req.file) {
+    logo = id + (path.extname(req.file.filename) || '.png');
+    fs.renameSync(req.file.path, path.join(LOGOS_PROP_DIR, 'logo-' + logo));
+  }
+  const html = renderPropuesta(pl, { empresa, alias, colores, plan, firma, logoUrl: logo ? `/propuestas/${id}/logo` : null });
+  db.prepare('UPDATE propuestas SET html = ?, logo = ? WHERE id = ?').run(html, logo, id);
+  if (dealId) logDealEvent(dealId, req.user.id, 'edicion', `Nota: Generó la propuesta «${empresa}» (plantilla ${pl.nombre}) — está en el Generador de Propuestas #${id}`);
+  res.redirect(`/propuestas/${id}`);
+});
+
+app.get('/propuestas/:id', requireAuth, requireSistema('propuestas'), (req, res) => {
+  const p = propuestaDe(req);
+  if (!p) return res.redirect('/propuestas');
+  res.send(V.propuestaVerPage({ user: req.user, p }));
+});
+
+// El documento en sí (va dentro del iframe). Con ?editar=1 se inyecta el modo edición de textos.
+const EDITOR_PROP = `
+<style id="edt-css">[contenteditable="true"]:hover { outline: 2px dashed rgba(192,84,80,.55); outline-offset: 2px; } [contenteditable="true"]:focus { outline: 2px solid rgba(192,84,80,.85); outline-offset: 2px; }</style>
+<script id="edt-js">
+(function () {
+  var INLINE = { SPAN: 1, A: 1, B: 1, STRONG: 1, I: 1, EM: 1, BR: 1, SMALL: 1, SUP: 1, SUB: 1, U: 1 };
+  var els = document.querySelectorAll('h1,h2,h3,h4,p,li,td,th,span,a,div,figcaption,blockquote');
+  Array.prototype.forEach.call(els, function (el) {
+    var kids = el.children, ok = true;
+    for (var i = 0; i < kids.length; i++) if (!INLINE[kids[i].tagName]) { ok = false; break; }
+    if (ok && (el.textContent || '').trim().length > 0) el.setAttribute('contenteditable', 'true');
+  });
+  window.addEventListener('message', function (ev) {
+    if (!ev.data || ev.data.tipo !== 'pedirHtml') return;
+    var clon = document.body.cloneNode(true);
+    var q = clon.querySelectorAll('[contenteditable]');
+    for (var i = 0; i < q.length; i++) q[i].removeAttribute('contenteditable');
+    var a = clon.querySelector('#edt-css'); if (a) a.remove();
+    var b = clon.querySelector('#edt-js'); if (b) b.remove();
+    parent.postMessage({ tipo: 'htmlEditado', html: clon.innerHTML }, '*');
+  });
+})();
+</` + `script>`;
+
+app.get('/propuestas/:id/doc', requireAuth, requireSistema('propuestas'), (req, res) => {
+  const p = propuestaDe(req);
+  if (!p) return res.status(404).end();
+  let h = p.html;
+  if (req.query.editar === '1') h = h.split('</body>').join(EDITOR_PROP + '</body>');
+  res.type('html').send(h);
+});
+
+// Guardar los textos editados: llega el <body> como texto plano y se empalma en el HTML guardado.
+app.post('/propuestas/:id/guardar', requireAuth, requireSistema('propuestas'), express.text({ type: '*/*', limit: '3mb' }), (req, res) => {
+  const p = propuestaDe(req);
+  if (!p) return res.status(404).end();
+  let cuerpo = String(req.body || '');
+  if (!cuerpo.trim()) return res.status(400).end();
+  cuerpo = cuerpo.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/\son\w+\s*=\s*"[^"]*"/gi, '');
+  const html = p.html.replace(/<body>[\s\S]*<\/body>/, () => '<body>' + cuerpo + '</body>');
+  db.prepare("UPDATE propuestas SET html = ?, updated_at = datetime('now') WHERE id = ?").run(html, p.id);
+  res.json({ ok: true });
+});
+
+app.post('/propuestas/:id/borrar', requireAuth, requireSistema('propuestas'), (req, res) => {
+  const p = propuestaDe(req);
+  if (p) {
+    if (p.logo) { try { fs.unlinkSync(path.join(LOGOS_PROP_DIR, 'logo-' + p.logo)); } catch {} }
+    db.prepare('DELETE FROM propuestas WHERE id = ?').run(p.id);
+  }
+  res.redirect('/propuestas?msg=' + encodeURIComponent('Propuesta eliminada.'));
+});
+
+app.get('/propuestas/:id/logo', requireAuth, requireSistema('propuestas'), (req, res) => {
+  const p = propuestaDe(req);
+  if (!p || !p.logo) return res.status(404).end();
+  res.sendFile(path.join(LOGOS_PROP_DIR, 'logo-' + p.logo));
+});
+
+// Assets de las plantillas (fuentes e imágenes), con cache larga.
+app.get('/propuestas/pl/:pl/a/:uuid', requireAuth, (req, res) => {
+  const pl = /^[a-z0-9-]+$/.test(req.params.pl) ? plantillaProp(req.params.pl) : null;
+  const mime = pl && pl.assets && pl.assets[req.params.uuid];
+  if (!mime) return res.status(404).end();
+  res.set('Content-Type', mime).set('Cache-Control', 'public, max-age=604800');
+  res.sendFile(path.join(PLANTILLAS_PROP_DIR, pl.slug, 'assets', req.params.uuid));
+});
+
 /* ---------------- agenda de reuniones (Cloud For Deploy) ---------------- */
 
 // Cada admin carga SU disponibilidad (agenda_disponibilidad) y tiene un color fijo; las reuniones son con un admin concreto.

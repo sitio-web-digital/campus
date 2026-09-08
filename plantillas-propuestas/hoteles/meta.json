@@ -1,0 +1,72 @@
+{
+  "nombre": "Hoteles",
+  "descripcion": "Propuesta de sitio web para hoteles y alojamientos",
+  "empresaOriginal": "El Castillo Hotel Restaurante",
+  "aliasOriginal": "El Castillo",
+  "firmaOriginal": "Juan Jose Bertinatti",
+  "colores": [
+    {
+      "clave": "principal",
+      "label": "Color principal",
+      "hex": "#942d1d",
+      "derivados": {
+        "#6f2115": -0.27
+      }
+    },
+    {
+      "clave": "secundario",
+      "label": "Color secundario",
+      "hex": "#1f6f6b"
+    },
+    {
+      "clave": "detalle",
+      "label": "Color de detalle",
+      "hex": "#a9791f"
+    }
+  ],
+  "planes": [
+    "Esencial",
+    "Profesional",
+    "Premium"
+  ],
+  "planDefault": "Profesional",
+  "heroTexto": "Un sitio digno de",
+  "assets": {
+    "f511753c-292e-441d-bd79-fe16481a753f": "image/webp",
+    "77b8b9a2-02d9-4092-889d-d89e7b0d808b": "font/woff2",
+    "ff11346c-61ae-49e1-a9a1-93e34cd6bc78": "font/woff2",
+    "763bd928-c88c-49e3-b739-49d2fca2618c": "font/woff2",
+    "62032f5a-0424-4575-94af-e5f8119e3aa9": "font/woff2",
+    "78eb2ae7-26fc-4f54-9d24-a8208e17d5b7": "font/woff2",
+    "b4db8d45-1f4d-4fa0-8b91-61f794daac12": "font/woff2",
+    "fdde4f2a-c165-467f-aced-72ea9d9af371": "font/woff2",
+    "7196356d-d151-4275-b320-b1478d45e681": "font/woff2",
+    "4c032a1f-2fe9-419d-bc43-6dd9b3189f6e": "font/woff2",
+    "c96419ff-e1a7-4324-8ea9-6644d56166ff": "font/woff2",
+    "81fbb2f4-483c-4e50-94a5-ee5b95247cfb": "font/woff2",
+    "0ff56499-c066-487f-9e38-e9693555ede8": "font/woff2",
+    "5892b053-a750-4e67-a6f5-eb8a639a0543": "font/woff2",
+    "9891b6bb-db93-4d6e-9e2b-93182323a302": "font/woff2",
+    "b44195da-bbce-43b3-b8c4-9790763019c8": "font/woff2",
+    "23c2a0e9-50cf-4897-a7a1-559b73a94821": "font/woff2",
+    "e319bbd5-bbe5-4d36-a8ca-2ad8a00f798a": "font/woff2",
+    "b9f4a65e-c22b-4da7-90dd-3a84da884f94": "font/woff2",
+    "59566ccf-09a9-4837-b232-bde73a4388f4": "font/woff2",
+    "14ab698b-46a2-4093-8853-97ee3cdd7a93": "font/woff2",
+    "fd06ae07-a15d-458e-a47f-284a63dc2e2b": "font/woff2",
+    "282e93b3-8c97-4042-99b4-338646c871e7": "font/woff2",
+    "907de463-4294-4ac5-bd5a-3109567cb813": "font/woff2",
+    "7c5241ca-9f34-4142-b3bf-407c91255c04": "image/jpeg",
+    "fb705ecc-9a9d-41d2-a7c5-defb947c1ce1": "image/jpeg",
+    "a12757c3-eaac-46c9-b90e-07124cc277c1": "image/jpeg",
+    "746dfa9d-5273-4e6c-901d-cdc3f0f605ed": "image/jpeg",
+    "b261ed84-800b-44b2-87c3-09b061b3736f": "image/jpeg",
+    "a709fb52-6bb8-459c-a4bc-1781089785f0": "image/jpeg",
+    "d280af6a-8185-4a56-9663-54eae4207a5c": "image/jpeg",
+    "becbf820-f474-4223-91f8-74634ac3ee0e": "image/jpeg",
+    "b08fc5ff-efaa-4ba0-84c7-c94fd8a58e53": "image/jpeg",
+    "cd5c9f52-8369-469d-9954-a10532908f05": "image/jpeg",
+    "91f333ca-781f-4c4c-b44f-3c6b51e04d57": "image/jpeg",
+    "5f32ce1a-0b42-4fb9-8f4c-8bf42b6b42e2": "image/jpeg"
+  }
+}

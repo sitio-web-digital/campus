@@ -326,6 +326,21 @@ CREATE TABLE IF NOT EXISTS prospecto_scans (
 if (!db.prepare('PRAGMA table_info(prospecto_scans)').all().some((c) => c.name === 'consultas')) {
   db.exec('ALTER TABLE prospecto_scans ADD COLUMN consultas INTEGER NOT NULL DEFAULT 1');
 }
+// 2.48.0: generador de propuestas PDF por rubro (plantillas en plantillas-propuestas/).
+db.exec(`CREATE TABLE IF NOT EXISTS propuestas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  deal_id INTEGER REFERENCES deals(id),
+  plantilla TEXT NOT NULL,
+  empresa TEXT NOT NULL,
+  alias TEXT,
+  datos TEXT,
+  html TEXT NOT NULL,
+  logo TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);`);
+
 // 2.43.0: agenda de reuniones (Cloud For Deploy): los vendedores reservan turnos sobre la disponibilidad del equipo admin.
 db.exec(`CREATE TABLE IF NOT EXISTS reuniones (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -617,6 +632,7 @@ const SISTEMAS = [
   ['cobranza', 'Panel de Cobranza'],
   ['developers', 'Panel de Developers'],
   ['clientes', 'Panel de Clientes (prospectos)'],
+  ['propuestas', 'Generador de Propuestas'],
 ];
 
 // Etapas del tablero de proyectos del Panel de Developers.
