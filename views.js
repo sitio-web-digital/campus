@@ -1312,6 +1312,10 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .prop-colores { display:flex; gap:1.1rem; flex-wrap:wrap; margin:.2rem 0 .4rem; }
 .prop-colores label { font-size:.72rem; }
 .prop-colores input[type="color"] { width:3.4rem; height:2.2rem; padding:.15rem; border:1px solid var(--line); border-radius:8px; background:var(--surface); cursor:pointer; }
+.prop-split { display:grid; grid-template-columns:minmax(19rem, 23rem) minmax(0, 1fr); gap:1rem; align-items:start; }
+.prop-split .prop-form { position:sticky; top:3.6rem; max-height:calc(100vh - 5rem); overflow:auto; }
+.prop-marco-vivo { height:calc(100vh - 11.5rem); }
+@media (max-width: 900px) { .prop-split { grid-template-columns:1fr; } .prop-split .prop-form { position:static; max-height:none; } .prop-marco-vivo { height:70vh; } }
 
 /* ---------- toast ---------- */
 /* Arriba a la derecha: abajo a la derecha vive la burbuja de MiniJuan y la tapaba. */
@@ -4940,44 +4944,110 @@ function propuestasPage({ user, filas, plantillas, msg, err }) {
 }
 
 function propuestaNuevaPage({ user, plantillas, leads = [], dealSel = null }) {
+  const metaCliente = plantillas.map((p) => ({
+    slug: p.slug, colores: p.colores || [], planDefault: p.planDefault || '',
+    empresaOriginal: p.empresaOriginal || '', aliasOriginal: p.aliasOriginal || '', firmaOriginal: p.firmaOriginal || '',
+  }));
   const body = `
   <h1>Nueva propuesta</h1>
-  <p class="small muted">El contenido ya está escrito por rubro. Acá se cambia lo del cliente: nombre, colores, logo y plan a destacar. Después vas a poder retocar cualquier texto sobre la vista previa.</p>
+  <p class="small muted">Editá a la izquierda y mirá el resultado en vivo a la derecha. Los textos también: tocá cualquier texto del documento y corregilo ahí mismo — recién al apretar "Generar propuesta" queda guardada.</p>
   <div class="toolbar"><a class="btn secondary small" href="/propuestas">← Volver</a></div>
-  <form method="post" action="/propuestas" enctype="multipart/form-data" class="card" style="max-width:44rem" onsubmit="var b = this.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Generando…';">
+  <div class="prop-split">
+  <form method="post" action="/propuestas" enctype="multipart/form-data" class="card prop-form" id="formProp">
+    <input type="hidden" name="html" id="inpHtml">
     <label>Plantilla (rubro)</label>
     <select name="plantilla" id="selPlantilla">${plantillas.map((p, i) => `<option value="${p.slug}" ${i === 0 ? 'selected' : ''}>${esc(p.nombre)} — ${esc(p.descripcion || '')}</option>`).join('')}</select>
     <label>Nombre completo de la empresa</label>
-    <input name="empresa" required placeholder="${esc(plantillas[0].empresaOriginal || 'Nombre de la empresa')}">
-    <label>Nombre corto <span class="muted" style="font-weight:400">(como lo llaman en el día a día; si queda vacío se usa el completo)</span></label>
-    <input name="alias" placeholder="${esc(plantillas[0].aliasOriginal || '')}">
+    <input name="empresa" id="inpEmpresa" required placeholder="${esc(plantillas[0].empresaOriginal || 'Nombre de la empresa')}">
+    <label>Nombre corto <span class="muted" style="font-weight:400">(como lo llaman en el día a día; vacío = el completo)</span></label>
+    <input name="alias" id="inpAlias" placeholder="${esc(plantillas[0].aliasOriginal || '')}">
     ${plantillas.map((p, i) => `
     <div class="pl-campos" data-pl="${p.slug}" ${i === 0 ? '' : 'hidden'}>
       <div class="prop-colores">${(p.colores || []).map((c) => `
-        <div><label>${esc(c.label)}</label><input type="color" name="color_${c.clave}" value="${c.hex}" ${i === 0 ? '' : 'disabled'}></div>`).join('')}
+        <div><label>${esc(c.label)}</label><input type="color" name="color_${c.clave}" data-clave="${c.clave}" value="${c.hex}" ${i === 0 ? '' : 'disabled'}></div>`).join('')}
       </div>
       ${(p.planes || []).length ? `<label>Plan a destacar como "Recomendado"</label>
       <select name="plan" ${i === 0 ? '' : 'disabled'}>${p.planes.map((n) => `<option ${n === p.planDefault ? 'selected' : ''}>${n}</option>`).join('')}</select>` : ''}
     </div>`).join('')}
     <label>Logo del cliente <span class="muted" style="font-weight:400">(opcional — va arriba del título)</span></label>
-    <input type="file" name="logo" accept="image/*">
+    <input type="file" name="logo" id="inpLogo" accept="image/*">
     <label>Firma <span class="muted" style="font-weight:400">(quién manda la propuesta)</span></label>
-    <input name="firma" value="${esc(user.name)}">
-    <label>Ligar a una lead de Cloud For Deploy <span class="muted" style="font-weight:400">(opcional — queda anotado en su historial)</span></label>
+    <input name="firma" id="inpFirma" value="${esc(user.name)}">
+    <label>Ligar a una lead de Cloud For Deploy <span class="muted" style="font-weight:400">(opcional)</span></label>
     <select name="deal_id"><option value="">— Sin lead —</option>${leads.map((l) => `<option value="${l.id}" ${l.id === dealSel ? 'selected' : ''}>${esc(l.empresa)}</option>`).join('')}</select>
     <div style="margin-top:1rem"><button type="submit" class="btn" style="width:100%">Generar propuesta</button></div>
   </form>
+  <iframe id="marcoVivo" class="prop-marco prop-marco-vivo" src="/propuestas/editor/${plantillas[0].slug}" title="Vista previa"></iframe>
+  </div>
   <script>
+    var META = ${JSON.stringify(metaCliente)};
+    var marco = document.getElementById('marcoVivo');
+    var form = document.getElementById('formProp');
     var sel = document.getElementById('selPlantilla');
+    var prevCol = {};
+    function meta() { for (var i = 0; i < META.length; i++) if (META[i].slug === sel.value) return META[i]; return META[0]; }
+    function avisar(m) { if (marco.contentWindow) marco.contentWindow.postMessage(m, '*'); }
+    function tono(hex, f) {
+      var n = parseInt(hex.slice(1), 16);
+      function c(v) { v = Math.round(v * (1 + f)); if (v < 0) v = 0; if (v > 255) v = 255; var s = v.toString(16); return s.length < 2 ? '0' + s : s; }
+      return '#' + c((n >> 16) & 255) + c((n >> 8) & 255) + c(n & 255);
+    }
+    function sincronizar() {
+      var m = meta();
+      var emp = document.getElementById('inpEmpresa').value.trim();
+      var ali = document.getElementById('inpAlias').value.trim();
+      var fir = document.getElementById('inpFirma').value.trim();
+      avisar({ tipo: 'texto', tok: 'empresa', valor: emp || m.empresaOriginal });
+      avisar({ tipo: 'texto', tok: 'alias', valor: ali || emp || m.aliasOriginal || m.empresaOriginal });
+      avisar({ tipo: 'texto', tok: 'firma', valor: fir || m.firmaOriginal });
+      for (var i = 0; i < m.colores.length; i++) {
+        var c = m.colores[i];
+        var inp = form.querySelector('.pl-campos[data-pl="' + m.slug + '"] input[data-clave="' + c.clave + '"]');
+        if (!inp) continue;
+        var nuevo = inp.value.toLowerCase();
+        var viejo = prevCol[m.slug + '|' + c.clave] || c.hex;
+        if (viejo === nuevo) continue;
+        var der = c.derivados || {};
+        for (var k in der) avisar({ tipo: 'color', de: viejo === c.hex ? k : tono(viejo, der[k]), a: tono(nuevo, der[k]) });
+        avisar({ tipo: 'color', de: viejo, a: nuevo });
+        prevCol[m.slug + '|' + c.clave] = nuevo;
+      }
+      var selPlan = form.querySelector('.pl-campos[data-pl="' + m.slug + '"] select[name="plan"]');
+      if (selPlan) avisar({ tipo: 'plan', plan: selPlan.value });
+      var archivo = document.getElementById('inpLogo').files[0];
+      if (archivo) {
+        var rd = new FileReader();
+        rd.onload = function () { avisar({ tipo: 'logo', src: rd.result }); };
+        rd.readAsDataURL(archivo);
+      } else avisar({ tipo: 'logo', src: '' });
+    }
+    var timer = null;
+    form.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(sincronizar, 250); });
+    form.addEventListener('change', function () { clearTimeout(timer); timer = setTimeout(sincronizar, 100); });
     sel.addEventListener('change', function () {
       Array.prototype.forEach.call(document.querySelectorAll('.pl-campos'), function (b) {
         var activo = b.getAttribute('data-pl') === sel.value;
         b.hidden = !activo;
         Array.prototype.forEach.call(b.querySelectorAll('input, select'), function (c) { c.disabled = !activo; });
       });
+      prevCol = {};
+      marco.src = '/propuestas/editor/' + sel.value;
+    });
+    window.addEventListener('message', function (ev) {
+      var d = ev.data || {};
+      if (d.tipo === 'editorListo') { prevCol = {}; sincronizar(); }
+      else if (d.tipo === 'docListo') { document.getElementById('inpHtml').value = d.html; form.submit(); }
+    });
+    form.addEventListener('submit', function (e) {
+      if (document.getElementById('inpHtml').value) return;
+      e.preventDefault();
+      var b = form.querySelector('button[type=submit]');
+      b.disabled = true; b.textContent = 'Generando…';
+      avisar({ tipo: 'pedirDoc', titulo: 'Propuesta de sitio web — ' + document.getElementById('inpEmpresa').value.trim() });
+      setTimeout(function () { if (!document.getElementById('inpHtml').value) form.submit(); }, 3000);
     });
   </script>`;
-  return layout({ title: 'Nueva propuesta', user, active: 'propuestas', sistema: 'propuestas', body });
+  return layout({ title: 'Nueva propuesta', user, active: 'propuestas', sistema: 'propuestas', body, bodyClass: 'prop-full' });
 }
 
 function propuestaVerPage({ user, p }) {

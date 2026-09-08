@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.48.1',
+    fecha: '2026-09-06',
+    cambios: [
+      { tipo: 'mejora', texto: 'El Generador de Propuestas ahora es un editor en vivo: el formulario a la izquierda y la propuesta a la derecha, actualizándose al instante — escribís el nombre y aparece en todo el documento, tocás un color y cambia toda la paleta (con sus tonos derivados), elegís el logo y se ve arriba del título, cambiás el plan y se mueve el "Recomendado".' },
+      { tipo: 'mejora', texto: 'Los textos se editan a la par: tocás cualquier texto de la vista previa y lo corregís ahí mismo mientras seguís cambiando colores o datos — nada se pisa. Al apretar "Generar propuesta" se guarda exactamente lo que estás viendo.' },
+    ],
+  },
+  {
     version: '2.48.0',
     fecha: '2026-09-06',
     cambios: [

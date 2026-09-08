@@ -1722,7 +1722,7 @@ const uploadLogoProp = multer({
     destination: LOGOS_PROP_DIR,
     filename: (req, file, cb) => cb(null, 'tmp-' + Date.now() + (path.extname(file.originalname || '') || '.png').toLowerCase()),
   }),
-  limits: { fileSize: 4 * 1024 * 1024 },
+  limits: { fileSize: 4 * 1024 * 1024, fieldSize: 3 * 1024 * 1024 },
   fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
 });
 
@@ -1741,9 +1741,88 @@ function tonoHex(hex, f) {
   return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => c(v).toString(16).padStart(2, '0')).join('');
 }
 
-function renderPropuesta(pl, d) {
+// Snippet inyectado en el documento del EDITOR EN VIVO (/propuestas/editor/:slug):
+// habilita edición de textos in-place y escucha los cambios del formulario por postMessage.
+const EDITOR_VIVO = `
+<style id="edt-css">[contenteditable="true"]:hover { outline: 2px dashed rgba(192,84,80,.55); outline-offset: 2px; } [contenteditable="true"]:focus { outline: 2px solid rgba(192,84,80,.85); outline-offset: 2px; }</style>
+<script id="edt-js">
+(function () {
+  var INLINE = { SPAN: 1, A: 1, B: 1, STRONG: 1, I: 1, EM: 1, BR: 1, SMALL: 1, SUP: 1, SUB: 1, U: 1 };
+  var els = document.querySelectorAll('h1,h2,h3,h4,p,li,td,th,span,a,div,figcaption,blockquote');
+  Array.prototype.forEach.call(els, function (el) {
+    var kids = el.children, ok = true;
+    for (var i = 0; i < kids.length; i++) if (!INLINE[kids[i].tagName]) { ok = false; break; }
+    if (ok && (el.textContent || '').trim().length > 0) el.setAttribute('contenteditable', 'true');
+  });
+  function cambiarColor(de, a) {
+    if (!de || !a || de === a) return;
+    var conEstilo = document.querySelectorAll('[style]');
+    for (var i = 0; i < conEstilo.length; i++) {
+      var st = conEstilo[i].getAttribute('style');
+      if (st && st.indexOf(de) >= 0) conEstilo[i].setAttribute('style', st.split(de).join(a));
+    }
+    var bloques = document.querySelectorAll('style');
+    for (var j = 0; j < bloques.length; j++) {
+      if (bloques[j].textContent.indexOf(de) >= 0) bloques[j].textContent = bloques[j].textContent.split(de).join(a);
+    }
+  }
+  function ponerTexto(tok, valor) {
+    var marcas = document.querySelectorAll('[data-tok="' + tok + '"]');
+    for (var i = 0; i < marcas.length; i++) marcas[i].textContent = valor;
+  }
+  window.addEventListener('message', function (ev) {
+    var d = ev.data || {};
+    if (d.tipo === 'color') cambiarColor(d.de, d.a);
+    else if (d.tipo === 'texto') ponerTexto(d.tok, d.valor);
+    else if (d.tipo === 'plan') {
+      var sp = document.querySelectorAll('[data-sc-plan]');
+      for (var i = 0; i < sp.length; i++) sp[i].hidden = sp[i].getAttribute('data-sc-plan') !== d.plan;
+    } else if (d.tipo === 'logo') {
+      var im = document.getElementById('logoCliente');
+      if (im) { if (d.src) { im.src = d.src; im.hidden = false; } else { im.hidden = true; im.removeAttribute('src'); } }
+    } else if (d.tipo === 'pedirDoc') {
+      var raiz = document.documentElement.cloneNode(true);
+      var fuera = raiz.querySelectorAll('#edt-css, #edt-js');
+      for (var i = 0; i < fuera.length; i++) fuera[i].remove();
+      var edit = raiz.querySelectorAll('[contenteditable]');
+      for (var j = 0; j < edit.length; j++) edit[j].removeAttribute('contenteditable');
+      var toks = raiz.querySelectorAll('[data-tok]');
+      for (var k = 0; k < toks.length; k++) toks[k].replaceWith(document.createTextNode(toks[k].textContent));
+      var im2 = raiz.querySelector('#logoCliente');
+      if (im2) { if (im2.hidden || !im2.getAttribute('src')) im2.remove(); else im2.setAttribute('src', '__LOGO__'); }
+      var tt = raiz.querySelector('title');
+      if (tt && d.titulo) tt.textContent = d.titulo;
+      parent.postMessage({ tipo: 'docListo', html: '<!DOCTYPE html>' + raiz.outerHTML }, '*');
+    }
+  });
+  parent.postMessage({ tipo: 'editorListo' }, '*');
+})();
+</` + `script>`;
+
+function renderPropuesta(pl, d, modo = 'final') {
   let h = fs.readFileSync(path.join(PLANTILLAS_PROP_DIR, pl.slug, 'template.html'), 'utf8');
   const escp = (x) => String(x || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  if (modo === 'editor') {
+    // Editor en vivo: sale con los valores originales de la plantilla y el navegador va aplicando
+    // los cambios del formulario. Los nombres quedan marcados con spans data-tok (se desarman al generar).
+    h = h.replace(/<title>[\s\S]*?<\/title>/, '<title>Propuesta</title>');
+    h = h.split(pl.empresaOriginal).join('@@EMP@@');
+    if (pl.aliasOriginal) h = h.split(pl.aliasOriginal).join('@@ALI@@');
+    if (pl.firmaOriginal) h = h.split(pl.firmaOriginal).join('@@FIR@@');
+    h = h.split('@@EMP@@').join(`<span data-tok="empresa">${escp(pl.empresaOriginal)}</span>`);
+    h = h.split('@@ALI@@').join(`<span data-tok="alias">${escp(pl.aliasOriginal || pl.empresaOriginal)}</span>`);
+    h = h.split('@@FIR@@').join(`<span data-tok="firma">${escp(pl.firmaOriginal || '')}</span>`);
+    h = h.replace(/<sc-if value="\{\{ dest(\w+) \}\}"[^>]*>([\s\S]*?)<\/sc-if>/g, (m, cual, inner) => `<span data-sc-plan="${cual}"${cual === pl.planDefault ? '' : ' hidden'}>${inner}</span>`);
+    h = h.replace(/\{\{[^}]*\}\}/g, '');
+    if (pl.heroTexto) {
+      const i = h.indexOf(pl.heroTexto);
+      if (i >= 0) {
+        const j = h.lastIndexOf('<h1', i);
+        if (j >= 0) h = h.slice(0, j) + '<img id="logoCliente" alt="" hidden style="height:58px;width:auto;display:block;margin:26px 0 -16px">' + h.slice(j);
+      }
+    }
+    return h.split('</body>').join(EDITOR_VIVO + '</body>');
+  }
   // 1) Paleta: cada color original de la plantilla (y sus derivados) pasa al elegido.
   for (const c of pl.colores) {
     const elegido = /^#[0-9a-fA-F]{6}$/.test(d.colores[c.clave] || '') ? d.colores[c.clave].toLowerCase() : c.hex;
@@ -1816,10 +1895,27 @@ app.post('/propuestas', requireAuth, requireSistema('propuestas'), uploadLogoPro
     logo = id + (path.extname(req.file.filename) || '.png');
     fs.renameSync(req.file.path, path.join(LOGOS_PROP_DIR, 'logo-' + logo));
   }
-  const html = renderPropuesta(pl, { empresa, alias, colores, plan, firma, logoUrl: logo ? `/propuestas/${id}/logo` : null });
+  const htmlCliente = String(uno(req.body.html) || '');
+  let html;
+  if (htmlCliente.length > 500) {
+    // Vino armado desde el editor en vivo, con los textos ya retocados por el vendedor.
+    html = htmlCliente.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/\son\w+\s*=\s*"[^"]*"/gi, '');
+    html = html.split('"__LOGO__"').join(logo ? `"/propuestas/${id}/logo"` : '""');
+    if (!logo) html = html.replace(/<img id="logoCliente"[^>]*>/, '');
+  } else {
+    // Sin JS (o falló el editor): render clásico en el servidor.
+    html = renderPropuesta(pl, { empresa, alias, colores, plan, firma, logoUrl: logo ? `/propuestas/${id}/logo` : null });
+  }
   db.prepare('UPDATE propuestas SET html = ?, logo = ? WHERE id = ?').run(html, logo, id);
   if (dealId) logDealEvent(dealId, req.user.id, 'edicion', `Nota: Generó la propuesta «${empresa}» (plantilla ${pl.nombre}) — está en el Generador de Propuestas #${id}`);
   res.redirect(`/propuestas/${id}`);
+});
+
+// Documento del editor en vivo: la plantilla con sus valores originales + el snippet que escucha el formulario.
+app.get('/propuestas/editor/:slug', requireAuth, requireSistema('propuestas'), (req, res) => {
+  const pl = /^[a-z0-9-]+$/.test(req.params.slug) ? plantillaProp(req.params.slug) : null;
+  if (!pl) return res.status(404).end();
+  res.type('html').send(renderPropuesta(pl, {}, 'editor'));
 });
 
 app.get('/propuestas/:id', requireAuth, requireSistema('propuestas'), (req, res) => {
