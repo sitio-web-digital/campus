@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.50.0',
+    fecha: '2026-09-08',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Tercera plantilla en el Generador de Propuestas: Arquitectura — con la maqueta "Vértice" (taller de arquitectura): landing de escritorio completa con su hero "Construimos con la luz", y las pantallas del celular en Portada, Obras, Video y Agendar (mapa incluido). Mismos planes Básica / Media / Pro, color principal configurable, logo, firma y línea "Preparada para «empresa»".' },
+    ],
+  },
+  {
     version: '2.49.4',
     fecha: '2026-09-08',
     cambios: [
