@@ -1,0 +1,66 @@
+{
+  "nombre": "Comida Rápida",
+  "descripcion": "Propuesta de tienda online para comida rápida y gastronomía (planes Básico / Medio / Pro, maqueta Doble Fuego)",
+  "empresaOriginal": "",
+  "aliasOriginal": "",
+  "firmaOriginal": "Juan Jose Bertinatti",
+  "colores": [
+    {
+      "clave": "principal",
+      "label": "Color principal",
+      "hex": "#942d1d",
+      "derivados": {
+        "#6f2115": -0.27
+      }
+    }
+  ],
+  "planes": [
+    "Básico",
+    "Medio",
+    "Pro"
+  ],
+  "planDefault": "Medio",
+  "heroTexto": "Tiendas online para gastronomía",
+  "clienteEn": "hero",
+  "assets": {
+    "e556161e-e5cf-417d-b126-b3b03b62a5d9": "image/webp",
+    "92af064c-c2b0-459c-a788-f5c5a4989042": "text/css",
+    "49db6e5f-fb53-4a35-8f97-41dd51c8463a": "font/woff2",
+    "c34adac6-1d5b-4342-9357-b91655017d31": "font/woff2",
+    "8ace2c7c-32a9-4980-aa6c-5e4c9ed2d07f": "font/woff2",
+    "7ed9b83f-f81c-41a7-9e09-ce5863728f22": "font/woff2",
+    "cd6d1e24-2695-45ef-bcd4-84e48bfb0114": "font/woff2",
+    "2b11e77e-b3fc-4899-85ea-8f0addc641b6": "font/woff2",
+    "b79862d9-e999-4806-a724-4f4926c4d167": "font/woff2",
+    "dbbdc4d4-37aa-4d11-8394-d4b82b5ce6cf": "font/woff2",
+    "834a5d95-850d-4cdd-97d9-3bcf5d8dfdd5": "font/woff2",
+    "97ad4ab5-009c-4091-901b-fc21ab50ba14": "font/woff2",
+    "3e4a4924-c87c-413b-981d-fd1b6b28b325": "font/woff2",
+    "9857b318-418d-49f0-88f2-b08d5bd32ba4": "font/woff2",
+    "6711f6cd-073f-42fa-9541-c03002f9ee63": "font/woff2",
+    "744d5942-4f8b-4540-a1a7-c4809a735c54": "font/woff2",
+    "74e2b0e3-450c-477e-b2d9-4922d2e5c545": "font/woff2",
+    "ca309db1-6846-4eec-9c54-9464a2d5e782": "font/woff2",
+    "59a01402-259b-47d0-9a1c-f9080c98a084": "font/woff2",
+    "e6741d13-b3f4-448d-b5eb-d47d63449db3": "font/woff2",
+    "fb6deb48-f8d0-4d76-a27f-21304cd92113": "font/woff2",
+    "169ec10a-61ee-48b9-ba6b-1e343f54f77c": "font/woff2",
+    "6a883d90-7a24-4d46-8592-4345d87a92cf": "font/woff2",
+    "7cd3d87d-83b0-479a-b03f-839614b64ac6": "font/woff2",
+    "3bf63283-9728-4102-b21c-d3cd7b720ce6": "font/woff2",
+    "un-729e403517.jpg": "image/jpeg",
+    "un-51db05a8eb.jpg": "image/jpeg",
+    "un-eff6c264af.jpg": "image/jpeg",
+    "un-c0c1dc052d.jpg": "image/jpeg",
+    "un-653cbedfad.jpg": "image/jpeg",
+    "un-bfe6d4c883.jpg": "image/jpeg",
+    "un-89db419625.jpg": "image/jpeg",
+    "un-55d68f7a76.jpg": "image/jpeg",
+    "un-9c53678b1d.jpg": "image/jpeg",
+    "un-41e6df23ea.jpg": "image/jpeg",
+    "un-d81a1fc084.jpg": "image/jpeg",
+    "un-ce0b60231b.jpg": "image/jpeg",
+    "un-4645df4496.jpg": "image/jpeg",
+    "un-a5d65c3fc5.jpg": "image/jpeg"
+  }
+}

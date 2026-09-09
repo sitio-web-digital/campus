@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.53.0',
+    fecha: '2026-09-09',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Sexta plantilla en el Generador de Propuestas: Comida Rápida — la propuesta de ecommerce gastronómico ("Tiendas online para gastronomía") con la maqueta "Doble Fuego": la tienda de hamburguesas con catálogo, fotos reales, tiempos de preparación y las pantallas del celular de catálogo, carrito, ficha y pago. Las fotos quedaron embebidas como assets (no dependen de internet para verse ni imprimirse).' },
+    ],
+  },
+  {
     version: '2.52.0',
     fecha: '2026-09-08',
     cambios: [

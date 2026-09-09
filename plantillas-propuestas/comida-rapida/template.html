@@ -1,0 +1,2027 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Propuesta de tienda online gastronómica — Cloud For Deploy</title>
+<style>/* vietnamese */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/49db6e5f-fb53-4a35-8f97-41dd51c8463a") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/c34adac6-1d5b-4342-9357-b91655017d31") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/8ace2c7c-32a9-4980-aa6c-5e4c9ed2d07f") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/49db6e5f-fb53-4a35-8f97-41dd51c8463a") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/c34adac6-1d5b-4342-9357-b91655017d31") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/8ace2c7c-32a9-4980-aa6c-5e4c9ed2d07f") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/49db6e5f-fb53-4a35-8f97-41dd51c8463a") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/c34adac6-1d5b-4342-9357-b91655017d31") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/8ace2c7c-32a9-4980-aa6c-5e4c9ed2d07f") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/49db6e5f-fb53-4a35-8f97-41dd51c8463a") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/c34adac6-1d5b-4342-9357-b91655017d31") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/8ace2c7c-32a9-4980-aa6c-5e4c9ed2d07f") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/7ed9b83f-f81c-41a7-9e09-ce5863728f22") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/cd6d1e24-2695-45ef-bcd4-84e48bfb0114") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/2b11e77e-b3fc-4899-85ea-8f0addc641b6") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/7ed9b83f-f81c-41a7-9e09-ce5863728f22") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/cd6d1e24-2695-45ef-bcd4-84e48bfb0114") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/2b11e77e-b3fc-4899-85ea-8f0addc641b6") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/7ed9b83f-f81c-41a7-9e09-ce5863728f22") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/cd6d1e24-2695-45ef-bcd4-84e48bfb0114") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/2b11e77e-b3fc-4899-85ea-8f0addc641b6") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/b79862d9-e999-4806-a724-4f4926c4d167") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/dbbdc4d4-37aa-4d11-8394-d4b82b5ce6cf") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/834a5d95-850d-4cdd-97d9-3bcf5d8dfdd5") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/97ad4ab5-009c-4091-901b-fc21ab50ba14") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/3e4a4924-c87c-413b-981d-fd1b6b28b325") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/9857b318-418d-49f0-88f2-b08d5bd32ba4") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/6711f6cd-073f-42fa-9541-c03002f9ee63") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/744d5942-4f8b-4540-a1a7-c4809a735c54") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/74e2b0e3-450c-477e-b2d9-4922d2e5c545") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/ca309db1-6846-4eec-9c54-9464a2d5e782") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/59a01402-259b-47d0-9a1c-f9080c98a084") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/e6741d13-b3f4-448d-b5eb-d47d63449db3") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/59a01402-259b-47d0-9a1c-f9080c98a084") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/e6741d13-b3f4-448d-b5eb-d47d63449db3") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/59a01402-259b-47d0-9a1c-f9080c98a084") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/e6741d13-b3f4-448d-b5eb-d47d63449db3") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/59a01402-259b-47d0-9a1c-f9080c98a084") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/e6741d13-b3f4-448d-b5eb-d47d63449db3") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/59a01402-259b-47d0-9a1c-f9080c98a084") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/e6741d13-b3f4-448d-b5eb-d47d63449db3") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/fb6deb48-f8d0-4d76-a27f-21304cd92113") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/169ec10a-61ee-48b9-ba6b-1e343f54f77c") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/6a883d90-7a24-4d46-8592-4345d87a92cf") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/7cd3d87d-83b0-479a-b03f-839614b64ac6") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/3bf63283-9728-4102-b21c-d3cd7b720ce6") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/fb6deb48-f8d0-4d76-a27f-21304cd92113") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/169ec10a-61ee-48b9-ba6b-1e343f54f77c") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/6a883d90-7a24-4d46-8592-4345d87a92cf") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/7cd3d87d-83b0-479a-b03f-839614b64ac6") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/3bf63283-9728-4102-b21c-d3cd7b720ce6") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/fb6deb48-f8d0-4d76-a27f-21304cd92113") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/169ec10a-61ee-48b9-ba6b-1e343f54f77c") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/6a883d90-7a24-4d46-8592-4345d87a92cf") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/7cd3d87d-83b0-479a-b03f-839614b64ac6") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/3bf63283-9728-4102-b21c-d3cd7b720ce6") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/fb6deb48-f8d0-4d76-a27f-21304cd92113") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/169ec10a-61ee-48b9-ba6b-1e343f54f77c") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/6a883d90-7a24-4d46-8592-4345d87a92cf") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/7cd3d87d-83b0-479a-b03f-839614b64ac6") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/comida-rapida/a/3bf63283-9728-4102-b21c-d3cd7b720ce6") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style>
+<style>
+
+body{margin:0;font-family:Karla,Helvetica,sans-serif;color:#231d1a}
+a{color:#942d1d}
+a:hover{color:#6f2115}
+</style>
+<style>
+.mock-df *{ box-sizing: border-box; }
+.mock-df a{ color: #C0392B; text-decoration: none; }
+.mock-df a:hover{ color: #14181A; }
+.mock-df input,.mock-df select,.mock-df button,.mock-df textarea{ font: inherit; color: inherit; }
+@keyframes slidein{ from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pop{ from { transform: scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
+.mock-df-m *{ box-sizing: border-box; }
+.mock-df-m a{ color: #C0392B; text-decoration: none; }
+.mock-df-m a:hover{ color: #14181A; }
+.mock-df-m input,.mock-df-m select,.mock-df-m button,.mock-df-m textarea{ font: inherit; color: inherit; }
+@keyframes slidein{ from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pop{ from { transform: scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
+</style>
+<style>
+/* Paginado A4 propio */
+@page { size: A4; margin: 0.78in; }
+p, li { orphans: 3; widows: 3; }
+html { background: #e9e5e0; }
+body { margin: 0 auto; max-width: 6.71in; background: #fffdfb; padding: 0.6in 0.5in; box-shadow: 0 10px 40px rgba(35,29,26,.18); }
+.pie-doc { margin-top: 40px; }
+@media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  html, body { background: #fff; }
+  body { max-width: none; margin: 0; padding: 0; box-shadow: none; }
+  .pie-doc { margin-top: 28px; break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="contenido-doc">
+<div style="position:relative;display:grid;grid-template-columns:minmax(0,1fr) 362px;column-gap:18px;align-items:start;width:640px;min-height:300px">
+<div style="position:absolute;right:0;top:2px;width:362px;height:238px;overflow:hidden;border:1px solid #efe8e3;border-radius:8px;box-shadow:0 14px 40px rgba(35,29,26,0.10)">
+<div style="width:1440px;transform:scale(0.2514);transform-origin:top left"><div class="mock-df" style="width:100%">
+<div style="">
+
+  <div style="display:flex;align-items:center;justify-content:center;gap:28px;flex-wrap:wrap;padding:9px 20px;background:#C0392B;color:#FFF6F3;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase">
+    <span>Envío gratis desde $15.000 en la ciudad</span>
+    <span>Pedí ahora, llega en 35 minutos</span>
+    <span>Pedidos 0810-222-3663</span>
+  </div>
+
+  <header style="position:relative;z-index:40;display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:14px 24px;background:rgba(251,251,249,.94);backdrop-filter:blur(12px);border-bottom:1px solid #E5E4DF">
+    <div style="display:flex;align-items:center;gap:11px;flex-shrink:0">
+      <span style="position:relative;width:30px;height:30px;border-radius:9px;background:#C0392B;flex-shrink:0">
+        <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:14px;height:4px;border-radius:2px;background:#fff"></span>
+        <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:4px;height:14px;border-radius:2px;background:#fff"></span>
+      </span>
+      <span style="font-size:20px;font-weight:700;letter-spacing:-.02em;white-space:nowrap">Doble Fuego</span>
+    </div>
+    <div style="flex:1 1 280px;min-width:0;display:flex;align-items:center;gap:8px;padding:0 14px;background:#fff;border:1px solid #DEDDD7;border-radius:8px">
+      <input placeholder="Buscar hamburguesas, combos o postres" style="flex:1;min-width:0;padding:12px 0;border:0;outline:none;background:transparent;font-size:14px">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button style="padding:11px 16px;background:transparent;border:1px solid #DEDDD7;border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap">Mi cuenta</button>
+      <button style="display:flex;align-items:center;gap:9px;padding:11px 16px;background:#C0392B;color:#fff;border:0;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">
+        Carrito
+        <span style="min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px">0</span>
+      </button>
+    </div>
+  </header>
+
+  <nav style="display:flex;gap:8px;flex-wrap:wrap;padding:16px 24px;border-bottom:1px solid #E5E4DF;background:#fff">
+    
+      <button style="padding:9px 15px;border-radius:999px;border:1px solid #DEDDD7;cursor:pointer;font-size:13px;white-space:nowrap;background:#14181A;color:#fff">Todo</button>
+    
+      <button style="padding:9px 15px;border-radius:999px;border:1px solid #DEDDD7;cursor:pointer;font-size:13px;white-space:nowrap;background:transparent;color:#3D4144">Hamburguesas</button>
+    
+      <button style="padding:9px 15px;border-radius:999px;border:1px solid #DEDDD7;cursor:pointer;font-size:13px;white-space:nowrap;background:transparent;color:#3D4144">Pollo</button>
+    
+      <button style="padding:9px 15px;border-radius:999px;border:1px solid #DEDDD7;cursor:pointer;font-size:13px;white-space:nowrap;background:transparent;color:#3D4144">Papas y entradas</button>
+    
+      <button style="padding:9px 15px;border-radius:999px;border:1px solid #DEDDD7;cursor:pointer;font-size:13px;white-space:nowrap;background:transparent;color:#3D4144">Bebidas</button>
+    
+      <button style="padding:9px 15px;border-radius:999px;border:1px solid #DEDDD7;cursor:pointer;font-size:13px;white-space:nowrap;background:transparent;color:#3D4144">Postres</button>
+    
+  </nav>
+
+  <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;padding:24px">
+    <div style="position:relative;min-width:0;overflow:hidden;border-radius:14px;background:#8E2A1F;color:#FFF6F3;padding:34px 30px;display:flex;flex-direction:column;justify-content:space-between;gap:22px;min-height:210px">
+      <div>
+        <p style="margin:0 0 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;opacity:.75">A la parrilla, siempre</p>
+        <h1 style="margin:0;font-size:32px;font-weight:700;line-height:1.1;letter-spacing:-.025em">Combos con hasta 20% off<br>de lunes a jueves</h1>
+      </div>
+      <button style="align-self:flex-start;padding:12px 20px;background:#FFF6F3;color:#8E2A1F;border:0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Ver combos</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;min-width:0">
+      <div style="border:1px solid #E5E4DF;border-radius:14px;padding:22px;background:#fff;display:flex;flex-direction:column;gap:8px;justify-content:center">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8C8F8A">Envíos</span>
+        <strong style="font-size:16px">Llega en 35 min</strong>
+        <span style="font-size:13px;line-height:1.55;color:#63676A">En toda la ciudad. Retiro en el local sin costo.</span>
+      </div>
+      <div style="border:1px solid #E5E4DF;border-radius:14px;padding:22px;background:#fff;display:flex;flex-direction:column;gap:8px;justify-content:center">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8C8F8A">Cocina</span>
+        <strong style="font-size:16px">Todo a la plancha</strong>
+        <span style="font-size:13px;line-height:1.55;color:#63676A">Carne fresca del día, pan propio.</span>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:8px 24px 40px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+      <h2 style="margin:0;font-size:20px;font-weight:600;letter-spacing:-.02em">Todos los productos</h2>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8C8F8A">14 PRODUCTOS</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(216px,1fr));gap:14px">
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F6E9DF;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-729e403517.jpg" alt="Doble cheese" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Hamburguesas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Doble cheeseburger clásica</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$9.800</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Lista en 15 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F6E9DF;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-51db05a8eb.jpg" alt="Bacon BBQ" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+              <span style="position:absolute;right:10px;top:10px;padding:5px 9px;background:#C0392B;color:#fff;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;pointer-events:none">-15%</span>
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Hamburguesas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Bacon BBQ con cheddar y aros</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$11.500</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">La más pedida</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F6E9DF;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-eff6c264af.jpg" alt="Smash simple" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Hamburguesas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Smash simple con papas incluidas</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$8.900</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Lista en 12 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F6E9DF;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-c0c1dc052d.jpg" alt="Doble picante" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+              <span style="position:absolute;left:10px;top:10px;padding:5px 9px;background:#14181A;color:#fff;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;pointer-events:none">PICANTE</span>
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Hamburguesas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Doble picante con jalapeños</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$10.900</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Lista en 15 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F7F0DC;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-653cbedfad.jpg" alt="Pollo crispy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Pollo</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Sándwich de pollo crispy</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$9.400</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Listo en 15 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F7F0DC;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-bfe6d4c883.jpg" alt="Nuggets x10" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Pollo</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Nuggets x 10 con dos salsas</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$7.200</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Listo en 10 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F7F0DC;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-89db419625.jpg" alt="Alitas BBQ" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+              <span style="position:absolute;right:10px;top:10px;padding:5px 9px;background:#C0392B;color:#fff;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;pointer-events:none">-10%</span>
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Pollo</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Alitas BBQ x 8</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$9.900</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Listas en 18 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F3F1E4;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-55d68f7a76.jpg" alt="Papas cheddar" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Papas y entradas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Papas fritas grandes con cheddar</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$6.500</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Listas en 8 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F3F1E4;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-9c53678b1d.jpg" alt="Aros de cebolla" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Papas y entradas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Aros de cebolla x 8</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$5.900</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Listos en 8 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F3F1E4;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-41e6df23ea.jpg" alt="Ensalada césar" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Papas y entradas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Ensalada césar con pollo</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$8.200</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Lista en 10 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#E7EFF3;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-d81a1fc084.jpg" alt="Gaseosa 500" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Bebidas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Gaseosa línea Coca-Cola 500 ml</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$2.600</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Siempre fría</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#E7EFF3;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-ce0b60231b.jpg" alt="IPA 473" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Bebidas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Cerveza artesanal IPA 473 ml</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$4.200</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Stock disponible</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F3E9EF;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-4645df4496.jpg" alt="Milkshake" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+              <span style="position:absolute;right:10px;top:10px;padding:5px 9px;background:#C0392B;color:#fff;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;pointer-events:none">-20%</span>
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Postres</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Milkshake de vainilla 400 ml</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$5.400</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Listo en 6 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F3E9EF;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-a5d65c3fc5.jpg" alt="Brownie" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Postres</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Brownie tibio con helado</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$5.900</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Listo en 8 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+    </div>
+  </section>
+
+  <footer style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;padding:44px 24px;background:#14181A;color:#E9EAE7">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:24px;height:24px;border-radius:7px;background:#C0392B;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px">F</span><strong style="font-size:17px">Doble Fuego</strong></div>
+      <span style="font-size:13px;line-height:1.6;color:#9BA09C">Av. Rivadavia 4820 · abierto hasta las 00 h<br>Cocina propia · Delivery propio</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;font-size:13px;color:#9BA09C">
+      <strong style="color:#E9EAE7;font-size:13px">Comprar</strong>
+      <a href="#" style="color:#9BA09C">Hamburguesas</a>
+      <a href="#" style="color:#9BA09C">Pollo</a>
+      <a href="#" style="color:#9BA09C">Postres</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;font-size:13px;color:#9BA09C">
+      <strong style="color:#E9EAE7;font-size:13px">Ayuda</strong>
+      <a href="#" style="color:#9BA09C">Zonas de envío</a>
+      <a href="#" style="color:#9BA09C">Tiempos de entrega</a>
+      <a href="#" style="color:#9BA09C">Reclamos y cambios</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;font-size:13px;color:#9BA09C">
+      <strong style="color:#E9EAE7;font-size:13px">Pagos</strong>
+      <span>Tarjetas de crédito y débito</span>
+      <span>Mercado Pago</span>
+      <span>Transferencia bancaria</span>
+    </div>
+  </footer>
+</div>
+
+
+
+
+
+
+</div></div>
+</div>
+<div style="position:absolute;right:210px;top:96px;width:134px;height:212px;overflow:hidden;border-radius:14px;border:1px solid #efe8e3;box-shadow:0 12px 30px rgba(35,29,26,0.16);background:#FFF6F3"><div style="width:390px;transform:scale(0.3436);transform-origin:top left;margin-left:-8px;margin-top:-44px"><div class="mock-df-m" style="width:100%">
+<section data-screen-label="Móvil" style="padding:64px 24px 80px;background:#F1F1EE;border-top:1px solid #E5E4DF">
+  <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:26px">
+    <h2 style="margin:0;font-size:20px;font-weight:600;letter-spacing:-.02em">Versión móvil</h2>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8C8F8A">CATÁLOGO Y CARRITO</span>
+  </div>
+
+  <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start">
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8C8F8A">Catálogo</span>
+      <div style="width:390px;max-width:100%;background:#FBFBF9;border:1px solid #E5E4DF;border-radius:14px;overflow:hidden">
+        <div style="padding:8px 14px;background:#C0392B;color:#FFF6F3;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-align:center">ENVÍO GRATIS DESDE $15.000</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid #E5E4DF">
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="position:relative;width:26px;height:26px;border-radius:8px;background:#C0392B;flex-shrink:0">
+              <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:12px;height:4px;border-radius:2px;background:#fff"></span>
+              <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:4px;height:12px;border-radius:2px;background:#fff"></span>
+            </span>
+            <strong style="font-size:16px;letter-spacing:-.02em">Doble Fuego</strong>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="display:flex;align-items:center;gap:6px;padding:8px 11px;background:#C0392B;color:#fff;border-radius:8px;font-size:12px">Carrito <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(255,255,255,.22);padding:1px 6px;border-radius:999px">3</span></span>
+            <div style="display:flex;flex-direction:column;gap:4px"><span style="width:18px;height:1.5px;background:#14181A"></span><span style="width:18px;height:1.5px;background:#14181A"></span></div>
+          </div>
+        </div>
+        <div style="padding:12px 14px 0">
+          <div style="padding:11px 13px;background:#fff;border:1px solid #DEDDD7;border-radius:8px;font-size:13px;color:#9A9E9B">Buscar hamburguesas o combos</div>
+        </div>
+        <div style="display:flex;gap:7px;padding:12px 14px;overflow:hidden">
+          <span style="padding:7px 13px;background:#14181A;color:#fff;border-radius:999px;font-size:12px;white-space:nowrap">Todo</span>
+          <span style="padding:7px 13px;border:1px solid #DEDDD7;border-radius:999px;font-size:12px;white-space:nowrap">Hamburguesas</span>
+          <span style="padding:7px 13px;border:1px solid #DEDDD7;border-radius:999px;font-size:12px;white-space:nowrap">Postres</span>
+        </div>
+
+        <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:2/1;background:#8E2A1F;margin:0 14px;border-radius:12px">
+          <img src="/propuestas/pl/comida-rapida/a/un-51db05a8eb.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;padding:16px;background:linear-gradient(180deg,rgba(14,91,73,.2) 0%,rgba(14,91,73,.86) 100%);color:#FFF6F3;pointer-events:none">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em">COMBOS DE LA SEMANA</span>
+            <strong style="font-size:21px;line-height:1.1;letter-spacing:-.02em">20% off de lunes a jueves</strong>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px">
+          <div style="border:1px solid #E5E4DF;border-radius:12px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:relative;aspect-ratio:1/1;background:#E8F0EC;display:flex;align-items:center;justify-content:center">
+              <img src="/propuestas/pl/comida-rapida/a/un-729e403517.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            </div>
+            <div style="padding:11px;display:flex;flex-direction:column;gap:5px">
+              <span style="font-size:12px;line-height:1.3">Doble cheeseburger</span>
+              <strong style="font-size:16px">$9.800</strong>
+              <span style="font-size:10px;color:#C0392B">Lista en 15 min</span>
+              <span style="margin-top:4px;padding:9px;text-align:center;border:1px solid #C0392B;color:#C0392B;border-radius:8px;font-size:12px">Agregar</span>
+            </div>
+          </div>
+          <div style="border:1px solid #E5E4DF;border-radius:12px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:relative;aspect-ratio:1/1;background:#F1ECF3;display:flex;align-items:center;justify-content:center">
+              <img src="/propuestas/pl/comida-rapida/a/un-55d68f7a76.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+              <span style="position:absolute;right:8px;top:8px;padding:4px 7px;background:#C0392B;color:#fff;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em">-25%</span>
+            </div>
+            <div style="padding:11px;display:flex;flex-direction:column;gap:5px">
+              <span style="font-size:12px;line-height:1.3">Papas cheddar</span>
+              <strong style="font-size:16px">$6.500</strong>
+              <span style="font-size:10px;color:#C0392B">Listas en 8 min</span>
+              <span style="margin-top:4px;padding:9px;text-align:center;border:1px solid #C0392B;color:#C0392B;border-radius:8px;font-size:12px">Agregar</span>
+            </div>
+          </div>
+          <div style="border:1px solid #E5E4DF;border-radius:12px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:relative;aspect-ratio:1/1;background:#E9EFF4;display:flex;align-items:center;justify-content:center">
+              <img src="/propuestas/pl/comida-rapida/a/un-653cbedfad.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            </div>
+            <div style="padding:11px;display:flex;flex-direction:column;gap:5px">
+              <span style="font-size:12px;line-height:1.3">Milkshake de vainilla</span>
+              <strong style="font-size:16px">$5.400</strong>
+              <span style="font-size:10px;color:#C0392B">Listo en 6 min</span>
+              <span style="margin-top:4px;padding:9px;text-align:center;border:1px solid #C0392B;color:#C0392B;border-radius:8px;font-size:12px">Agregar</span>
+            </div>
+          </div>
+          <div style="border:1px solid #E5E4DF;border-radius:12px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:relative;aspect-ratio:1/1;background:#F3EEE4;display:flex;align-items:center;justify-content:center">
+              <img src="/propuestas/pl/comida-rapida/a/un-4645df4496.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            </div>
+            <div style="padding:11px;display:flex;flex-direction:column;gap:5px">
+              <span style="font-size:12px;line-height:1.3">Nuggets x 10 con salsas</span>
+              <strong style="font-size:16px">$7.200</strong>
+              <span style="font-size:10px;color:#C0392B">Listos en 10 min</span>
+              <span style="margin-top:4px;padding:9px;text-align:center;border:1px solid #C0392B;color:#C0392B;border-radius:8px;font-size:12px">Agregar</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-around;padding:12px 14px 16px;border-top:1px solid #E5E4DF;background:#fff;font-size:11px;color:#8C8F8A">
+          <span style="color:#C0392B;font-weight:500">Inicio</span><span>Categorías</span><span>Pedidos</span><span>Cuenta</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8C8F8A">Carrito desplegado</span>
+      <div style="position:relative;width:390px;max-width:100%;height:844px;background:#FBFBF9;border:1px solid #E5E4DF;border-radius:14px;overflow:hidden">
+        <div style="position:absolute;inset:0;filter:blur(1.5px);opacity:.5">
+          <div style="padding:8px 14px;background:#C0392B;color:#FFF6F3;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-align:center">ENVÍO GRATIS DESDE $15.000</div>
+          <div style="padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="aspect-ratio:1/1;background:#E8F0EC;border-radius:12px"></div>
+            <div style="aspect-ratio:1/1;background:#F1ECF3;border-radius:12px"></div>
+            <div style="aspect-ratio:1/1;background:#E9EFF4;border-radius:12px"></div>
+            <div style="aspect-ratio:1/1;background:#F3EEE4;border-radius:12px"></div>
+          </div>
+        </div>
+        <div style="position:absolute;inset:0;background:rgba(20,24,26,.35)"></div>
+
+        <div style="position:absolute;left:0;right:0;bottom:0;background:#FBFBF9;border-radius:16px 16px 0 0;box-shadow:0 -14px 40px rgba(20,24,26,.2);display:flex;flex-direction:column;max-height:86%">
+          <div style="display:flex;justify-content:center;padding:9px"><span style="width:38px;height:4px;border-radius:999px;background:#DEDDD7"></span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 16px 12px;border-bottom:1px solid #E5E4DF">
+            <strong style="font-size:16px">Tu carrito · 3 productos</strong>
+            <span style="font-size:19px;color:#63676A">×</span>
+          </div>
+
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;gap:11px;padding:11px;border:1px solid #E5E4DF;border-radius:12px;background:#fff">
+              <div style="position:relative;width:56px;height:56px;flex-shrink:0;border-radius:8px;overflow:hidden;background:#E8F0EC">
+                <img src="/propuestas/pl/comida-rapida/a/un-729e403517.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+              </div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
+                <span style="font-size:12px;line-height:1.35">Doble cheeseburger clásica</span>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="display:flex;align-items:center;gap:10px;border:1px solid #DEDDD7;border-radius:8px;padding:4px 10px;font-size:13px"><span>−</span><span style="font-family:'IBM Plex Mono',monospace">2</span><span>+</span></span>
+                  <strong style="font-size:13px">$19.600</strong>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:11px;padding:11px;border:1px solid #E5E4DF;border-radius:12px;background:#fff">
+              <div style="position:relative;width:56px;height:56px;flex-shrink:0;border-radius:8px;overflow:hidden;background:#F1ECF3">
+                <img src="/propuestas/pl/comida-rapida/a/un-55d68f7a76.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+              </div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
+                <span style="font-size:12px;line-height:1.35">Papas fritas grandes con cheddar</span>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="display:flex;align-items:center;gap:10px;border:1px solid #DEDDD7;border-radius:8px;padding:4px 10px;font-size:13px"><span>−</span><span style="font-family:'IBM Plex Mono',monospace">1</span><span>+</span></span>
+                  <strong style="font-size:13px">$6.500</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:14px 16px 20px;border-top:1px solid #E5E4DF;background:#fff;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:#63676A"><span>Subtotal</span><span>$26.100</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:#63676A"><span>Envío</span><span>Gratis</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:700;padding-top:6px;border-top:1px solid #EFEEE9"><span>Total</span><span>$26.100</span></div>
+            <span style="padding:13px;text-align:center;background:#C0392B;color:#fff;border-radius:9px;font-size:14px;font-weight:600">Iniciar compra</span>
+            <span style="text-align:center;font-size:10px;color:#8C8F8A">Pago protegido · Datos cifrados</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8C8F8A">Ficha de producto</span>
+      <div style="width:390px;max-width:100%;height:844px;overflow:hidden;background:#FBFBF9;border:1px solid #E5E4DF;border-radius:14px;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #E5E4DF">
+          <span style="font-size:18px;color:#14181A">←</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8C8F8A">HAMBURGUESAS</span>
+          <span style="font-size:16px;color:#63676A">♡</span>
+        </div>
+        <div style="position:relative;aspect-ratio:1/1;background:#F1ECF3;flex-shrink:0">
+          <img src="/propuestas/pl/comida-rapida/a/un-55d68f7a76.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+          <span style="position:absolute;left:12px;top:12px;padding:5px 9px;background:#C0392B;color:#fff;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em">-25%</span>
+        </div>
+        <div style="flex:1;overflow:hidden;padding:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <h3 style="margin:0;font-size:19px;font-weight:600;line-height:1.25;letter-spacing:-.02em">Papas fritas grandes con cheddar</h3>
+            <span style="font-size:12px;color:#8C8F8A">Doble medallón · cheddar y salsa de la casa</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:10px">
+            <strong style="font-size:26px;letter-spacing:-.025em">$6.500</strong>
+            <span style="font-size:14px;color:#8C8F8A;text-decoration:line-through">$9.800</span>
+          </div>
+          <span style="font-size:13px;color:#C0392B">Lista en 15 minutos</span>
+          <div style="display:flex;gap:8px">
+            <span style="padding:6px 11px;background:#E8F0EC;color:#C0392B;border-radius:999px;font-size:11px">Llega en 35 min</span>
+            <span style="padding:6px 11px;background:#F2F1EE;color:#63676A;border-radius:999px;font-size:11px">Apto celíacos</span>
+          </div>
+          <p style="margin:0;font-size:13px;line-height:1.65;color:#63676A">Dos medallones de carne fresca del día sellados a la plancha, doble cheddar, cebolla caramelizada y salsa de la casa en pan de papa. Se puede pedir sin cebolla o con extra picante.</p>
+          <div style="display:flex;flex-direction:column;gap:8px;padding-top:4px;border-top:1px solid #EFEEE9">
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#63676A">Porción</span><span>1 persona · 320 g</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#63676A">Acompañamiento</span><span>Papas o ensalada</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#63676A">Preparación</span><span style="color:#C0392B">15 minutos</span></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:14px;border-top:1px solid #E5E4DF;background:#fff">
+          <span style="display:flex;align-items:center;gap:12px;border:1px solid #DEDDD7;border-radius:9px;padding:11px 13px;font-size:14px"><span>−</span><span style="font-family:'IBM Plex Mono',monospace">1</span><span>+</span></span>
+          <span style="flex:1;padding:14px;text-align:center;background:#C0392B;color:#fff;border-radius:9px;font-size:14px;font-weight:600">Agregar al carrito</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8C8F8A">Pago</span>
+      <div style="width:390px;max-width:100%;height:844px;overflow:hidden;background:#FBFBF9;border:1px solid #E5E4DF;border-radius:14px;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #E5E4DF">
+          <span style="font-size:18px">←</span>
+          <strong style="font-size:15px">Pago</strong>
+          <span style="font-size:18px;color:#63676A">×</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #E5E4DF;background:#fff">
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:999px;background:#C0392B;color:#fff;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px">✓</span><span style="font-size:12px;color:#63676A">Entrega</span></span>
+          <span style="flex:1;height:1px;background:#E5E4DF"></span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:999px;background:#C0392B;color:#fff;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px">2</span><span style="font-size:12px">Pago</span></span>
+          <span style="flex:1;height:1px;background:#E5E4DF"></span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:999px;background:#EFEEE9;color:#8C8F8A;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px">3</span><span style="font-size:12px;color:#8C8F8A">Listo</span></span>
+        </div>
+        <div style="flex:1;overflow:hidden;padding:14px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:9px;padding:10px;border:1px solid #E5E4DF;border-radius:10px;background:#fff">
+            <div style="position:relative;width:44px;height:44px;border-radius:7px;overflow:hidden;background:#F1ECF3;flex-shrink:0"><img src="/propuestas/pl/comida-rapida/a/un-55d68f7a76.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>
+            <div style="position:relative;width:44px;height:44px;border-radius:7px;overflow:hidden;background:#E8F0EC;flex-shrink:0"><img src="/propuestas/pl/comida-rapida/a/un-729e403517.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>
+            <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:2px">
+              <span style="font-size:12px;color:#63676A">3 productos</span>
+              <strong style="font-size:14px">$26.100</strong>
+            </div>
+            <span style="align-self:center;font-size:12px;color:#C0392B">Ver</span>
+          </div>
+
+          <strong style="font-size:14px;margin-top:2px">Medio de pago</strong>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #C0392B;border-radius:10px;background:#fff">
+            <span style="width:15px;height:15px;border-radius:999px;background:#C0392B;flex-shrink:0"></span>
+            <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:500">Tarjeta de crédito</span><span style="font-size:11px;color:#63676A">Visa · Mastercard · Cabal</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #DEDDD7;border-radius:10px;background:#fff">
+            <span style="width:15px;height:15px;border-radius:999px;border:1px solid #C9C8C2;flex-shrink:0"></span>
+            <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:500">Billetera virtual</span><span style="font-size:11px;color:#63676A">Pagás desde tu app</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #DEDDD7;border-radius:10px;background:#fff">
+            <span style="width:15px;height:15px;border-radius:999px;border:1px solid #C9C8C2;flex-shrink:0"></span>
+            <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:500">Transferencia</span><span style="font-size:11px;color:#63676A">5% de descuento por transferencia</span></span>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+            <div style="padding:12px 13px;border:1px solid #DEDDD7;border-radius:9px;background:#fff;font-size:13px;color:#9A9E9B">Número de tarjeta</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="padding:12px 13px;border:1px solid #DEDDD7;border-radius:9px;background:#fff;font-size:13px;color:#9A9E9B">MM/AA</div>
+              <div style="padding:12px 13px;border:1px solid #DEDDD7;border-radius:9px;background:#fff;font-size:13px;color:#9A9E9B">CVV</div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 13px;border:1px solid #DEDDD7;border-radius:9px;background:#fff;font-size:13px">
+              <span>Pago en un toque</span><span style="color:#8C8F8A">▾</span>
+            </div>
+          </div>
+        </div>
+        <div style="padding:14px;border-top:1px solid #E5E4DF;background:#fff;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:700"><span>Total</span><span>$26.100</span></div>
+          <span style="padding:14px;text-align:center;background:#C0392B;color:#fff;border-radius:9px;font-size:14px;font-weight:600">Pagar $26.100</span>
+          <span style="text-align:center;font-size:10px;color:#8C8F8A">Pago protegido · Datos cifrados</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</div></div></div>
+<div style="position:relative;z-index:2">
+<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72">Juan Jose Bertinatti · cofundador de Cloud For Deploy</div>
+<h1 style="margin:30px 0 0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:31px;line-height:1.05;letter-spacing:-0.04em">Tiendas online para gastronomía</h1>
+<p style="margin:14px 0 0;font-weight:300;font-size:15px;line-height:1.6;color:#5c5049;max-width:2.6in">Tres niveles de tienda con pedidos online, para que elijas según el momento del local.</p>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:22px 0 0;padding:14px 0;border-top:1px solid #ddd2c9;border-bottom:1px solid #e6ddd6;break-inside:avoid">
+<div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72;margin-bottom:5px">Preparada para</div><div style="font-size:12.5px;font-weight:600;letter-spacing:-0.015em">[Nombre del cliente]</div></div>
+<div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72;margin-bottom:5px">Fecha</div><div style="font-size:12.5px;font-weight:600">Septiembre 2026</div></div>
+<div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72;margin-bottom:5px">Validez</div><div style="font-size:12.5px;font-weight:600">30 días</div></div>
+<div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72;margin-bottom:5px">Documento</div><div style="font-size:12.5px;font-weight:600">Propuesta comercial</div></div>
+</div>
+
+<h2 style="margin:42px 0 0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:29px;line-height:1.12;letter-spacing:-0.035em;max-width:6.4in">Tu cocina ya funciona. Que los pedidos entren solos.</h2>
+<div style="display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);column-gap:34px;margin-top:14px">
+<p style="margin:0;font-size:13.5px;line-height:1.8;color:#4a3f39">Hoy el pedido se hace desde el celular. Una tienda propia toma pedidos sin comisiones de las apps de delivery, con tus precios, tus combos y tus tiempos de cocina.</p>
+<p style="margin:0;padding-left:18px;border-left:2px solid #942d1d;font-weight:500;font-size:14px;line-height:1.6;color:#231d1a">Cada pedido por app deja entre 20% y 30% en comisiones. Por tu tienda, ese margen queda en el local.</p>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:24px;margin-top:26px;break-inside:avoid">
+<div><div style="font-size:14px;font-weight:600;letter-spacing:-0.015em;margin-bottom:6px">Tu marca, no una plantilla</div><p style="margin:0;font-size:11.5px;line-height:1.75;color:#5c5049">Diseño propio con tus colores, tus fotos y tu carta. Nada de fichas iguales a las de la competencia.</p></div>
+<div><div style="font-size:14px;font-weight:600;letter-spacing:-0.015em;margin-bottom:6px">Primero el celular</div><p style="margin:0;font-size:11.5px;line-height:1.75;color:#5c5049">Ahí se pide, casi siempre con hambre. Si la carta es lenta o confusa, el cliente abre la app de delivery.</p></div>
+<div><div style="font-size:14px;font-weight:600;letter-spacing:-0.015em;margin-bottom:6px">Que el pedido salga rápido</div><p style="margin:0;font-size:11.5px;line-height:1.75;color:#5c5049">Categorías, carrito y pago en pocos toques. La tienda sirve cuando el pedido entra directo a cocina.</p></div>
+</div>
+
+<h2 style="margin:44px 0 0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:29px;line-height:1.12;letter-spacing:-0.035em;max-width:6.4in">Así se ve una tienda en pantalla</h2>
+<p style="margin:12px 0 0;font-size:13.5px;line-height:1.8;color:#4a3f39;max-width:5.6in">Maqueta real de una tienda nuestra: buscador, categorías, catálogo con tiempos de preparación, carrito lateral y pago en tres pasos. Es la estructura del plan Ecommerce Pro.</p>
+<div style="margin-top:18px;width:640px;height:430px;overflow:hidden;border:1px solid #efe8e3;border-radius:8px;box-shadow:0 12px 34px rgba(35,29,26,0.09);break-inside:avoid">
+<div style="width:1440px;transform:scale(0.4444);transform-origin:top left"><div class="mock-df" style="width:100%">
+<div style="">
+
+  <div style="display:flex;align-items:center;justify-content:center;gap:28px;flex-wrap:wrap;padding:9px 20px;background:#C0392B;color:#FFF6F3;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase">
+    <span>Envío gratis desde $15.000 en la ciudad</span>
+    <span>Pedí ahora, llega en 35 minutos</span>
+    <span>Pedidos 0810-222-3663</span>
+  </div>
+
+  <header style="position:relative;z-index:40;display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:14px 24px;background:rgba(251,251,249,.94);backdrop-filter:blur(12px);border-bottom:1px solid #E5E4DF">
+    <div style="display:flex;align-items:center;gap:11px;flex-shrink:0">
+      <span style="position:relative;width:30px;height:30px;border-radius:9px;background:#C0392B;flex-shrink:0">
+        <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:14px;height:4px;border-radius:2px;background:#fff"></span>
+        <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:4px;height:14px;border-radius:2px;background:#fff"></span>
+      </span>
+      <span style="font-size:20px;font-weight:700;letter-spacing:-.02em;white-space:nowrap">Doble Fuego</span>
+    </div>
+    <div style="flex:1 1 280px;min-width:0;display:flex;align-items:center;gap:8px;padding:0 14px;background:#fff;border:1px solid #DEDDD7;border-radius:8px">
+      <input placeholder="Buscar hamburguesas, combos o postres" style="flex:1;min-width:0;padding:12px 0;border:0;outline:none;background:transparent;font-size:14px">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button style="padding:11px 16px;background:transparent;border:1px solid #DEDDD7;border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap">Mi cuenta</button>
+      <button style="display:flex;align-items:center;gap:9px;padding:11px 16px;background:#C0392B;color:#fff;border:0;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">
+        Carrito
+        <span style="min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px">0</span>
+      </button>
+    </div>
+  </header>
+
+  <nav style="display:flex;gap:8px;flex-wrap:wrap;padding:16px 24px;border-bottom:1px solid #E5E4DF;background:#fff">
+    
+      <button style="padding:9px 15px;border-radius:999px;border:1px solid #DEDDD7;cursor:pointer;font-size:13px;white-space:nowrap;background:#14181A;color:#fff">Todo</button>
+    
+      <button style="padding:9px 15px;border-radius:999px;border:1px solid #DEDDD7;cursor:pointer;font-size:13px;white-space:nowrap;background:transparent;color:#3D4144">Hamburguesas</button>
+    
+      <button style="padding:9px 15px;border-radius:999px;border:1px solid #DEDDD7;cursor:pointer;font-size:13px;white-space:nowrap;background:transparent;color:#3D4144">Pollo</button>
+    
+      <button style="padding:9px 15px;border-radius:999px;border:1px solid #DEDDD7;cursor:pointer;font-size:13px;white-space:nowrap;background:transparent;color:#3D4144">Papas y entradas</button>
+    
+      <button style="padding:9px 15px;border-radius:999px;border:1px solid #DEDDD7;cursor:pointer;font-size:13px;white-space:nowrap;background:transparent;color:#3D4144">Bebidas</button>
+    
+      <button style="padding:9px 15px;border-radius:999px;border:1px solid #DEDDD7;cursor:pointer;font-size:13px;white-space:nowrap;background:transparent;color:#3D4144">Postres</button>
+    
+  </nav>
+
+  <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;padding:24px">
+    <div style="position:relative;min-width:0;overflow:hidden;border-radius:14px;background:#8E2A1F;color:#FFF6F3;padding:34px 30px;display:flex;flex-direction:column;justify-content:space-between;gap:22px;min-height:210px">
+      <div>
+        <p style="margin:0 0 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;opacity:.75">A la parrilla, siempre</p>
+        <h1 style="margin:0;font-size:32px;font-weight:700;line-height:1.1;letter-spacing:-.025em">Combos con hasta 20% off<br>de lunes a jueves</h1>
+      </div>
+      <button style="align-self:flex-start;padding:12px 20px;background:#FFF6F3;color:#8E2A1F;border:0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Ver combos</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;min-width:0">
+      <div style="border:1px solid #E5E4DF;border-radius:14px;padding:22px;background:#fff;display:flex;flex-direction:column;gap:8px;justify-content:center">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8C8F8A">Envíos</span>
+        <strong style="font-size:16px">Llega en 35 min</strong>
+        <span style="font-size:13px;line-height:1.55;color:#63676A">En toda la ciudad. Retiro en el local sin costo.</span>
+      </div>
+      <div style="border:1px solid #E5E4DF;border-radius:14px;padding:22px;background:#fff;display:flex;flex-direction:column;gap:8px;justify-content:center">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8C8F8A">Cocina</span>
+        <strong style="font-size:16px">Todo a la plancha</strong>
+        <span style="font-size:13px;line-height:1.55;color:#63676A">Carne fresca del día, pan propio.</span>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:8px 24px 40px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+      <h2 style="margin:0;font-size:20px;font-weight:600;letter-spacing:-.02em">Todos los productos</h2>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8C8F8A">14 PRODUCTOS</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(216px,1fr));gap:14px">
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F6E9DF;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-729e403517.jpg" alt="Doble cheese" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Hamburguesas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Doble cheeseburger clásica</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$9.800</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Lista en 15 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F6E9DF;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-51db05a8eb.jpg" alt="Bacon BBQ" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+              <span style="position:absolute;right:10px;top:10px;padding:5px 9px;background:#C0392B;color:#fff;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;pointer-events:none">-15%</span>
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Hamburguesas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Bacon BBQ con cheddar y aros</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$11.500</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">La más pedida</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F6E9DF;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-eff6c264af.jpg" alt="Smash simple" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Hamburguesas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Smash simple con papas incluidas</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$8.900</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Lista en 12 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F6E9DF;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-c0c1dc052d.jpg" alt="Doble picante" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+              <span style="position:absolute;left:10px;top:10px;padding:5px 9px;background:#14181A;color:#fff;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;pointer-events:none">PICANTE</span>
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Hamburguesas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Doble picante con jalapeños</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$10.900</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Lista en 15 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F7F0DC;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-653cbedfad.jpg" alt="Pollo crispy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Pollo</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Sándwich de pollo crispy</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$9.400</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Listo en 15 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F7F0DC;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-bfe6d4c883.jpg" alt="Nuggets x10" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Pollo</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Nuggets x 10 con dos salsas</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$7.200</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Listo en 10 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F7F0DC;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-89db419625.jpg" alt="Alitas BBQ" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+              <span style="position:absolute;right:10px;top:10px;padding:5px 9px;background:#C0392B;color:#fff;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;pointer-events:none">-10%</span>
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Pollo</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Alitas BBQ x 8</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$9.900</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Listas en 18 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F3F1E4;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-55d68f7a76.jpg" alt="Papas cheddar" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Papas y entradas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Papas fritas grandes con cheddar</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$6.500</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Listas en 8 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F3F1E4;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-9c53678b1d.jpg" alt="Aros de cebolla" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Papas y entradas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Aros de cebolla x 8</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$5.900</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Listos en 8 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F3F1E4;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-41e6df23ea.jpg" alt="Ensalada césar" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Papas y entradas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Ensalada césar con pollo</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$8.200</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Lista en 10 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#E7EFF3;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-d81a1fc084.jpg" alt="Gaseosa 500" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Bebidas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Gaseosa línea Coca-Cola 500 ml</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$2.600</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Siempre fría</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#E7EFF3;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-ce0b60231b.jpg" alt="IPA 473" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Bebidas</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Cerveza artesanal IPA 473 ml</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$4.200</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Stock disponible</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F3E9EF;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-4645df4496.jpg" alt="Milkshake" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+              <span style="position:absolute;right:10px;top:10px;padding:5px 9px;background:#C0392B;color:#fff;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;pointer-events:none">-20%</span>
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Postres</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Milkshake de vainilla 400 ml</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$5.400</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Listo en 6 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+        <article style="display:flex;flex-direction:column;border:1px solid #E5E4DF;border-radius:14px;background:#fff;overflow:hidden;transition:box-shadow .25s ease,transform .25s ease">
+          <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:1/1;background:#F3E9EF;border-bottom:1px solid #EFEEE9">
+            <img src="/propuestas/pl/comida-rapida/a/un-a5d65c3fc5.jpg" alt="Brownie" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            
+            
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;flex:1">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8C8F8A">Postres</span>
+            <h3 style="margin:0;font-size:14px;font-weight:500;line-height:1.35;text-wrap:pretty">Brownie tibio con helado</h3>
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px">
+              <strong style="font-size:20px;letter-spacing:-.02em">$5.900</strong>
+              <span style="font-size:12px;color:#C0392B">Listo en pocos minutos</span>
+              <span style="font-size:11px;color:#8C8F8A">Listo en 8 min</span>
+            </div>
+            <button style="margin-top:8px;padding:11px;border:1px solid #C0392B;background:#fff;color:#C0392B;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Agregar al carrito</button>
+          </div>
+        </article>
+      
+    </div>
+  </section>
+
+  <footer style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;padding:44px 24px;background:#14181A;color:#E9EAE7">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:24px;height:24px;border-radius:7px;background:#C0392B;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px">F</span><strong style="font-size:17px">Doble Fuego</strong></div>
+      <span style="font-size:13px;line-height:1.6;color:#9BA09C">Av. Rivadavia 4820 · abierto hasta las 00 h<br>Cocina propia · Delivery propio</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;font-size:13px;color:#9BA09C">
+      <strong style="color:#E9EAE7;font-size:13px">Comprar</strong>
+      <a href="#" style="color:#9BA09C">Hamburguesas</a>
+      <a href="#" style="color:#9BA09C">Pollo</a>
+      <a href="#" style="color:#9BA09C">Postres</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;font-size:13px;color:#9BA09C">
+      <strong style="color:#E9EAE7;font-size:13px">Ayuda</strong>
+      <a href="#" style="color:#9BA09C">Zonas de envío</a>
+      <a href="#" style="color:#9BA09C">Tiempos de entrega</a>
+      <a href="#" style="color:#9BA09C">Reclamos y cambios</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;font-size:13px;color:#9BA09C">
+      <strong style="color:#E9EAE7;font-size:13px">Pagos</strong>
+      <span>Tarjetas de crédito y débito</span>
+      <span>Mercado Pago</span>
+      <span>Transferencia bancaria</span>
+    </div>
+  </footer>
+</div>
+
+
+
+
+
+
+</div></div>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:7px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.14em;color:#a1938a"><span>Maqueta de ejemplo · escritorio 1440 px</span><span>Fotos y textos de ejemplo, se reemplazan por los tuyos</span></div>
+<div style="margin-top:20px;width:640px;height:470px;overflow:hidden;break-inside:avoid">
+<div style="width:1720px;transform:scale(0.3721);transform-origin:top left">
+<div class="mock-df-m" style="width:100%">
+<section data-screen-label="Móvil" style="padding:64px 24px 80px;background:#F1F1EE;border-top:1px solid #E5E4DF">
+  <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:26px">
+    <h2 style="margin:0;font-size:20px;font-weight:600;letter-spacing:-.02em">Versión móvil</h2>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8C8F8A">CATÁLOGO Y CARRITO</span>
+  </div>
+
+  <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start">
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8C8F8A">Catálogo</span>
+      <div style="width:390px;max-width:100%;background:#FBFBF9;border:1px solid #E5E4DF;border-radius:14px;overflow:hidden">
+        <div style="padding:8px 14px;background:#C0392B;color:#FFF6F3;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-align:center">ENVÍO GRATIS DESDE $15.000</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid #E5E4DF">
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="position:relative;width:26px;height:26px;border-radius:8px;background:#C0392B;flex-shrink:0">
+              <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:12px;height:4px;border-radius:2px;background:#fff"></span>
+              <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:4px;height:12px;border-radius:2px;background:#fff"></span>
+            </span>
+            <strong style="font-size:16px;letter-spacing:-.02em">Doble Fuego</strong>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="display:flex;align-items:center;gap:6px;padding:8px 11px;background:#C0392B;color:#fff;border-radius:8px;font-size:12px">Carrito <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(255,255,255,.22);padding:1px 6px;border-radius:999px">3</span></span>
+            <div style="display:flex;flex-direction:column;gap:4px"><span style="width:18px;height:1.5px;background:#14181A"></span><span style="width:18px;height:1.5px;background:#14181A"></span></div>
+          </div>
+        </div>
+        <div style="padding:12px 14px 0">
+          <div style="padding:11px 13px;background:#fff;border:1px solid #DEDDD7;border-radius:8px;font-size:13px;color:#9A9E9B">Buscar hamburguesas o combos</div>
+        </div>
+        <div style="display:flex;gap:7px;padding:12px 14px;overflow:hidden">
+          <span style="padding:7px 13px;background:#14181A;color:#fff;border-radius:999px;font-size:12px;white-space:nowrap">Todo</span>
+          <span style="padding:7px 13px;border:1px solid #DEDDD7;border-radius:999px;font-size:12px;white-space:nowrap">Hamburguesas</span>
+          <span style="padding:7px 13px;border:1px solid #DEDDD7;border-radius:999px;font-size:12px;white-space:nowrap">Postres</span>
+        </div>
+
+        <div style="position:relative;min-width:0;overflow:hidden;aspect-ratio:2/1;background:#8E2A1F;margin:0 14px;border-radius:12px">
+          <img src="/propuestas/pl/comida-rapida/a/un-51db05a8eb.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;padding:16px;background:linear-gradient(180deg,rgba(14,91,73,.2) 0%,rgba(14,91,73,.86) 100%);color:#FFF6F3;pointer-events:none">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em">COMBOS DE LA SEMANA</span>
+            <strong style="font-size:21px;line-height:1.1;letter-spacing:-.02em">20% off de lunes a jueves</strong>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px">
+          <div style="border:1px solid #E5E4DF;border-radius:12px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:relative;aspect-ratio:1/1;background:#E8F0EC;display:flex;align-items:center;justify-content:center">
+              <img src="/propuestas/pl/comida-rapida/a/un-729e403517.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            </div>
+            <div style="padding:11px;display:flex;flex-direction:column;gap:5px">
+              <span style="font-size:12px;line-height:1.3">Doble cheeseburger</span>
+              <strong style="font-size:16px">$9.800</strong>
+              <span style="font-size:10px;color:#C0392B">Lista en 15 min</span>
+              <span style="margin-top:4px;padding:9px;text-align:center;border:1px solid #C0392B;color:#C0392B;border-radius:8px;font-size:12px">Agregar</span>
+            </div>
+          </div>
+          <div style="border:1px solid #E5E4DF;border-radius:12px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:relative;aspect-ratio:1/1;background:#F1ECF3;display:flex;align-items:center;justify-content:center">
+              <img src="/propuestas/pl/comida-rapida/a/un-55d68f7a76.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+              <span style="position:absolute;right:8px;top:8px;padding:4px 7px;background:#C0392B;color:#fff;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em">-25%</span>
+            </div>
+            <div style="padding:11px;display:flex;flex-direction:column;gap:5px">
+              <span style="font-size:12px;line-height:1.3">Papas cheddar</span>
+              <strong style="font-size:16px">$6.500</strong>
+              <span style="font-size:10px;color:#C0392B">Listas en 8 min</span>
+              <span style="margin-top:4px;padding:9px;text-align:center;border:1px solid #C0392B;color:#C0392B;border-radius:8px;font-size:12px">Agregar</span>
+            </div>
+          </div>
+          <div style="border:1px solid #E5E4DF;border-radius:12px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:relative;aspect-ratio:1/1;background:#E9EFF4;display:flex;align-items:center;justify-content:center">
+              <img src="/propuestas/pl/comida-rapida/a/un-653cbedfad.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            </div>
+            <div style="padding:11px;display:flex;flex-direction:column;gap:5px">
+              <span style="font-size:12px;line-height:1.3">Milkshake de vainilla</span>
+              <strong style="font-size:16px">$5.400</strong>
+              <span style="font-size:10px;color:#C0392B">Listo en 6 min</span>
+              <span style="margin-top:4px;padding:9px;text-align:center;border:1px solid #C0392B;color:#C0392B;border-radius:8px;font-size:12px">Agregar</span>
+            </div>
+          </div>
+          <div style="border:1px solid #E5E4DF;border-radius:12px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:relative;aspect-ratio:1/1;background:#F3EEE4;display:flex;align-items:center;justify-content:center">
+              <img src="/propuestas/pl/comida-rapida/a/un-4645df4496.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            </div>
+            <div style="padding:11px;display:flex;flex-direction:column;gap:5px">
+              <span style="font-size:12px;line-height:1.3">Nuggets x 10 con salsas</span>
+              <strong style="font-size:16px">$7.200</strong>
+              <span style="font-size:10px;color:#C0392B">Listos en 10 min</span>
+              <span style="margin-top:4px;padding:9px;text-align:center;border:1px solid #C0392B;color:#C0392B;border-radius:8px;font-size:12px">Agregar</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-around;padding:12px 14px 16px;border-top:1px solid #E5E4DF;background:#fff;font-size:11px;color:#8C8F8A">
+          <span style="color:#C0392B;font-weight:500">Inicio</span><span>Categorías</span><span>Pedidos</span><span>Cuenta</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8C8F8A">Carrito desplegado</span>
+      <div style="position:relative;width:390px;max-width:100%;height:844px;background:#FBFBF9;border:1px solid #E5E4DF;border-radius:14px;overflow:hidden">
+        <div style="position:absolute;inset:0;filter:blur(1.5px);opacity:.5">
+          <div style="padding:8px 14px;background:#C0392B;color:#FFF6F3;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-align:center">ENVÍO GRATIS DESDE $15.000</div>
+          <div style="padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="aspect-ratio:1/1;background:#E8F0EC;border-radius:12px"></div>
+            <div style="aspect-ratio:1/1;background:#F1ECF3;border-radius:12px"></div>
+            <div style="aspect-ratio:1/1;background:#E9EFF4;border-radius:12px"></div>
+            <div style="aspect-ratio:1/1;background:#F3EEE4;border-radius:12px"></div>
+          </div>
+        </div>
+        <div style="position:absolute;inset:0;background:rgba(20,24,26,.35)"></div>
+
+        <div style="position:absolute;left:0;right:0;bottom:0;background:#FBFBF9;border-radius:16px 16px 0 0;box-shadow:0 -14px 40px rgba(20,24,26,.2);display:flex;flex-direction:column;max-height:86%">
+          <div style="display:flex;justify-content:center;padding:9px"><span style="width:38px;height:4px;border-radius:999px;background:#DEDDD7"></span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 16px 12px;border-bottom:1px solid #E5E4DF">
+            <strong style="font-size:16px">Tu carrito · 3 productos</strong>
+            <span style="font-size:19px;color:#63676A">×</span>
+          </div>
+
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;gap:11px;padding:11px;border:1px solid #E5E4DF;border-radius:12px;background:#fff">
+              <div style="position:relative;width:56px;height:56px;flex-shrink:0;border-radius:8px;overflow:hidden;background:#E8F0EC">
+                <img src="/propuestas/pl/comida-rapida/a/un-729e403517.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+              </div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
+                <span style="font-size:12px;line-height:1.35">Doble cheeseburger clásica</span>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="display:flex;align-items:center;gap:10px;border:1px solid #DEDDD7;border-radius:8px;padding:4px 10px;font-size:13px"><span>−</span><span style="font-family:'IBM Plex Mono',monospace">2</span><span>+</span></span>
+                  <strong style="font-size:13px">$19.600</strong>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:11px;padding:11px;border:1px solid #E5E4DF;border-radius:12px;background:#fff">
+              <div style="position:relative;width:56px;height:56px;flex-shrink:0;border-radius:8px;overflow:hidden;background:#F1ECF3">
+                <img src="/propuestas/pl/comida-rapida/a/un-55d68f7a76.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+              </div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
+                <span style="font-size:12px;line-height:1.35">Papas fritas grandes con cheddar</span>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="display:flex;align-items:center;gap:10px;border:1px solid #DEDDD7;border-radius:8px;padding:4px 10px;font-size:13px"><span>−</span><span style="font-family:'IBM Plex Mono',monospace">1</span><span>+</span></span>
+                  <strong style="font-size:13px">$6.500</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:14px 16px 20px;border-top:1px solid #E5E4DF;background:#fff;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:#63676A"><span>Subtotal</span><span>$26.100</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:#63676A"><span>Envío</span><span>Gratis</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:700;padding-top:6px;border-top:1px solid #EFEEE9"><span>Total</span><span>$26.100</span></div>
+            <span style="padding:13px;text-align:center;background:#C0392B;color:#fff;border-radius:9px;font-size:14px;font-weight:600">Iniciar compra</span>
+            <span style="text-align:center;font-size:10px;color:#8C8F8A">Pago protegido · Datos cifrados</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8C8F8A">Ficha de producto</span>
+      <div style="width:390px;max-width:100%;height:844px;overflow:hidden;background:#FBFBF9;border:1px solid #E5E4DF;border-radius:14px;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #E5E4DF">
+          <span style="font-size:18px;color:#14181A">←</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8C8F8A">HAMBURGUESAS</span>
+          <span style="font-size:16px;color:#63676A">♡</span>
+        </div>
+        <div style="position:relative;aspect-ratio:1/1;background:#F1ECF3;flex-shrink:0">
+          <img src="/propuestas/pl/comida-rapida/a/un-55d68f7a76.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+          <span style="position:absolute;left:12px;top:12px;padding:5px 9px;background:#C0392B;color:#fff;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em">-25%</span>
+        </div>
+        <div style="flex:1;overflow:hidden;padding:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <h3 style="margin:0;font-size:19px;font-weight:600;line-height:1.25;letter-spacing:-.02em">Papas fritas grandes con cheddar</h3>
+            <span style="font-size:12px;color:#8C8F8A">Doble medallón · cheddar y salsa de la casa</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:10px">
+            <strong style="font-size:26px;letter-spacing:-.025em">$6.500</strong>
+            <span style="font-size:14px;color:#8C8F8A;text-decoration:line-through">$9.800</span>
+          </div>
+          <span style="font-size:13px;color:#C0392B">Lista en 15 minutos</span>
+          <div style="display:flex;gap:8px">
+            <span style="padding:6px 11px;background:#E8F0EC;color:#C0392B;border-radius:999px;font-size:11px">Llega en 35 min</span>
+            <span style="padding:6px 11px;background:#F2F1EE;color:#63676A;border-radius:999px;font-size:11px">Apto celíacos</span>
+          </div>
+          <p style="margin:0;font-size:13px;line-height:1.65;color:#63676A">Dos medallones de carne fresca del día sellados a la plancha, doble cheddar, cebolla caramelizada y salsa de la casa en pan de papa. Se puede pedir sin cebolla o con extra picante.</p>
+          <div style="display:flex;flex-direction:column;gap:8px;padding-top:4px;border-top:1px solid #EFEEE9">
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#63676A">Porción</span><span>1 persona · 320 g</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#63676A">Acompañamiento</span><span>Papas o ensalada</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#63676A">Preparación</span><span style="color:#C0392B">15 minutos</span></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:14px;border-top:1px solid #E5E4DF;background:#fff">
+          <span style="display:flex;align-items:center;gap:12px;border:1px solid #DEDDD7;border-radius:9px;padding:11px 13px;font-size:14px"><span>−</span><span style="font-family:'IBM Plex Mono',monospace">1</span><span>+</span></span>
+          <span style="flex:1;padding:14px;text-align:center;background:#C0392B;color:#fff;border-radius:9px;font-size:14px;font-weight:600">Agregar al carrito</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8C8F8A">Pago</span>
+      <div style="width:390px;max-width:100%;height:844px;overflow:hidden;background:#FBFBF9;border:1px solid #E5E4DF;border-radius:14px;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #E5E4DF">
+          <span style="font-size:18px">←</span>
+          <strong style="font-size:15px">Pago</strong>
+          <span style="font-size:18px;color:#63676A">×</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #E5E4DF;background:#fff">
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:999px;background:#C0392B;color:#fff;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px">✓</span><span style="font-size:12px;color:#63676A">Entrega</span></span>
+          <span style="flex:1;height:1px;background:#E5E4DF"></span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:999px;background:#C0392B;color:#fff;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px">2</span><span style="font-size:12px">Pago</span></span>
+          <span style="flex:1;height:1px;background:#E5E4DF"></span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:999px;background:#EFEEE9;color:#8C8F8A;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px">3</span><span style="font-size:12px;color:#8C8F8A">Listo</span></span>
+        </div>
+        <div style="flex:1;overflow:hidden;padding:14px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:9px;padding:10px;border:1px solid #E5E4DF;border-radius:10px;background:#fff">
+            <div style="position:relative;width:44px;height:44px;border-radius:7px;overflow:hidden;background:#F1ECF3;flex-shrink:0"><img src="/propuestas/pl/comida-rapida/a/un-55d68f7a76.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>
+            <div style="position:relative;width:44px;height:44px;border-radius:7px;overflow:hidden;background:#E8F0EC;flex-shrink:0"><img src="/propuestas/pl/comida-rapida/a/un-729e403517.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>
+            <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:2px">
+              <span style="font-size:12px;color:#63676A">3 productos</span>
+              <strong style="font-size:14px">$26.100</strong>
+            </div>
+            <span style="align-self:center;font-size:12px;color:#C0392B">Ver</span>
+          </div>
+
+          <strong style="font-size:14px;margin-top:2px">Medio de pago</strong>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #C0392B;border-radius:10px;background:#fff">
+            <span style="width:15px;height:15px;border-radius:999px;background:#C0392B;flex-shrink:0"></span>
+            <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:500">Tarjeta de crédito</span><span style="font-size:11px;color:#63676A">Visa · Mastercard · Cabal</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #DEDDD7;border-radius:10px;background:#fff">
+            <span style="width:15px;height:15px;border-radius:999px;border:1px solid #C9C8C2;flex-shrink:0"></span>
+            <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:500">Billetera virtual</span><span style="font-size:11px;color:#63676A">Pagás desde tu app</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #DEDDD7;border-radius:10px;background:#fff">
+            <span style="width:15px;height:15px;border-radius:999px;border:1px solid #C9C8C2;flex-shrink:0"></span>
+            <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:500">Transferencia</span><span style="font-size:11px;color:#63676A">5% de descuento por transferencia</span></span>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+            <div style="padding:12px 13px;border:1px solid #DEDDD7;border-radius:9px;background:#fff;font-size:13px;color:#9A9E9B">Número de tarjeta</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="padding:12px 13px;border:1px solid #DEDDD7;border-radius:9px;background:#fff;font-size:13px;color:#9A9E9B">MM/AA</div>
+              <div style="padding:12px 13px;border:1px solid #DEDDD7;border-radius:9px;background:#fff;font-size:13px;color:#9A9E9B">CVV</div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 13px;border:1px solid #DEDDD7;border-radius:9px;background:#fff;font-size:13px">
+              <span>Pago en un toque</span><span style="color:#8C8F8A">▾</span>
+            </div>
+          </div>
+        </div>
+        <div style="padding:14px;border-top:1px solid #E5E4DF;background:#fff;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:700"><span>Total</span><span>$26.100</span></div>
+          <span style="padding:14px;text-align:center;background:#C0392B;color:#fff;border-radius:9px;font-size:14px;font-weight:600">Pagar $26.100</span>
+          <span style="text-align:center;font-size:10px;color:#8C8F8A">Pago protegido · Datos cifrados</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+</div>
+</div>
+<div style="margin-top:-6px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.14em;color:#a1938a">Versión celular · 390 px · catálogo, carrito, ficha de producto y pago</div>
+
+
+<h2 style="margin:44px 0 0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:29px;line-height:1.12;letter-spacing:-0.035em;max-width:6.4in">Planes de ecommerce</h2>
+<p style="margin:12px 0 0;font-size:13.5px;line-height:1.8;color:#4a3f39;max-width:5.6in">Cada nivel parte de la web del mismo nombre y le suma la parte de tienda. Todos incluyen diseño propio, versión celular y carrito.</p>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:18px">
+<div style="border-top:1px solid #ddd2c9;padding:12px 0 0;break-inside:avoid">
+<div style="height:14px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:#942d1d"><sc-if value="{{ destBasico }}" hint-placeholder-val="{{ false }}">Recomendado</sc-if></div>
+<div style="font-family:'Bricolage Grotesque',Karla,sans-serif;font-size:21px;font-weight:600;letter-spacing:-0.035em;margin-top:2px">Ecommerce Básico</div>
+<div style="font-size:11px;color:#8a7b72;margin-top:3px">Empezar a tomar pedidos por WhatsApp</div>
+<ul style="margin:12px 0 0;padding:0;list-style:none;font-size:10.5px;line-height:1.6;color:#231d1a">
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Todo lo de Web Básica</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Carta con fotos, precios y descripciones</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Carrito de compras</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· El pedido llega armado al WhatsApp del local</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Marcar platos sin stock en un toque</li>
+</ul>
+</div>
+<div style="border-top:1px solid #942d1d;padding:12px 0 0;break-inside:avoid">
+<div style="height:14px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:#942d1d"><sc-if value="{{ destMedio }}" hint-placeholder-val="{{ true }}">Recomendado</sc-if></div>
+<div style="font-family:'Bricolage Grotesque',Karla,sans-serif;font-size:21px;font-weight:600;letter-spacing:-0.035em;margin-top:2px;color:#942d1d">Ecommerce Medio</div>
+<div style="font-size:11px;color:#8a7b72;margin-top:3px">Pedidos con cobro online</div>
+<ul style="margin:12px 0 0;padding:0;list-style:none;font-size:10.5px;line-height:1.6;color:#231d1a">
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Todo lo de Web Media</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Carrito de compras</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Pasarela de pagos: tarjeta y transferencia</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Panel para cargar platos, precios y disponibilidad</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Aviso de cada pedido por mail y WhatsApp</li>
+</ul>
+</div>
+<div style="border-top:1px solid #ddd2c9;padding:12px 0 0;break-inside:avoid">
+<div style="height:14px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:#942d1d"><sc-if value="{{ destPro }}" hint-placeholder-val="{{ false }}">Recomendado</sc-if></div>
+<div style="font-family:'Bricolage Grotesque',Karla,sans-serif;font-size:21px;font-weight:600;letter-spacing:-0.035em;margin-top:2px">Ecommerce Pro</div>
+<div style="font-size:11px;color:#8a7b72;margin-top:3px">Pedido, cobro y delivery de punta a punta</div>
+<ul style="margin:12px 0 0;padding:0;list-style:none;font-size:10.5px;line-height:1.6;color:#231d1a">
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Todo lo de Web Pro</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Carrito de compras</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Pasarela de pagos completa</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Delivery integrado: zonas, costos y seguimiento</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Combos, cupones y promos por día</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Chatbot para estado del pedido y consultas</li>
+</ul>
+</div>
+</div>
+<p style="margin:12px 0 0;font-size:10.5px;line-height:1.75;color:#8a7b72">Los montos se detallan en el presupuesto que acompaña esta propuesta. Todos los planes incluyen una cuota mensual de mantenimiento, hosting y soporte. Las comisiones de la pasarela de pagos las cobra el proveedor y no están incluidas.</p>
+
+<h2 style="margin:44px 0 0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:29px;line-height:1.12;letter-spacing:-0.035em">Qué incluye cualquier tienda que hagamos</h2>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:24px;row-gap:0;margin-top:14px;break-inside:avoid">
+<div style="padding:10px 0"><div style="font-size:13px;font-weight:600;margin-bottom:5px">Velocidad</div><p style="margin:0;font-size:11px;line-height:1.7;color:#5c5049">La carta abre en menos de 2,5 segundos, incluso con datos móviles. Menos pedidos que se pierden.</p></div>
+<div style="padding:10px 0"><div style="font-size:13px;font-weight:600;margin-bottom:5px">Seguridad</div><p style="margin:0;font-size:11px;line-height:1.7;color:#5c5049">Conexión segura, copias de respaldo y datos de pago que nunca pasan por tu servidor.</p></div>
+<div style="padding:10px 0"><div style="font-size:13px;font-weight:600;margin-bottom:5px">En todos los dispositivos</div><p style="margin:0;font-size:11px;line-height:1.7;color:#5c5049">Pensado primero para el celular: se ve y funciona perfecto en teléfono, tablet y computadora.</p></div>
+<div style="padding:10px 0"><div style="font-size:13px;font-weight:600;margin-bottom:5px">Visible en Google</div><p style="margin:0;font-size:11px;line-height:1.7;color:#5c5049">Preparado para aparecer cuando alguien busca comida en tu zona.</p></div>
+<div style="padding:10px 0"><div style="font-size:13px;font-weight:600;margin-bottom:5px">Todo conectado</div><p style="margin:0;font-size:11px;line-height:1.7;color:#5c5049">Pagos, envíos, WhatsApp y estadísticas funcionando juntos, sin trabajo extra para la cocina.</p></div>
+<div style="padding:10px 0"><div style="font-size:13px;font-weight:600;margin-bottom:5px">Autonomía y soporte</div><p style="margin:0;font-size:11px;line-height:1.7;color:#5c5049">Cargás platos, precios y promos del día sin depender de nadie, con soporte nuestro todos los meses.</p></div>
+</div>
+
+<h2 style="margin:44px 0 0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:29px;line-height:1.12;letter-spacing:-0.035em">Cómo trabajamos, paso a paso</h2>
+<div style="margin-top:16px;display:grid;grid-template-columns:88px minmax(0,1.1fr) minmax(0,2.4fr);column-gap:20px;row-gap:0;align-items:baseline;font-size:11.5px">
+<div style="grid-column:1/-1;height:1px;background:#231d1a"></div>
+<div style="padding:12px 0;font-size:11px;font-weight:600;color:#942d1d">Semana 1</div>
+<div style="padding:12px 0;font-size:13px;font-weight:600;letter-spacing:-0.015em">Descubrimiento</div>
+<div style="padding:12px 0;line-height:1.75;color:#5c5049">Entendemos el local, su carta y su logística. Definimos categorías, combos, zonas de envío y medios de pago.</div>
+<div style="padding:12px 0;font-size:11px;font-weight:600;color:#942d1d">Semanas 1–2</div>
+<div style="padding:12px 0;font-size:13px;font-weight:600;letter-spacing:-0.015em">Diseño</div>
+<div style="padding:12px 0;line-height:1.75;color:#5c5049">Armamos la maqueta visual de las pantallas clave. La revisamos juntos hasta aprobarla.</div>
+<div style="padding:12px 0;font-size:11px;font-weight:600;color:#942d1d">Semanas 2–3</div>
+<div style="padding:12px 0;font-size:13px;font-weight:600;letter-spacing:-0.015em">Desarrollo</div>
+<div style="padding:12px 0;line-height:1.75;color:#5c5049">Construimos la tienda, cargamos la carta real y conectamos pagos, envíos y avisos a cocina según el plan.</div>
+<div style="padding:12px 0;font-size:11px;font-weight:600;color:#942d1d">Semana 4</div>
+<div style="padding:12px 0;font-size:13px;font-weight:600;letter-spacing:-0.015em">Pruebas y ajustes</div>
+<div style="padding:12px 0;line-height:1.75;color:#5c5049">Probamos en distintos dispositivos y hacemos pedidos de prueba: carrito, pago y aviso a cocina.</div>
+<div style="padding:12px 0;font-size:11px;font-weight:600;color:#942d1d">Semana 4 +</div>
+<div style="padding:12px 0;font-size:13px;font-weight:600;letter-spacing:-0.015em">Lanzamiento y acompañamiento</div>
+<div style="padding:12px 0;line-height:1.75;color:#5c5049">Publicamos, te mostramos cómo cargar platos y promos, y acompañamos los primeros meses con el plan de soporte.</div>
+<div style="grid-column:1/-1;height:1px;background:#231d1a"></div>
+</div>
+
+<h2 style="margin:44px 0 0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:29px;line-height:1.12;letter-spacing:-0.035em">Qué cambia con la tienda online</h2>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:16px;break-inside:avoid">
+<div><div style="font-family:Fraunces,serif;font-size:34px;font-weight:600;letter-spacing:-0.03em;line-height:1;color:#942d1d;margin-bottom:8px">&lt;2,5 s</div><p style="margin:0;font-size:11px;line-height:1.75;color:#5c5049">Tiempo de carga en celular: menos carritos abandonados y mejor posición en Google.</p></div>
+<div><div style="font-family:Fraunces,serif;font-size:34px;font-weight:600;letter-spacing:-0.03em;line-height:1;color:#942d1d;margin-bottom:8px">100%</div><p style="margin:0;font-size:11px;line-height:1.75;color:#5c5049">Se ve bien en celular, tablet y computadora, sin excepciones.</p></div>
+<div><div style="font-family:Fraunces,serif;font-size:34px;font-weight:600;letter-spacing:-0.03em;line-height:1;color:#942d1d;margin-bottom:8px">+ Ventas</div><p style="margin:0;font-size:11px;line-height:1.75;color:#5c5049">Pedir en pocos toques, con pago y envío resueltos.</p></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:32px;row-gap:0;margin-top:18px;font-size:11.5px">
+<div style="padding:9px 0"><p style="margin:0;line-height:1.75;color:#231d1a"><strong style="font-weight:600">Marca profesional.</strong> Una tienda propia genera confianza antes del primer pedido.</p></div>
+<div style="padding:9px 0"><p style="margin:0;line-height:1.75;color:#231d1a"><strong style="font-weight:600">Datos para decidir.</strong> Vas a saber qué platos se piden más y a qué hora entra cada pedido.</p></div>
+<div style="padding:9px 0"><p style="margin:0;line-height:1.75;color:#231d1a"><strong style="font-weight:600">Autonomía.</strong> Cambiás platos, precios y promos sin depender de nadie.</p></div>
+<div style="padding:9px 0"><p style="margin:0;line-height:1.75;color:#231d1a"><strong style="font-weight:600">Encontrable.</strong> Aparecés en Google por búsquedas de comida en tu zona.</p></div>
+</div>
+
+<div style="margin-top:40px;padding:26px 28px;background:#231d1a;color:#fffdfb;break-inside:avoid">
+<h2 style="margin:0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:27px;line-height:1.12;letter-spacing:-0.035em;max-width:5.4in">No hacemos cartas bonitas. Hacemos tiendas que reciben pedidos.</h2>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:20px">
+<div style="border-top:1px solid #4a3f39;padding-top:9px"><div style="font-size:12.5px;font-weight:600;margin-bottom:5px">Foco en el negocio</div><p style="margin:0;font-size:10.5px;line-height:1.75;color:#cfc2b9">Cada decisión de diseño se mide contra una pregunta: ¿esto ayuda a que hagan el pedido?</p></div>
+<div style="border-top:1px solid #4a3f39;padding-top:9px"><div style="font-size:12.5px;font-weight:600;margin-bottom:5px">Todo en un solo lugar</div><p style="margin:0;font-size:10.5px;line-height:1.75;color:#cfc2b9">Diseño, desarrollo, hosting y soporte los manejamos nosotros. No tenés que coordinar proveedores.</p></div>
+<div style="border-top:1px solid #4a3f39;padding-top:9px"><div style="font-size:12.5px;font-weight:600;margin-bottom:5px">Acompañamiento real</div><p style="margin:0;font-size:10.5px;line-height:1.75;color:#cfc2b9">No desaparecemos tras el lanzamiento: el plan mensual incluye cambios, soporte y monitoreo.</p></div>
+</div>
+</div>
+
+<div style="margin-top:34px;break-inside:avoid">
+<h2 style="margin:0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:29px;line-height:1.12;letter-spacing:-0.035em">Demos el próximo paso</h2>
+<p style="margin:10px 0 0;font-size:13.5px;line-height:1.8;color:#4a3f39;max-width:4.6in">Coordinemos una reunión de 30 minutos para conocer el local y la carta, ver qué plan conviene y ajustar esta propuesta a tu medida. Sin compromiso.</p>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:18px;font-size:12px">
+<div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72;margin-bottom:4px">Contacto</div>Juan Jose Bertinatti<div style="font-size:10.5px;color:#8a7b72;margin-top:2px">Cofundador de Cloud For Deploy</div></div>
+<div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72;margin-bottom:4px">WhatsApp</div>+54 0 3816660612</div>
+<div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72;margin-bottom:4px">Email</div>cloudfordeploy@gmail.com</div>
+</div>
+</div>
+
+<div style="margin-top:30px;padding:26px 28px;background:#0d2a4f;color:#f2f6fb;display:grid;grid-template-columns:minmax(0,1fr) 168px;column-gap:22px;align-items:center;break-inside:avoid">
+<div style="display:flex;align-items:center;gap:18px">
+<img src="/propuestas/pl/comida-rapida/a/e556161e-e5cf-417d-b126-b3b03b62a5d9" alt="Cloud For Deploy" style="height:64px;width:auto;flex:none;display:block">
+<div style="min-width:0">
+<div style="font-family:'Bricolage Grotesque',Karla,sans-serif;font-size:19px;font-weight:600;letter-spacing:-0.03em;line-height:1.25;max-width:220px">Visitá nuestra página web</div>
+<div style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;color:#9fc3ea">cloudfordeploy.com</div>
+</div>
+</div>
+<div style="text-align:right">
+<div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#9fc3ea;margin-bottom:5px">Contacto</div>
+<div style="font-family:'Bricolage Grotesque',Karla,sans-serif;font-size:15px;font-weight:600;letter-spacing:-0.02em">+54 0 3816660612</div>
+<div style="margin-top:3px;font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:#9fc3ea">cloudfordeploy@gmail.com</div>
+</div>
+</div>
+
+<div style="margin:20px 0 0;padding-top:12px;border-top:1px solid #e6ddd6;font-family:'IBM Plex Mono',monospace;font-size:8.5px;line-height:1.8;letter-spacing:0.03em;color:#8a7b72">
+<div style="font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#231d1a;margin-bottom:5px">Confidencialidad</div>
+<p style="margin:0">Este documento es confidencial y de uso exclusivo del destinatario. Su contenido —alcance, plazos, maquetas y condiciones— no puede ser divulgado, reproducido, publicado ni compartido con terceros, total o parcialmente, sin autorización previa y por escrito de Cloud For Deploy. Las maquetas e ideas aquí presentadas son propiedad intelectual de Cloud For Deploy y no pueden utilizarse ni ejecutarse con otro proveedor. Si recibió este documento por error, le pedimos eliminarlo y avisarnos.</p>
+<p style="margin:8px 0 0">Propuesta orientativa y editable. Alcance y plazos se confirman tras el relevamiento del negocio.<br>Propuesta de ecommerce · Septiembre 2026 · Preparada por Juan Jose Bertinatti — cofundador de Cloud For Deploy.</p>
+</div>
+</div>
+<div class="pie-doc"><div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:baseline;padding:8px 0 0;border-top:1px solid #231d1a;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:#8a7b72;white-space:nowrap">
+<span>Cloud For Deploy</span>
+<span style="color:#942d1d">Ecommerce gastronómico</span>
+<span style="text-align:right">Juan Jose Bertinatti</span>
+</div></div>
+</body>
+</html>
