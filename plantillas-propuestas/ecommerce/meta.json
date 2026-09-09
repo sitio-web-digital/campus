@@ -1,0 +1,71 @@
+{
+  "nombre": "Ecommerce",
+  "descripcion": "Propuesta de tienda online (planes Básico / Medio / Pro, maqueta Farmacia Andes)",
+  "empresaOriginal": "",
+  "aliasOriginal": "",
+  "firmaOriginal": "Juan Jose Bertinatti",
+  "colores": [
+    {
+      "clave": "principal",
+      "label": "Color principal",
+      "hex": "#942d1d",
+      "derivados": {
+        "#6f2115": -0.27
+      }
+    }
+  ],
+  "planes": [
+    "Básico",
+    "Medio",
+    "Pro"
+  ],
+  "planDefault": "Medio",
+  "heroTexto": "Tiendas online a medida",
+  "clienteEn": "hero",
+  "assets": {
+    "00b14b8b-d86e-409f-95d4-6a98da2af75d": "image/webp",
+    "a2be884f-7b62-4876-abfb-a7923354ed85": "image/webp",
+    "070e02d1-fa48-4144-bfac-66f91ad3c429": "image/webp",
+    "c6b4b223-1b7b-4cd1-80ef-0674158bb283": "image/webp",
+    "cd857667-9a33-438d-80a7-c774898d6cd2": "image/webp",
+    "250043ce-79ed-4c38-b9f9-4ba3860982ed": "image/webp",
+    "38766e6a-cb74-4dd7-a56e-be230e2f2d08": "text/css",
+    "4affbe9e-d961-42a3-a93a-d98d9737049b": "font/woff2",
+    "25c9a8da-3a67-4c17-9f3d-96e67f21c0e0": "font/woff2",
+    "6bd6cc1b-ff1d-4f79-9c8a-cd4dcd1aa7aa": "font/woff2",
+    "a346c022-2e76-430a-b1e4-492fdf9a8bea": "font/woff2",
+    "d5b83ebb-5b2f-4ead-af92-8f6fb766f0de": "font/woff2",
+    "2539eced-81c8-45e8-8952-4ceffb4354bf": "font/woff2",
+    "937bfe82-22ef-4af9-9025-3b1de7d281c9": "font/woff2",
+    "281c01be-fedc-415f-98e8-aecd09d6659b": "font/woff2",
+    "a718761e-bfb9-4757-a7fb-7a2e7daada7a": "font/woff2",
+    "59e04550-8675-41b9-8322-d605df4db8c0": "font/woff2",
+    "cfa944a8-09c0-4ad2-975e-79fa0d2df37d": "font/woff2",
+    "f7acc7ca-4a63-4a19-b69b-2977e47bfb4e": "font/woff2",
+    "993f25f5-9e1b-4201-bcc9-680189ef5f7a": "font/woff2",
+    "37867db5-841f-4a74-823c-d0f335123bab": "font/woff2",
+    "3a2f07e3-0426-456a-bf98-dc6d1e44f6de": "font/woff2",
+    "cbc4ee10-3385-4e85-844c-f1c99850c9ab": "font/woff2",
+    "392582bd-6e11-47b0-81d9-e99181a3f245": "font/woff2",
+    "60ac7150-802a-488b-9168-678e79d3651a": "font/woff2",
+    "c41a6457-8a21-4b62-b8db-e7b51b115b0b": "font/woff2",
+    "593fb4f4-05db-46b1-84f0-5b314ac467ab": "font/woff2",
+    "c7ad8639-c2d5-43a0-8f70-1d61c56023db": "font/woff2",
+    "f0b07593-017b-484c-b142-eda1e276ab23": "font/woff2",
+    "02d58a16-aa88-41df-a183-932265066ea9": "font/woff2",
+    "im-0b77c61f6321.webp": "image/webp",
+    "im-c3f4128cbb89.webp": "image/webp",
+    "im-d529db14f4b4.webp": "image/webp",
+    "im-532ee3aee321.webp": "image/webp",
+    "im-27b3d0256d95.webp": "image/webp",
+    "im-1be978a56f0c.webp": "image/webp",
+    "im-db2e9ef39d04.webp": "image/webp",
+    "im-263f6801cc24.webp": "image/webp",
+    "im-4068c9ecf357.webp": "image/webp",
+    "im-0210570c97a0.webp": "image/webp",
+    "im-ab57d51e534b.webp": "image/webp",
+    "im-65ec082ad557.webp": "image/webp",
+    "im-a2a3156eb23a.webp": "image/webp",
+    "im-bceff183e26a.webp": "image/webp"
+  }
+}

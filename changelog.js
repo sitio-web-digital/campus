@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.52.0',
+    fecha: '2026-09-08',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Quinta plantilla en el Generador de Propuestas: Ecommerce — el documento propio de tiendas online ("Tiendas online a medida", planes Básico / Medio / Pro) con la maqueta "Farmacia Andes": la tienda de escritorio con buscador, categorías, catálogo con fotos y precios reales de ejemplo, y las pantallas del celular de catálogo, carrito, ficha de producto y pago.' },
+    ],
+  },
+  {
     version: '2.51.0',
     fecha: '2026-09-08',
     cambios: [
