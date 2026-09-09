@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Propuesta de páginas web — Cloud For Deploy</title>
+<style>/* vietnamese */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/be7736f6-3570-4a03-9a60-1b638534b1dd") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/38005994-0af8-4e1f-9f5a-577e1813565b") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/47bf296b-819a-4fa3-bff9-e5ccbfc69e54") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/be7736f6-3570-4a03-9a60-1b638534b1dd") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/38005994-0af8-4e1f-9f5a-577e1813565b") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/47bf296b-819a-4fa3-bff9-e5ccbfc69e54") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/be7736f6-3570-4a03-9a60-1b638534b1dd") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/38005994-0af8-4e1f-9f5a-577e1813565b") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/47bf296b-819a-4fa3-bff9-e5ccbfc69e54") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/be7736f6-3570-4a03-9a60-1b638534b1dd") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/38005994-0af8-4e1f-9f5a-577e1813565b") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/47bf296b-819a-4fa3-bff9-e5ccbfc69e54") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/ef113719-499d-4436-9969-edd900a8ff02") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/f7a3fca4-005e-425e-a781-e3032d05b68d") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/d69bdaa1-6ff1-4467-8522-48bb71497636") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/ef113719-499d-4436-9969-edd900a8ff02") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/f7a3fca4-005e-425e-a781-e3032d05b68d") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/d69bdaa1-6ff1-4467-8522-48bb71497636") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/ef113719-499d-4436-9969-edd900a8ff02") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/f7a3fca4-005e-425e-a781-e3032d05b68d") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/d69bdaa1-6ff1-4467-8522-48bb71497636") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/3be66edc-286e-48c6-af5a-0ec407255cfb") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/74003c3d-d7da-4ed4-bdea-2f3753a78d0a") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/a2cfd3fc-c03e-4ec1-96ee-0cd4b3e195cb") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/262fe3a3-fa4a-442d-b892-c563225313a6") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/d3622aaa-98d7-498d-a593-0f7e60624ce7") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/4487f19d-66fa-4751-8c8b-1b93959f997d") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/6785349b-b460-48a5-821e-d97f6e46061e") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/24221a95-d24d-498c-8a36-30bdc35af01a") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/a47bcdd0-5fed-4a1c-ba97-22129945c03f") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/8b53938f-d942-40f9-98fc-b485a62b681a") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/15da0f0e-0c65-490c-b108-9ea666217bf0") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/40437fea-99af-4942-a43e-006a6462703c") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/15da0f0e-0c65-490c-b108-9ea666217bf0") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/40437fea-99af-4942-a43e-006a6462703c") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/15da0f0e-0c65-490c-b108-9ea666217bf0") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/40437fea-99af-4942-a43e-006a6462703c") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/15da0f0e-0c65-490c-b108-9ea666217bf0") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/40437fea-99af-4942-a43e-006a6462703c") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/15da0f0e-0c65-490c-b108-9ea666217bf0") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/40437fea-99af-4942-a43e-006a6462703c") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/f4b3835f-dbbd-4261-a989-378cab313662") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/d5e908d9-7902-4685-8c3d-243c1d191412") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/b7da3c38-d86a-468c-b212-fb54917b5abf") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/a0440ef2-6fae-41a9-887c-215d3efe0198") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/410d2625-3159-441c-8f14-03c9abf4ad2c") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/f4b3835f-dbbd-4261-a989-378cab313662") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/d5e908d9-7902-4685-8c3d-243c1d191412") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/b7da3c38-d86a-468c-b212-fb54917b5abf") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/a0440ef2-6fae-41a9-887c-215d3efe0198") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/410d2625-3159-441c-8f14-03c9abf4ad2c") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/f4b3835f-dbbd-4261-a989-378cab313662") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/d5e908d9-7902-4685-8c3d-243c1d191412") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/b7da3c38-d86a-468c-b212-fb54917b5abf") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/a0440ef2-6fae-41a9-887c-215d3efe0198") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/410d2625-3159-441c-8f14-03c9abf4ad2c") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/f4b3835f-dbbd-4261-a989-378cab313662") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/d5e908d9-7902-4685-8c3d-243c1d191412") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/b7da3c38-d86a-468c-b212-fb54917b5abf") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/a0440ef2-6fae-41a9-887c-215d3efe0198") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/propuestas/pl/gastronomia/a/410d2625-3159-441c-8f14-03c9abf4ad2c") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style>
+<style>
+
+body{margin:0;font-family:Karla,Helvetica,sans-serif;color:#231d1a}
+a{color:#942d1d}
+a:hover{color:#6f2115}
+</style>
+<style>
+/* Paginado A4 propio (reemplaza al runtime doc-page) */
+@page { size: A4; margin: 0.78in 0.78in 0.95in; }
+html { background: #e9e5e0; }
+body { margin: 0 auto; max-width: 6.71in; background: #fffdfb; padding: 0.6in 0.5in; box-shadow: 0 10px 40px rgba(35,29,26,.18); }
+.pie-doc { margin-top: 40px; }
+@media print {
+  html, body { background: #fff; }
+  body { max-width: none; margin: 0; padding: 0; box-shadow: none; }
+  .pie-doc { position: fixed; bottom: -0.62in; left: 0; right: 0; background: #fff; margin: 0; }
+  .contenido-doc { padding-bottom: 10px; }
+}
+</style>
+</head>
+<body>
+<div class="contenido-doc">
+<div style="position:relative;display:grid;grid-template-columns:minmax(0,1fr) 362px;column-gap:18px;align-items:start;width:640px;min-height:300px">
+<div style="position:absolute;right:0;top:2px;width:362px;height:238px;overflow:hidden;border:1px solid #efe8e3;border-radius:8px;box-shadow:0 14px 40px rgba(35,29,26,0.10)">
+<div style="width:1440px;transform:scale(0.2514);transform-origin:top left"><dc-import name="Ocre - Web Pro" gallery-count="6" scroll-reveal="{{ falso }}" hint-size="1440px,1400px"></dc-import></div>
+</div>
+<div style="position:absolute;right:210px;top:96px;width:134px;height:212px;overflow:hidden;border-radius:14px;border:1px solid #efe8e3;box-shadow:0 12px 30px rgba(35,29,26,0.16);background:#F6F0E7"><div style="width:402px;transform:scale(0.3333);transform-origin:top left"><dc-import name="Ocre - Movil" gallery-count="6" scroll-reveal="{{ falso }}" hint-size="402px,3600px"></dc-import></div></div>
+<div style="position:relative;z-index:2">
+<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72">Juan Jose Bertinatti · cofundador de Cloud For Deploy</div>
+<h1 style="margin:30px 0 0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:31px;line-height:1.05;letter-spacing:-0.04em">Páginas web a medida</h1>
+<p style="margin:14px 0 0;font-weight:300;font-size:15px;line-height:1.6;color:#5c5049;max-width:2.6in">Tres niveles de sitio, para que elijas según el momento del negocio.</p>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:22px 0 0;padding:14px 0;border-top:1px solid #ddd2c9;border-bottom:1px solid #e6ddd6;break-inside:avoid">
+<div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72;margin-bottom:5px">Preparada para</div><div style="font-size:12.5px;font-weight:600;letter-spacing:-0.015em">[Nombre del cliente]</div></div>
+<div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72;margin-bottom:5px">Fecha</div><div style="font-size:12.5px;font-weight:600">Septiembre 2026</div></div>
+<div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72;margin-bottom:5px">Validez</div><div style="font-size:12.5px;font-weight:600">30 días</div></div>
+<div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72;margin-bottom:5px">Documento</div><div style="font-size:12.5px;font-weight:600">Propuesta comercial</div></div>
+</div>
+
+<h2 style="margin:42px 0 0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:29px;line-height:1.12;letter-spacing:-0.035em;max-width:6.4in">Tu negocio ya funciona. Que la web trabaje igual.</h2>
+<div style="display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);column-gap:34px;margin-top:14px">
+<p style="margin:0;font-size:13.5px;line-height:1.8;color:#4a3f39">Hoy la mayoría de los clientes busca desde el celular antes de escribir o llamar. La web es la primera impresión y el único canal que es 100% tuyo: no depende de un algoritmo ni de una red social.</p>
+<p style="margin:0;padding-left:18px;border-left:2px solid #942d1d;font-weight:500;font-size:14px;line-height:1.6;color:#231d1a">Una web bien hecha no es una vidriera: es el canal que trabaja para el negocio todos los días.</p>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:24px;margin-top:26px;break-inside:avoid">
+<div><div style="font-size:14px;font-weight:600;letter-spacing:-0.015em;margin-bottom:6px">Tu marca, no una plantilla</div><p style="margin:0;font-size:11.5px;line-height:1.75;color:#5c5049">Diseño propio con tus colores, tus fotos y tu forma de hablar. Nada de temas genéricos repetidos.</p></div>
+<div><div style="font-size:14px;font-weight:600;letter-spacing:-0.015em;margin-bottom:6px">Primero el celular</div><p style="margin:0;font-size:11.5px;line-height:1.75;color:#5c5049">Ahí se decide. Si el sitio es lento o difícil de usar en el teléfono, el cliente se va con la competencia.</p></div>
+<div><div style="font-size:14px;font-weight:600;letter-spacing:-0.015em;margin-bottom:6px">Que te puedan contactar</div><p style="margin:0;font-size:11.5px;line-height:1.75;color:#5c5049">WhatsApp, llamada y formulario siempre a la vista. La web sirve cuando te llegan consultas.</p></div>
+</div>
+
+<h2 style="margin:44px 0 0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:29px;line-height:1.12;letter-spacing:-0.035em;max-width:6.4in">Así se ve una landing en pantalla</h2>
+<p style="margin:12px 0 0;font-size:13.5px;line-height:1.8;color:#4a3f39;max-width:5.6in">Maqueta real de un sitio nuestro: carrusel principal, carta, galería filtrable, video, opiniones, preguntas frecuentes, ubicación y chatbot. Es la estructura del plan Web Pro.</p>
+<div style="margin-top:18px;width:640px;height:430px;overflow:hidden;border:1px solid #efe8e3;border-radius:8px;box-shadow:0 12px 34px rgba(35,29,26,0.09);break-inside:avoid">
+<div style="width:1440px;transform:scale(0.4444);transform-origin:top left"><dc-import name="Ocre - Web Pro" gallery-count="6" scroll-reveal="{{ falso }}" hint-size="1440px,1400px"></dc-import></div>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:7px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.14em;color:#a1938a"><span>Maqueta de ejemplo · escritorio 1440 px</span><span>Fotos y textos de ejemplo, se reemplazan por los tuyos</span></div>
+<div style="display:flex;gap:14px;margin-top:20px;break-inside:avoid">
+<div>
+<div style="width:150px;height:318px;overflow:hidden;border:1px solid #efe8e3;border-radius:14px;background:#F6F0E7;box-shadow:0 8px 22px rgba(35,29,26,0.10)">
+<div style="width:402px;transform:scale(0.3731);transform-origin:top left;margin-top:-0px">
+<dc-import name="Ocre - Movil" gallery-count="6" scroll-reveal="{{ falso }}" hint-size="402px,3600px"></dc-import>
+</div>
+</div>
+<div style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.12em;color:#a1938a">PORTADA</div>
+</div>
+<div>
+<div style="width:150px;height:318px;overflow:hidden;border:1px solid #efe8e3;border-radius:14px;background:#F6F0E7;box-shadow:0 8px 22px rgba(35,29,26,0.10)">
+<div style="width:402px;transform:scale(0.3731);transform-origin:top left;margin-top:-380px">
+<dc-import name="Ocre - Movil" gallery-count="6" scroll-reveal="{{ falso }}" hint-size="402px,3600px"></dc-import>
+</div>
+</div>
+<div style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.12em;color:#a1938a">CARTA</div>
+</div>
+<div>
+<div style="width:150px;height:318px;overflow:hidden;border:1px solid #efe8e3;border-radius:14px;background:#F6F0E7;box-shadow:0 8px 22px rgba(35,29,26,0.10)">
+<div style="width:402px;transform:scale(0.3731);transform-origin:top left;margin-top:-610px">
+<dc-import name="Ocre - Movil" gallery-count="6" scroll-reveal="{{ falso }}" hint-size="402px,3600px"></dc-import>
+</div>
+</div>
+<div style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.12em;color:#a1938a">GALERÍA</div>
+</div>
+<div>
+<div style="width:150px;height:318px;overflow:hidden;border:1px solid #efe8e3;border-radius:14px;background:#F6F0E7;box-shadow:0 8px 22px rgba(35,29,26,0.10)">
+<div style="width:402px;transform:scale(0.3731);transform-origin:top left;margin-top:-1040px">
+<dc-import name="Ocre - Movil" gallery-count="6" scroll-reveal="{{ falso }}" hint-size="402px,3600px"></dc-import>
+</div>
+</div>
+<div style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.12em;color:#a1938a">RESERVAR</div>
+</div>
+</div>
+<div style="margin-top:7px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.14em;color:#a1938a">Versión celular · 402 px</div>
+
+
+<h2 style="margin:44px 0 0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:29px;line-height:1.12;letter-spacing:-0.035em;max-width:6.4in">Páginas web</h2>
+<p style="margin:12px 0 0;font-size:13.5px;line-height:1.8;color:#4a3f39;max-width:5.6in">Tres niveles, del sitio esencial al completo. Todos con diseño propio, versión celular y las secciones listas para publicar.</p>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:18px">
+<div style="border-top:1px solid #ddd2c9;padding:12px 0 0;break-inside:avoid">
+<div style="height:14px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:#942d1d"><sc-if value="{{ destBasica }}" hint-placeholder-val="{{ false }}">Recomendado</sc-if></div>
+<div style="font-family:'Bricolage Grotesque',Karla,sans-serif;font-size:21px;font-weight:600;letter-spacing:-0.035em;margin-top:2px">Web Básica</div>
+<div style="font-size:11px;color:#8a7b72;margin-top:3px">Presencia clara y directa</div>
+<ul style="margin:12px 0 0;padding:0;list-style:none;font-size:10.5px;line-height:1.6;color:#231d1a">
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Carrusel principal con tus mejores fotos</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Header con menú y botón de contacto</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Galería de 6 fotos</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Testimonios de clientes</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Preguntas frecuentes</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Footer con datos y redes</li>
+</ul>
+</div>
+<div style="border-top:1px solid #942d1d;padding:12px 0 0;break-inside:avoid">
+<div style="height:14px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:#942d1d"><sc-if value="{{ destMedia }}" hint-placeholder-val="{{ true }}">Recomendado</sc-if></div>
+<div style="font-family:'Bricolage Grotesque',Karla,sans-serif;font-size:21px;font-weight:600;letter-spacing:-0.035em;margin-top:2px;color:#942d1d">Web Media</div>
+<div style="font-size:11px;color:#8a7b72;margin-top:3px">El sitio completo del negocio</div>
+<ul style="margin:12px 0 0;padding:0;list-style:none;font-size:10.5px;line-height:1.6;color:#231d1a">
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Todo lo de Web Básica</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Galería ampliada de 20 fotos</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Formulario de contacto que llega a tu mail</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Ubicación con mapa y cómo llegar</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Fotos optimizadas por categoría</li>
+</ul>
+</div>
+<div style="border-top:1px solid #ddd2c9;padding:12px 0 0;break-inside:avoid">
+<div style="height:14px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:#942d1d"><sc-if value="{{ destPro }}" hint-placeholder-val="{{ false }}">Recomendado</sc-if></div>
+<div style="font-family:'Bricolage Grotesque',Karla,sans-serif;font-size:21px;font-weight:600;letter-spacing:-0.035em;margin-top:2px">Web Pro</div>
+<div style="font-size:11px;color:#8a7b72;margin-top:3px">Todo, con video y atención automática</div>
+<ul style="margin:12px 0 0;padding:0;list-style:none;font-size:10.5px;line-height:1.6;color:#231d1a">
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Todo lo de Web Media</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Galería completa de 40 fotos</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Animaciones y transiciones a medida</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Hasta 5 videos integrados</li>
+<li style="padding:4px 0 4px 12px;text-indent:-12px">· Chatbot para responder consultas 24 h</li>
+</ul>
+</div>
+</div>
+
+<p style="margin:12px 0 0;font-size:10.5px;line-height:1.75;color:#8a7b72">Los montos se detallan en el presupuesto que acompaña esta propuesta. Todos los planes incluyen una cuota mensual de mantenimiento, hosting y soporte.</p>
+
+<h2 style="margin:44px 0 0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:29px;line-height:1.12;letter-spacing:-0.035em">Qué incluye cualquiera de los planes</h2>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:24px;row-gap:0;margin-top:14px;break-inside:avoid">
+<div style="padding:10px 0"><div style="font-size:13px;font-weight:600;margin-bottom:5px">Velocidad</div><p style="margin:0;font-size:11px;line-height:1.7;color:#5c5049">El sitio abre en menos de 2,5 segundos, incluso con datos móviles. Menos visitas que se van antes de ver nada.</p></div>
+<div style="padding:10px 0"><div style="font-size:13px;font-weight:600;margin-bottom:5px">Seguridad</div><p style="margin:0;font-size:11px;line-height:1.7;color:#5c5049">Conexión segura, copias de respaldo y datos de tus clientes bien cuidados.</p></div>
+<div style="padding:10px 0"><div style="font-size:13px;font-weight:600;margin-bottom:5px">En todos los dispositivos</div><p style="margin:0;font-size:11px;line-height:1.7;color:#5c5049">Pensado primero para el celular: se ve y funciona perfecto en teléfono, tablet y computadora.</p></div>
+<div style="padding:10px 0"><div style="font-size:13px;font-weight:600;margin-bottom:5px">Visible en Google</div><p style="margin:0;font-size:11px;line-height:1.7;color:#5c5049">Preparado para que Google entienda y muestre tu negocio cuando alguien lo busca.</p></div>
+<div style="padding:10px 0"><div style="font-size:13px;font-weight:600;margin-bottom:5px">Todo conectado</div><p style="margin:0;font-size:11px;line-height:1.7;color:#5c5049">WhatsApp, mapa, redes, mail y estadísticas funcionando juntos, sin trabajo extra para vos.</p></div>
+<div style="padding:10px 0"><div style="font-size:13px;font-weight:600;margin-bottom:5px">Autonomía y soporte</div><p style="margin:0;font-size:11px;line-height:1.7;color:#5c5049">Podés editar textos y fotos sin depender de nadie, con soporte nuestro todos los meses.</p></div>
+</div>
+
+<h2 style="margin:44px 0 0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:29px;line-height:1.12;letter-spacing:-0.035em">Cómo trabajamos, paso a paso</h2>
+<div style="margin-top:16px;display:grid;grid-template-columns:88px minmax(0,1.1fr) minmax(0,2.4fr);column-gap:20px;row-gap:0;align-items:baseline;font-size:11.5px">
+<div style="grid-column:1/-1;height:1px;background:#231d1a"></div>
+<div style="padding:12px 0;font-size:11px;font-weight:600;color:#942d1d">Semana 1</div>
+<div style="padding:12px 0;font-size:13px;font-weight:600;letter-spacing:-0.015em">Descubrimiento</div>
+<div style="padding:12px 0;line-height:1.75;color:#5c5049">Entendemos el negocio, sus clientes y sus objetivos. Definimos secciones, textos y fotos disponibles.</div>
+<div style="padding:12px 0;font-size:11px;font-weight:600;color:#942d1d">Semanas 1–2</div>
+<div style="padding:12px 0;font-size:13px;font-weight:600;letter-spacing:-0.015em">Diseño</div>
+<div style="padding:12px 0;line-height:1.75;color:#5c5049">Armamos la maqueta visual de las pantallas clave. La revisamos juntos hasta aprobarla.</div>
+<div style="padding:12px 0;font-size:11px;font-weight:600;color:#942d1d">Semanas 2–3</div>
+<div style="padding:12px 0;font-size:13px;font-weight:600;letter-spacing:-0.015em">Desarrollo</div>
+<div style="padding:12px 0;line-height:1.75;color:#5c5049">Construimos el sitio, cargamos los contenidos reales y conectamos WhatsApp, formulario o chatbot según el plan.</div>
+<div style="padding:12px 0;font-size:11px;font-weight:600;color:#942d1d">Semana 4</div>
+<div style="padding:12px 0;font-size:13px;font-weight:600;letter-spacing:-0.015em">Pruebas y ajustes</div>
+<div style="padding:12px 0;line-height:1.75;color:#5c5049">Probamos en distintos dispositivos y verificamos que las consultas lleguen bien de punta a punta.</div>
+<div style="padding:12px 0;font-size:11px;font-weight:600;color:#942d1d">Semana 4 +</div>
+<div style="padding:12px 0;font-size:13px;font-weight:600;letter-spacing:-0.015em">Lanzamiento y acompañamiento</div>
+<div style="padding:12px 0;line-height:1.75;color:#5c5049">Publicamos, te mostramos cómo editar el sitio y acompañamos los primeros meses con el plan de soporte.</div>
+<div style="grid-column:1/-1;height:1px;background:#231d1a"></div>
+</div>
+
+<h2 style="margin:44px 0 0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:29px;line-height:1.12;letter-spacing:-0.035em">Qué cambia con el nuevo sitio</h2>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:16px;break-inside:avoid">
+<div><div style="font-family:Fraunces,serif;font-size:34px;font-weight:600;letter-spacing:-0.03em;line-height:1;color:#942d1d;margin-bottom:8px">&lt;2,5 s</div><p style="margin:0;font-size:11px;line-height:1.75;color:#5c5049">Tiempo de carga en celular: menos rebote y mejor posición en Google.</p></div>
+<div><div style="font-family:Fraunces,serif;font-size:34px;font-weight:600;letter-spacing:-0.03em;line-height:1;color:#942d1d;margin-bottom:8px">100%</div><p style="margin:0;font-size:11px;line-height:1.75;color:#5c5049">Se ve bien en celular, tablet y computadora, sin excepciones.</p></div>
+<div><div style="font-family:Fraunces,serif;font-size:34px;font-weight:600;letter-spacing:-0.03em;line-height:1;color:#942d1d;margin-bottom:8px">+ Consultas</div><p style="margin:0;font-size:11px;line-height:1.75;color:#5c5049">Contacto siempre a la vista: WhatsApp, llamada y formulario.</p></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:32px;row-gap:0;margin-top:18px;font-size:11.5px">
+<div style="padding:9px 0"><p style="margin:0;line-height:1.75;color:#231d1a"><strong style="font-weight:600">Marca profesional.</strong> Un sitio propio genera confianza antes de la primera charla.</p></div>
+<div style="padding:9px 0"><p style="margin:0;line-height:1.75;color:#231d1a"><strong style="font-weight:600">Datos para decidir.</strong> Vas a saber qué buscan tus clientes y desde dónde llegan.</p></div>
+<div style="padding:9px 0"><p style="margin:0;line-height:1.75;color:#231d1a"><strong style="font-weight:600">Autonomía.</strong> Cambiás fotos, textos y precios sin depender de nadie.</p></div>
+<div style="padding:9px 0"><p style="margin:0;line-height:1.75;color:#231d1a"><strong style="font-weight:600">Encontrable.</strong> Apareces en Google por búsquedas de tu rubro y tu zona.</p></div>
+</div>
+
+<div style="margin-top:40px;padding:26px 28px;background:#231d1a;color:#fffdfb;break-inside:avoid">
+<h2 style="margin:0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:27px;line-height:1.12;letter-spacing:-0.035em;max-width:5.4in">No hacemos webs bonitas. Hacemos webs que traen clientes.</h2>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:20px">
+<div style="border-top:1px solid #4a3f39;padding-top:9px"><div style="font-size:12.5px;font-weight:600;margin-bottom:5px">Foco en el negocio</div><p style="margin:0;font-size:10.5px;line-height:1.75;color:#cfc2b9">Cada decisión de diseño se mide contra una pregunta: ¿esto ayuda a que te contacten?</p></div>
+<div style="border-top:1px solid #4a3f39;padding-top:9px"><div style="font-size:12.5px;font-weight:600;margin-bottom:5px">Todo en un solo lugar</div><p style="margin:0;font-size:10.5px;line-height:1.75;color:#cfc2b9">Diseño, desarrollo, hosting y soporte los manejamos nosotros. No tenés que coordinar proveedores.</p></div>
+<div style="border-top:1px solid #4a3f39;padding-top:9px"><div style="font-size:12.5px;font-weight:600;margin-bottom:5px">Acompañamiento real</div><p style="margin:0;font-size:10.5px;line-height:1.75;color:#cfc2b9">No desaparecemos tras el lanzamiento: el plan mensual incluye cambios, soporte y monitoreo.</p></div>
+</div>
+</div>
+
+<div style="margin-top:34px;break-inside:avoid">
+<h2 style="margin:0;font-family:'Bricolage Grotesque',Karla,sans-serif;font-weight:600;font-size:29px;line-height:1.12;letter-spacing:-0.035em">Demos el próximo paso</h2>
+<p style="margin:10px 0 0;font-size:13.5px;line-height:1.8;color:#4a3f39;max-width:4.6in">Coordinemos una reunión de 30 minutos para conocer tu negocio, ver qué plan conviene y ajustar esta propuesta a tu medida. Sin compromiso.</p>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:18px;font-size:12px">
+<div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72;margin-bottom:4px">Contacto</div>Juan Jose Bertinatti<div style="font-size:10.5px;color:#8a7b72;margin-top:2px">Cofundador de Cloud For Deploy</div></div>
+<div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72;margin-bottom:4px">WhatsApp</div>+54 0 3816660612</div>
+<div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7b72;margin-bottom:4px">Email</div>cloudfordeploy@gmail.com</div>
+</div>
+</div>
+
+<div style="margin-top:30px;padding:26px 28px;background:#0d2a4f;color:#f2f6fb;display:grid;grid-template-columns:minmax(0,1fr) 168px;column-gap:22px;align-items:center;break-inside:avoid">
+<div style="display:flex;align-items:center;gap:18px">
+<img src="/propuestas/pl/gastronomia/a/e29faea2-fe0a-4a40-bca9-eb111cf44d36" alt="Cloud For Deploy" style="height:64px;width:auto;flex:none;display:block">
+<div style="min-width:0">
+<div style="font-family:'Bricolage Grotesque',Karla,sans-serif;font-size:19px;font-weight:600;letter-spacing:-0.03em;line-height:1.25;max-width:220px">Visitá nuestra página web</div>
+<div style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;color:#9fc3ea">cloudfordeploy.com</div>
+</div>
+</div>
+<div style="text-align:right">
+<div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#9fc3ea;margin-bottom:5px">Contacto</div>
+<div style="font-family:'Bricolage Grotesque',Karla,sans-serif;font-size:15px;font-weight:600;letter-spacing:-0.02em">+54 0 3816660612</div>
+<div style="margin-top:3px;font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:#9fc3ea">cloudfordeploy@gmail.com</div>
+</div>
+</div>
+
+<div style="margin:20px 0 0;padding-top:12px;border-top:1px solid #e6ddd6;font-family:'IBM Plex Mono',monospace;font-size:8.5px;line-height:1.8;letter-spacing:0.03em;color:#8a7b72">
+<div style="font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:#231d1a;margin-bottom:5px">Confidencialidad</div>
+<p style="margin:0">Este documento es confidencial y de uso exclusivo del destinatario. Su contenido —alcance, plazos, maquetas y condiciones— no puede ser divulgado, reproducido, publicado ni compartido con terceros, total o parcialmente, sin autorización previa y por escrito de Cloud For Deploy. Las maquetas e ideas aquí presentadas son propiedad intelectual de Cloud For Deploy y no pueden utilizarse ni ejecutarse con otro proveedor. Si recibió este documento por error, le pedimos eliminarlo y avisarnos.</p>
+<p style="margin:8px 0 0">Propuesta orientativa y editable. Alcance y plazos se confirman tras el relevamiento del negocio.<br>Propuesta de páginas web · Septiembre 2026 · Preparada por Juan Jose Bertinatti — cofundador de Cloud For Deploy.</p>
+</div>
+</div>
+<div class="pie-doc"><div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:baseline;padding:8px 0 0;border-top:1px solid #231d1a;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:#8a7b72;white-space:nowrap">
+<span>Cloud For Deploy</span>
+<span style="color:#942d1d">Páginas web</span>
+<span style="text-align:right">Juan Jose Bertinatti</span>
+</div></div>
+</body>
+</html>

@@ -1734,6 +1734,9 @@ function plantillasPropuestas() {
 }
 const plantillaProp = (slug) => plantillasPropuestas().find((p) => p.slug === slug) || null;
 
+// Comparación de planes sin acentos ("Básica" del form vs "destBasica" de la plantilla).
+const sinAcentos = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
 // Tono derivado de un color elegido (f negativo = más oscuro): para hovers y variantes.
 function tonoHex(hex, f) {
   const n = parseInt(hex.slice(1), 16);
@@ -1806,13 +1809,22 @@ function renderPropuesta(pl, d, modo = 'final') {
     // Editor en vivo: sale con los valores originales de la plantilla y el navegador va aplicando
     // los cambios del formulario. Los nombres quedan marcados con spans data-tok (se desarman al generar).
     h = h.replace(/<title>[\s\S]*?<\/title>/, '<title>Propuesta</title>');
-    h = h.split(pl.empresaOriginal).join('@@EMP@@');
+    if (pl.empresaOriginal) h = h.split(pl.empresaOriginal).join('@@EMP@@');
     if (pl.aliasOriginal) h = h.split(pl.aliasOriginal).join('@@ALI@@');
     if (pl.firmaOriginal) h = h.split(pl.firmaOriginal).join('@@FIR@@');
     h = h.split('@@EMP@@').join(`<span data-tok="empresa">${escp(pl.empresaOriginal)}</span>`);
     h = h.split('@@ALI@@').join(`<span data-tok="alias">${escp(pl.aliasOriginal || pl.empresaOriginal)}</span>`);
     h = h.split('@@FIR@@').join(`<span data-tok="firma">${escp(pl.firmaOriginal || '')}</span>`);
-    h = h.replace(/<sc-if value="\{\{ dest(\w+) \}\}"[^>]*>([\s\S]*?)<\/sc-if>/g, (m, cual, inner) => `<span data-sc-plan="${cual}"${cual === pl.planDefault ? '' : ' hidden'}>${inner}</span>`);
+    // Plantillas sin nombre de cliente en el texto: línea "Preparada para ..." bajo el título.
+    if (pl.clienteEn === 'hero' && pl.heroTexto) {
+      const iH = h.indexOf(pl.heroTexto);
+      const fin = iH >= 0 ? h.indexOf('</h1>', iH) : -1;
+      if (fin >= 0) h = h.slice(0, fin + 5) + `<p style="margin:10px 0 0;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#942d1d">Preparada para <span data-tok="empresa">${escp(pl.empresaOriginal || 'tu negocio')}</span></p>` + h.slice(fin + 5);
+    }
+    h = h.replace(/<sc-if value="\{\{ dest(\w+) \}\}"[^>]*>([\s\S]*?)<\/sc-if>/g, (m, cual, inner) => {
+      const nombre = (pl.planes || []).find((p) => sinAcentos(p) === cual) || cual;
+      return `<span data-sc-plan="${escp(nombre)}"${nombre === pl.planDefault ? '' : ' hidden'}>${inner}</span>`;
+    });
     h = h.replace(/\{\{[^}]*\}\}/g, '');
     if (pl.heroTexto) {
       const i = h.indexOf(pl.heroTexto);
@@ -1830,12 +1842,18 @@ function renderPropuesta(pl, d, modo = 'final') {
     h = h.split(c.hex).join(elegido);
   }
   // 2) Nombres y firma (primero el nombre completo, después el alias que es substring).
-  h = h.split(pl.empresaOriginal).join(escp(d.empresa));
+  if (pl.empresaOriginal) h = h.split(pl.empresaOriginal).join(escp(d.empresa));
   if (pl.aliasOriginal) h = h.split(pl.aliasOriginal).join(escp(d.alias || d.empresa));
   if (pl.firmaOriginal && d.firma) h = h.split(pl.firmaOriginal).join(escp(d.firma));
+  if (pl.clienteEn === 'hero' && pl.heroTexto && d.empresa) {
+    const iH = h.indexOf(pl.heroTexto);
+    const fin = iH >= 0 ? h.indexOf('</h1>', iH) : -1;
+    const cPri = (pl.colores[0] && /^#[0-9a-fA-F]{6}$/.test(d.colores[pl.colores[0].clave] || '') ? d.colores[pl.colores[0].clave].toLowerCase() : (pl.colores[0] || {}).hex) || '#231d1a';
+    if (fin >= 0) h = h.slice(0, fin + 5) + `<p style="margin:10px 0 0;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:${cPri}">Preparada para ${escp(d.empresa)}</p>` + h.slice(fin + 5);
+  }
   // 3) Plan destacado: cada sc-if muestra su contenido solo si es el plan elegido.
   const plan = (pl.planes || []).includes(d.plan) ? d.plan : pl.planDefault;
-  h = h.replace(/<sc-if value="\{\{ dest(\w+) \}\}"[^>]*>([\s\S]*?)<\/sc-if>/g, (m, cual, inner) => (cual === plan ? inner : ''));
+  h = h.replace(/<sc-if value="\{\{ dest(\w+) \}\}"[^>]*>([\s\S]*?)<\/sc-if>/g, (m, cual, inner) => (sinAcentos(plan) === cual ? inner : ''));
   h = h.replace(/\{\{[^}]*\}\}/g, '');
   // 4) Logo del cliente arriba del título principal.
   if (d.logoUrl && pl.heroTexto) {

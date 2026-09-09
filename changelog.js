@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.49.0',
+    fecha: '2026-09-08',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Segunda plantilla en el Generador de Propuestas: Gastronomía — la propuesta de páginas web con los tres planes (Básica / Media / Pro, eligiendo cuál se marca "Recomendado"). Como el documento no nombra al cliente en el texto, aparece la línea "PREPARADA PARA «empresa»" bajo el título, en el color principal elegido.' },
+      { tipo: 'mejora', texto: 'El motor de plantillas ahora banca plantillas sin nombre de cliente en el contenido y planes con acentos (Básica). Todo el editor en vivo funciona igual: colores, logo, firma, plan y textos editables.' },
+    ],
+  },
+  {
     version: '2.48.2',
     fecha: '2026-09-06',
     cambios: [

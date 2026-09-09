@@ -5036,8 +5036,8 @@ function propuestaNuevaPage({ user, plantillas, leads = [], dealSel = null }) {
       var emp = document.getElementById('inpEmpresa').value.trim();
       var ali = document.getElementById('inpAlias').value.trim();
       var fir = document.getElementById('inpFirma').value.trim();
-      avisar({ tipo: 'texto', tok: 'empresa', valor: emp || m.empresaOriginal });
-      avisar({ tipo: 'texto', tok: 'alias', valor: ali || emp || m.aliasOriginal || m.empresaOriginal });
+      avisar({ tipo: 'texto', tok: 'empresa', valor: emp || m.empresaOriginal || 'tu negocio' });
+      avisar({ tipo: 'texto', tok: 'alias', valor: ali || emp || m.aliasOriginal || m.empresaOriginal || 'tu negocio' });
       avisar({ tipo: 'texto', tok: 'firma', valor: fir || m.firmaOriginal });
       for (var i = 0; i < m.colores.length; i++) {
         var c = m.colores[i];
