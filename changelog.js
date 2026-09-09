@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.49.1',
+    fecha: '2026-09-08',
+    cambios: [
+      { tipo: 'fix', texto: 'La plantilla Gastronomía ahora muestra las maquetas de la web (la landing de escritorio y las pantallas del celular): venían como componentes dinámicos del documento original y no se veían — se convirtieron a HTML fijo con todas sus fotos, carrusel, carta, galería y chatbot dibujados.' },
+    ],
+  },
+  {
     version: '2.49.0',
     fecha: '2026-09-08',
     cambios: [
