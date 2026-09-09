@@ -1,0 +1,55 @@
+{
+  "nombre": "Colegios",
+  "descripcion": "Propuesta de páginas web para colegios e instituciones educativas (planes Básica / Media / Pro, maqueta Altamira)",
+  "empresaOriginal": "",
+  "aliasOriginal": "",
+  "firmaOriginal": "Juan Jose Bertinatti",
+  "colores": [
+    {
+      "clave": "principal",
+      "label": "Color principal",
+      "hex": "#942d1d",
+      "derivados": {
+        "#6f2115": -0.27
+      }
+    }
+  ],
+  "planes": [
+    "Básica",
+    "Media",
+    "Pro"
+  ],
+  "planDefault": "Media",
+  "heroTexto": "Páginas web a medida",
+  "clienteEn": "hero",
+  "assets": {
+    "7b05fe0a-4195-4f3c-8e13-294b0ed84113": "image/png",
+    "ec8b7c06-8243-4486-9f24-59fd691138ff": "image/png",
+    "984ff2bc-a715-4193-b5e9-46061ac71fb3": "image/png",
+    "9d7386bd-d19f-4b19-a151-bf4532fd41b4": "image/png",
+    "496875fc-7e69-4afa-8bb5-170026374b0e": "image/png",
+    "72cac051-6fce-4b20-91e2-280756cbaaf1": "image/png",
+    "9aa69a0f-0946-42dd-82c3-11ebd96db31c": "image/png",
+    "519a1ca2-7021-4eeb-9e2e-ea21624f8308": "image/png",
+    "856f1266-9ece-4d49-95d8-256cc7d029ef": "image/png",
+    "71182772-4c87-49da-9e13-5c1f55187f87": "image/jpeg",
+    "08eb5b98-ab96-4961-9108-b058bfb1e1f1": "image/jpeg",
+    "9f8b6a78-6401-4105-a74a-1ba740c425f2": "image/jpeg",
+    "191368a9-7503-4916-9191-ccb8f01e452a": "image/jpeg",
+    "16f68afa-d263-4986-a063-74877dcb0aa7": "image/jpeg",
+    "70ea4d2c-470b-4198-8b78-3232267bec34": "image/jpeg",
+    "d1b075c2-7ae5-4cf2-887f-93ac00495411": "font/woff2",
+    "859e1589-8b5b-480d-b798-704545678199": "font/woff2",
+    "3361d109-7213-46df-a624-e4ec30bafd96": "font/woff2",
+    "843ea062-78a5-41c0-a686-754a02e22802": "font/woff2",
+    "5700ab26-27f3-45ff-850c-c59aa324aa46": "font/woff2",
+    "a90d0b2d-a466-4c19-9195-3cda557a869d": "font/woff2",
+    "74d0d5bd-2328-4393-9ac4-954ac4ba419b": "font/woff2",
+    "100b2f7d-afa8-4130-9fbc-5c76eef36b65": "font/woff2",
+    "be5e10cf-f1bc-456b-8023-3d69ca808c4b": "font/woff2",
+    "7e254c96-a014-4eba-b002-1cbef7092271": "font/woff2",
+    "1146087d-2736-4ae8-8be6-e0110a19f75d": "font/woff2",
+    "447eae3d-c938-49c7-b2da-60fa95b6dff2": "font/woff2",
+    "b54b5375-cf77-4ff4-aeef-73d79707c4aa": "font/woff2"
+  }
+}

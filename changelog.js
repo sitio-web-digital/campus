@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.51.0',
+    fecha: '2026-09-08',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Cuarta plantilla en el Generador de Propuestas: Colegios — con la maqueta "Altamira" (colegio bilingüe): landing de escritorio con su hero "Aprender con calma", y las pantallas del celular en Portada, Campus, Video y Agendar (con mapa). El chatbot flotante ya sale en su lugar desde el arranque. Mismos planes, colores, logo y línea "Preparada para «empresa»".' },
+    ],
+  },
+  {
     version: '2.50.1',
     fecha: '2026-09-08',
     cambios: [
