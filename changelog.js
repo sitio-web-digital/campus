@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.49.4',
+    fecha: '2026-09-08',
+    cambios: [
+      { tipo: 'fix', texto: 'El mapa de la maqueta de Gastronomía (pantalla "Reservar" del celular y sección de ubicación) ya no sale como imagen rota: el documento original apuntaba a 9 imágenes del mapa que nunca se empaquetaron. Se cargaron las teselas reales de OpenStreetMap de la zona (con su pin y su crédito) y quedan embebidas como assets de la plantilla — se ven en la vista previa y en el PDF.' },
+    ],
+  },
+  {
     version: '2.49.3',
     fecha: '2026-09-08',
     cambios: [
