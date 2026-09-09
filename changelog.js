@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.49.2',
+    fecha: '2026-09-08',
+    cambios: [
+      { tipo: 'fix', texto: 'Descargar PDF ahora sale igual que la vista previa: las imágenes ya no desaparecen (se cargaban de forma diferida y al imprimir quedaban en blanco) y los fondos de color y fotos de fondo se imprimen siempre, sin depender del tilde "Gráficos de fondo" del navegador. Vale para las dos plantillas. Ojo: las propuestas ya generadas guardan el documento viejo — regeneralas para que tomen el arreglo.' },
+    ],
+  },
+  {
     version: '2.49.1',
     fecha: '2026-09-08',
     cambios: [
