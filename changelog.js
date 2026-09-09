@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.49.3',
+    fecha: '2026-09-08',
+    cambios: [
+      { tipo: 'fix', texto: 'Se acomodó el paginado del PDF: el pie de página que se repetía en cada hoja se desbordaba e imprimía ENCIMA del comienzo de la hoja siguiente (por eso todo se veía corrido/pisado). Ahora el pie va una sola vez al final y cada página quedó limpia. También se restauró el alto de página original del documento.' },
+    ],
+  },
+  {
     version: '2.49.2',
     fecha: '2026-09-08',
     cambios: [

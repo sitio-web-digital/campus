@@ -574,7 +574,8 @@ a:hover{color:#6f2115}
 </style>
 <style>
 /* Paginado A4 propio (reemplaza al runtime doc-page) */
-@page { size: A4; margin: 0.78in 0.78in 0.95in; }
+@page { size: A4; margin: 0.78in; }
+p, li { orphans: 3; widows: 3; }
 html { background: #e9e5e0; }
 body { margin: 0 auto; max-width: 6.71in; background: #fffdfb; padding: 0.6in 0.5in; box-shadow: 0 10px 40px rgba(35,29,26,.18); }
 .pie-doc { margin-top: 40px; }
@@ -582,8 +583,7 @@ body { margin: 0 auto; max-width: 6.71in; background: #fffdfb; padding: 0.6in 0.
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   html, body { background: #fff; }
   body { max-width: none; margin: 0; padding: 0; box-shadow: none; }
-  .pie-doc { position: fixed; bottom: -0.62in; left: 0; right: 0; background: #fff; margin: 0; }
-  .contenido-doc { padding-bottom: 10px; }
+  .pie-doc { margin-top: 28px; break-inside: avoid; }
 }
 </style>
 </head>
