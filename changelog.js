@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.50.1',
+    fecha: '2026-09-08',
+    cambios: [
+      { tipo: 'fix', texto: 'El chatbot de las maquetas ahora aparece donde corresponde: flotando abajo a la derecha de la interfaz visible (en el mockup de escritorio y en la pantalla del celular de contacto), tanto en Gastronomía ("¿Reservamos?") como en Arquitectura. Antes quedaba enterrado al fondo de la página completa de la maqueta y el recorte nunca lo mostraba. La plantilla de Hoteles no trae chatbot en su diseño original.' },
+    ],
+  },
+  {
     version: '2.50.0',
     fecha: '2026-09-08',
     cambios: [
