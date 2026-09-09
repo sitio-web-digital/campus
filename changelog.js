@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.53.1',
+    fecha: '2026-09-09',
+    cambios: [
+      { tipo: 'fix', texto: 'El Generador de Propuestas ya se ve bien en celular: como el documento es una hoja A4 de ancho fijo, en pantallas chicas la vista previa se paneea con el dedo hacia los costados en vez de romperse (tanto en el editor en vivo como al abrir una propuesta). Los botones de la barra también se acomodan. La lista ya scrolleaba bien.' },
+    ],
+  },
+  {
     version: '2.53.0',
     fecha: '2026-09-09',
     cambios: [

@@ -1338,7 +1338,17 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .prop-split { display:grid; grid-template-columns:minmax(19rem, 23rem) minmax(0, 1fr); gap:1rem; align-items:start; }
 .prop-split .prop-form { position:sticky; top:3.6rem; max-height:calc(100vh - 5rem); overflow:auto; }
 .prop-marco-vivo { height:calc(100vh - 11.5rem); }
-@media (max-width: 900px) { .prop-split { grid-template-columns:1fr; } .prop-split .prop-form { position:static; max-height:none; } .prop-marco-vivo { height:70vh; } }
+.prop-rueda { min-width:0; }
+@media (max-width: 900px) {
+  .prop-split { grid-template-columns:1fr; }
+  .prop-split .prop-form { position:static; max-height:none; }
+  .prop-marco-vivo { height:70vh; }
+  /* En celular el documento es una hoja A4 fija: el marco se paneea horizontal en vez de romperse */
+  .prop-rueda { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .prop-rueda .prop-marco { width:700px; min-width:700px; }
+  .prop-toolbar { gap:.4rem; }
+  .prop-toolbar .btn { flex:1 0 auto; }
+}
 
 /* ---------- toast ---------- */
 /* Arriba a la derecha: abajo a la derecha vive la burbuja de MiniJuan y la tapaba. */
@@ -5016,7 +5026,7 @@ function propuestaNuevaPage({ user, plantillas, leads = [], dealSel = null }) {
     <select name="deal_id"><option value="">— Sin lead —</option>${leads.map((l) => `<option value="${l.id}" ${l.id === dealSel ? 'selected' : ''}>${esc(l.empresa)}</option>`).join('')}</select>
     <div style="margin-top:1rem"><button type="submit" class="btn" style="width:100%">Generar propuesta</button></div>
   </form>
-  <iframe id="marcoVivo" class="prop-marco prop-marco-vivo" src="/propuestas/editor/${plantillas[0].slug}" title="Vista previa"></iframe>
+  <div class="prop-rueda"><iframe id="marcoVivo" class="prop-marco prop-marco-vivo" src="/propuestas/editor/${plantillas[0].slug}" title="Vista previa"></iframe></div>
   </div>
   <script>
     var META = ${JSON.stringify(metaCliente)};
@@ -5100,7 +5110,7 @@ function propuestaVerPage({ user, p }) {
     <form method="post" action="/propuestas/${p.id}/borrar" onsubmit="return confirm('¿Eliminar esta propuesta definitivamente?')" style="display:inline; margin:0"><button class="btn danger small">Eliminar</button></form>
   </div>
   <p class="caption" id="propAyuda" style="margin:.35rem 0 .5rem">Con <strong>Editar textos</strong> tocás cualquier texto del documento y lo corregís ahí mismo (la disposición no se mueve). <strong>Descargar PDF</strong> abre la impresión: elegí "Guardar como PDF".</p>
-  <iframe id="marco" class="prop-marco" src="/propuestas/${p.id}/doc" title="Propuesta"></iframe>
+  <div class="prop-rueda"><iframe id="marco" class="prop-marco" src="/propuestas/${p.id}/doc" title="Propuesta"></iframe></div>
   <script>
     var marco = document.getElementById('marco');
     var bE = document.getElementById('btnEditar'), bG = document.getElementById('btnGuardar'), bP = document.getElementById('btnPdf');
