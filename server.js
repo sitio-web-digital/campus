@@ -1803,13 +1803,23 @@ async function enviarWA(conv, texto, userId) {
   db.prepare(`UPDATE wa_conversaciones SET ultimo_mensaje_at = datetime('now') WHERE id = ?`).run(conv.id);
   try {
     if (!WA_TOKEN || !WA_PHONE_ID) throw new Error('Falta configurar WHATSAPP_TOKEN y WHATSAPP_PHONE_ID en el .env');
-    const resp = await fetch(`${WA_API_BASE}/${WA_PHONE_ID}/messages`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${WA_TOKEN}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ messaging_product: 'whatsapp', to: conv.telefono, type: 'text', text: { preview_url: true, body: texto } }),
-    });
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) throw new Error((data.error && data.error.message) || 'HTTP ' + resp.status);
+    const intentar = async (destino) => {
+      const resp = await fetch(`${WA_API_BASE}/${WA_PHONE_ID}/messages`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${WA_TOKEN}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ messaging_product: 'whatsapp', to: destino, type: 'text', text: { preview_url: true, body: texto } }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      return { ok: resp.ok, status: resp.status, data };
+    };
+    let envio = await intentar(conv.telefono);
+    // Rareza argentina del modo prueba de Meta: si el destinatario se registró SIN el 9,
+    // la lista permitida rechaza el wa_id con 9 (#131030). Reintentamos con el formato sin 9.
+    if (!envio.ok && conv.telefono.startsWith('549') && JSON.stringify(envio.data).includes('131030')) {
+      envio = await intentar('54' + conv.telefono.slice(3));
+    }
+    const data = envio.data;
+    if (!envio.ok) throw new Error((data.error && data.error.message) || 'HTTP ' + envio.status);
     const wamid = data.messages && data.messages[0] && data.messages[0].id;
     db.prepare(`UPDATE wa_mensajes SET estado = 'enviado', wamid = ? WHERE id = ?`).run(wamid || null, msgId);
     return { ok: true };

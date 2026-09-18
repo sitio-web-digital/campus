@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.0.1',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'fix', texto: 'WhatsApp: si Meta rechaza un envío porque el destinatario de prueba fue registrado sin el 9 argentino (#131030), el campus reintenta solo con el formato sin 9 — se acabó pelear con los formatos de número en el modo de prueba.' },
+    ],
+  },
+  {
     version: '3.0.0',
     fecha: '2026-09-18',
     cambios: [
