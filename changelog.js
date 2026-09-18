@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.1.0',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'nuevo', texto: '✨ Restyling completo del campus: nueva tipografía Montserrat en toda la plataforma, sombras y profundidad renovadas, botones y tarjetas con micro-animaciones, campos con foco marcado, tablas más legibles, barra de carga arriba al navegar entre páginas, entrada suave del contenido y scrollbars finas en toda la app. Todo respeta el modo oscuro y la preferencia de "menos movimiento" del sistema.' },
+      { tipo: 'mejora', texto: 'Simplificación: se escondieron de la vista (sin borrar nada — vuelven cuando se necesiten) los paneles de Góndolas, Estanterías Reforzadas y SitioWeb Digital, el Campus de formación, el Generador de Propuestas, el Panel de Cobranza, el Panel de Developers y el banner de PuntoCO2. El campus queda enfocado en lo que se usa hoy: Comercial CFD, Panel de Clientes, WhatsApp y Administración.' },
+    ],
+  },
+  {
     version: '3.0.4',
     fecha: '2026-09-18',
     cambios: [

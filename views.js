@@ -43,6 +43,12 @@ const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', developers: 'Panel de Developers', clientes: 'Panel de Clientes', propuestas: 'Generador de Propuestas', whatsapp: 'WhatsApp', hub: 'Campus C4D' };
 const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permisos || []).includes(s));
 
+// Simplificación 3.1: sistemas que EXISTEN pero se esconden de la vista de todos
+// (los usarán a futuro; para reactivar uno, sacarlo de este set y listo).
+const SISTEMAS_OCULTOS = new Set(['gondolas', 'estanterias', 'sitioweb', 'campus', 'propuestas', 'cobranza', 'developers']);
+const SITIOS_OCULTOS = new Set(['pco2']);
+const sistemaVisible = (slug) => !SISTEMAS_OCULTOS.has(slug);
+
 // Ícono hoja para PuntoCO2 (plataforma de huella de carbono).
 const ICON_PCO2 = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16.5 3.5C9 4 4.5 8 4.5 13.5c0 1.6.5 2.6 1 3 .5-4.5 3-8 7-10-3 2.5-5.5 6-5.7 10.2 1 .5 2.2.8 3.2.8 5 0 7-5.5 6.5-14z"/></svg>`;
 
@@ -64,7 +70,7 @@ const SITIOS_EXTERNOS = [
     icon: IC('<path d="M3 5h2l1.6 8.5a1.5 1.5 0 001.5 1.2h6.3a1.5 1.5 0 001.5-1.2L17.5 7H6"/><circle cx="8.5" cy="17" r="1.1"/><circle cx="14.5" cy="17" r="1.1"/>') },
 ];
 const esNuevo = (st) => !!st.nuevoDesde && Date.now() - new Date(st.nuevoDesde + 'T00:00:00Z').getTime() < 30 * 864e5;
-const sitiosOrdenados = () => [...SITIOS_EXTERNOS].sort((a, b) => (esNuevo(b) ? 1 : 0) - (esNuevo(a) ? 1 : 0));
+const sitiosOrdenados = () => SITIOS_EXTERNOS.filter((st) => !SITIOS_OCULTOS.has(st.slug)).sort((a, b) => (esNuevo(b) ? 1 : 0) - (esNuevo(a) ? 1 : 0));
 const sitiosMenu = () => sitiosOrdenados().map((st) => `
       <a class="sys-ext sys-${st.slug}" href="${st.url}" target="_blank" rel="noopener">
         ${st.logoMenu || `<span class="se-ic">${st.icon}</span>`}
@@ -100,16 +106,16 @@ function sysSwitch(sistema, user) {
       <div class="sys-h">Paneles y herramientas</div>
       <a href="/hub">Campus (inicio)</a>
       ${tieneSistema(user, 'cfd') ? `<a href="/pipeline"><span>Comercial Cloud For Deploy</span>${infoPanel('cfd')}</a>` : ''}
-      ${tieneSistema(user, 'gondolas') ? `<a href="/gondolas/pipeline"><span>Comercial Góndolas</span>${infoPanel('gondolas')}</a>` : ''}
-      ${tieneSistema(user, 'estanterias') ? `<a href="/estanterias/pipeline"><span>Comercial Estanterías Reforzadas</span>${infoPanel('estanterias')}</a>` : ''}
-      ${tieneSistema(user, 'sitioweb') ? `<a href="/sitioweb/pipeline"><span>Comercial SitioWeb Digital</span>${infoPanel('sitioweb')}</a>` : ''}
+      ${sistemaVisible('gondolas') && tieneSistema(user, 'gondolas') ? `<a href="/gondolas/pipeline"><span>Comercial Góndolas</span>${infoPanel('gondolas')}</a>` : ''}
+      ${sistemaVisible('estanterias') && tieneSistema(user, 'estanterias') ? `<a href="/estanterias/pipeline"><span>Comercial Estanterías Reforzadas</span>${infoPanel('estanterias')}</a>` : ''}
+      ${sistemaVisible('sitioweb') && tieneSistema(user, 'sitioweb') ? `<a href="/sitioweb/pipeline"><span>Comercial SitioWeb Digital</span>${infoPanel('sitioweb')}</a>` : ''}
       ${tieneSistema(user, 'clientes') ? `<a href="/clientes"><span>Panel de Clientes</span></a>` : ''}
-      ${tieneSistema(user, 'propuestas') ? `<a href="/propuestas"><span>Generador de Propuestas</span></a>` : ''}
+      ${sistemaVisible('propuestas') && tieneSistema(user, 'propuestas') ? `<a href="/propuestas"><span>Generador de Propuestas</span></a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/whatsapp"><span>WhatsApp</span><span class="soon-chip">Prueba</span></a>` : ''}
-      ${tieneSistema(user, 'cobranza') ? `<a href="/cobranza"><span>Panel de Cobranza</span>${infoCobranza()}</a>` : ''}
+      ${sistemaVisible('cobranza') && tieneSistema(user, 'cobranza') ? `<a href="/cobranza"><span>Panel de Cobranza</span>${infoCobranza()}</a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
-      ${tieneSistema(user, 'developers') ? '<a href="/developers"><span>Panel de Developers</span></a>' : '<span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>'}
-      <a href="/campus">Campus de formación</a>
+      ${sistemaVisible('developers') ? (tieneSistema(user, 'developers') ? '<a href="/developers"><span>Panel de Developers</span></a>' : '<span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>') : ''}
+      ${sistemaVisible('campus') ? '<a href="/campus">Campus de formación</a>' : ''}
       </div>
       <div class="sys-col sys-col-ext">
       <div class="sys-h">Sitios del grupo</div>
@@ -357,6 +363,22 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
     btn.addEventListener('click', function (e) { e.stopPropagation(); m.classList.toggle('abierto'); });
     document.addEventListener('click', function (ev) { if (!m.contains(ev.target)) m.classList.remove('abierto'); });
   })();
+  (function () {
+    var barra = document.createElement('div');
+    barra.id = 'barraCarga';
+    document.body.appendChild(barra);
+    var prender = function () { barra.classList.add('activa'); setTimeout(function () { barra.classList.remove('activa'); }, 9000); };
+    document.addEventListener('click', function (ev) {
+      var a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
+      if (!a || a.target === '_blank' || ev.metaKey || ev.ctrlKey) return;
+      var h = a.getAttribute('href') || '';
+      if (h.indexOf('#') === 0 || h.indexOf('mailto:') === 0 || h.indexOf('tel:') === 0 || h.indexOf('javascript') === 0) return;
+      if (h.indexOf('http') === 0 && h.indexOf(location.host) < 0) return;
+      prender();
+    }, true);
+    document.addEventListener('submit', function () { prender(); }, true);
+    window.addEventListener('pageshow', function () { barra.classList.remove('activa'); });
+  })();
   </script>` : '';
   return `<!doctype html>
 <html lang="es">
@@ -530,6 +552,13 @@ ${user ? `
 }
 
 const CSS = `
+/* Montserrat: la tipografía del campus (servida localmente desde /fonts) */
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/montserrat-400.woff2) format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 500; font-display: swap; src: url(/fonts/montserrat-500.woff2) format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 600; font-display: swap; src: url(/fonts/montserrat-600.woff2) format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 700; font-display: swap; src: url(/fonts/montserrat-700.woff2) format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 800; font-display: swap; src: url(/fonts/montserrat-800.woff2) format('woff2'); }
+
 /* Tipografías IBM Plex (servidas localmente desde /fonts) */
 @font-face {
   font-family: 'IBM Plex Mono';
@@ -656,10 +685,10 @@ const CSS = `
   --warn:#A8791F; --warn-soft:#F9F1DF;
   /* login: paleta corporativa navy, no cambia */
   --login:#0F3459; --login-ink:#0A2540;
-  --r:8px; --r-lg:10px;
-  --sh:0 1px 2px rgba(15,29,46,.06);
-  --sh-md:0 4px 12px rgba(15,52,89,.09);
-  --sh-lg:0 18px 44px rgba(10,20,35,.22);
+  --r:11px; --r-lg:15px;
+  --sh:0 1px 2px rgba(15,29,46,.05), 0 1px 6px rgba(15,29,46,.04);
+  --sh-md:0 3px 8px rgba(15,52,89,.07), 0 10px 24px rgba(15,52,89,.07);
+  --sh-lg:0 10px 24px rgba(10,20,35,.14), 0 28px 60px rgba(10,20,35,.18);
   --fs:15px;
 }
 
@@ -667,7 +696,8 @@ const CSS = `
 html { -webkit-text-size-adjust:100%; }
 body {
   margin:0; background:var(--bg); color:var(--ink); overflow-x:hidden;
-  font:var(--fs)/1.5 "IBM Plex Sans","Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+  font:var(--fs)/1.55 "Montserrat","IBM Plex Sans","Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+  letter-spacing:-.008em;
   -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
 }
 .wrap { max-width:76rem; margin:0 auto; padding:1.1rem 1.25rem 5.5rem; }
@@ -1781,6 +1811,84 @@ html.dark .hm-4 { background:#57B8AB; }
 .noti .noti-head { display:flex; justify-content:space-between; align-items:baseline; gap:.8rem; margin-bottom:.15rem; }
 .noti .noti-head strong { font-size:.82rem; }
 .noti .noti-head .f { margin:0; flex-shrink:0; margin-left:auto; }
+
+/* ================= RESTYLE 3.1 — capa visual (Montserrat, profundidad y micro-interacciones) ================= */
+h1 { font-size:1.5rem; font-weight:800; letter-spacing:-.028em; }
+h2 { font-weight:700; letter-spacing:-.018em; }
+h3 { font-weight:700; letter-spacing:-.014em; }
+
+/* botones con vida */
+.btn { border-radius:11px; font-weight:600; transition:transform .14s ease, box-shadow .14s ease, background .14s, filter .14s, border-color .14s; }
+.btn:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(10,25,40,.15); }
+.btn:active { transform:translateY(0) scale(.985); box-shadow:0 1px 2px rgba(10,25,40,.12); }
+.btn:focus-visible, a:focus-visible, summary:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:8px; }
+
+/* campos con foco marcado */
+input, select, textarea { border-radius:10px; transition:border-color .15s, box-shadow .15s, background .15s; }
+input:focus, select:focus, textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(14,110,102,.13); outline:none; }
+html.dark input:focus, html.dark select:focus, html.dark textarea:focus { box-shadow:0 0 0 3px rgba(53,179,154,.16); }
+
+/* tarjetas del inicio: elevación y carácter */
+.hub-card { border-radius:16px; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; will-change:transform; }
+.hub-card:hover { transform:translateY(-3px); box-shadow:0 14px 32px rgba(10,25,40,.13); border-color:rgba(14,110,102,.4); text-decoration:none; }
+.hub-card .hc-ic { transition:transform .18s ease; }
+.hub-card:hover .hc-ic { transform:scale(1.1) rotate(-4deg); }
+html.dark .hub-card:hover { border-color:rgba(53,179,154,.45); box-shadow:0 14px 32px rgba(0,0,0,.4); }
+
+/* tablas más legibles */
+table thead th { font-size:.67rem; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); font-weight:700; }
+tbody tr { transition:background .12s; }
+.tablewrap tbody tr:hover { background:var(--surface3); }
+html.dark .tablewrap tbody tr:hover { background:rgba(255,255,255,.035); }
+
+/* barra superior con leve vidrio */
+nav.nav { background:linear-gradient(180deg, rgba(27,36,48,.97), rgba(24,32,43,.97)); backdrop-filter:saturate(1.25) blur(7px); }
+
+/* modales: blur atrás y pop al abrir */
+.modal-back { backdrop-filter:blur(3px); }
+.modal { animation:modal-pop .18s ease; }
+@keyframes modal-pop { from { opacity:0; transform:translateY(10px) scale(.98); } }
+
+/* entrada suave del contenido (una sola vez por navegación) */
+@keyframes pagina-entra { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:none; } }
+.wrap > * { animation:pagina-entra .3s ease both; }
+.wrap > *:nth-child(2) { animation-delay:.05s; }
+.wrap > *:nth-child(3) { animation-delay:.09s; }
+.wrap > *:nth-child(4) { animation-delay:.13s; }
+.wrap > *:nth-child(n+5) { animation-delay:.16s; }
+body.wa-full .wrap > * { animation:none; }
+
+/* tarjetas del inicio: entrada en cascada */
+.hub-grid .hub-card, .hub-grid > * { animation:pagina-entra .34s ease both; }
+.hub-grid > *:nth-child(1) { animation-delay:.03s; } .hub-grid > *:nth-child(2) { animation-delay:.07s; }
+.hub-grid > *:nth-child(3) { animation-delay:.11s; } .hub-grid > *:nth-child(4) { animation-delay:.15s; }
+.hub-grid > *:nth-child(5) { animation-delay:.19s; } .hub-grid > *:nth-child(6) { animation-delay:.23s; }
+.hub-grid > *:nth-child(n+7) { animation-delay:.26s; }
+
+/* barra de carga al navegar */
+#barraCarga { position:fixed; top:0; left:0; right:0; height:3px; z-index:300; pointer-events:none; opacity:0; transition:opacity .18s; overflow:hidden; }
+#barraCarga.activa { opacity:1; }
+#barraCarga::before { content:""; position:absolute; top:0; bottom:0; left:0; width:34%; border-radius:999px;
+  background:linear-gradient(90deg, transparent, #17A88C 30%, #5FD3B8 55%, #17A88C 75%, transparent);
+  animation:barra-corre 1s ease-in-out infinite; }
+@keyframes barra-corre { from { transform:translateX(-110%); } to { transform:translateX(400%); } }
+
+/* scrollbars finas en toda la app */
+* { scrollbar-width:thin; scrollbar-color:rgba(120,130,140,.35) transparent; }
+*::-webkit-scrollbar { width:8px; height:8px; }
+*::-webkit-scrollbar-track { background:transparent; }
+*::-webkit-scrollbar-thumb { background:rgba(120,130,140,.3); border-radius:999px; }
+*::-webkit-scrollbar-thumb:hover { background:rgba(120,130,140,.55); }
+html.dark * { scrollbar-color:rgba(255,255,255,.18) transparent; }
+html.dark *::-webkit-scrollbar-thumb { background:rgba(255,255,255,.15); }
+html.dark *::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.3); }
+
+/* accesibilidad: sin animaciones si el sistema lo pide */
+@media (prefers-reduced-motion: reduce) {
+  .wrap > *, .hub-grid > *, .modal, #barraCarga::before { animation:none !important; }
+  .btn, .hub-card, .hub-card .hc-ic { transition:none !important; }
+}
+
 `;
 
 /* ---------------- páginas ---------------- */
@@ -3833,21 +3941,21 @@ function hubPage({ user }) {
         <p>Ventas de software: pipeline, actividad diaria, metas, ranking${user.role === 'admin' ? ', dashboard y reportes' : ''}.</p>
         ${chipsPanel('cfd')}
       </a>` : ''}
-      ${tieneSistema(user, 'gondolas') ? `
+      ${sistemaVisible('gondolas') && tieneSistema(user, 'gondolas') ? `
       <a class="hub-card" href="/gondolas/pipeline">
         <span class="hc-ic${deudaPanel('gondolas')}">${IC('<path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/>')}</span>
         <h3>Comercial Góndolas</h3>
         <p>Ventas de góndolas: pipeline con etapas propias y carga diaria a medida.</p>
         ${chipsPanel('gondolas')}
       </a>` : ''}
-      ${tieneSistema(user, 'estanterias') ? `
+      ${sistemaVisible('estanterias') && tieneSistema(user, 'estanterias') ? `
       <a class="hub-card" href="/estanterias/pipeline">
         <span class="hc-ic${deudaPanel('estanterias')}">${IC('<path d="M3.5 3v14M16.5 3v14M3.5 8h13M3.5 13h13"/>')}</span>
         <h3>Comercial Estanterías Reforzadas</h3>
         <p>Ventas de la nueva empresa: pipeline, actividad y metas propias.</p>
         ${chipsPanel('estanterias')}
       </a>` : ''}
-      ${tieneSistema(user, 'sitioweb') ? `
+      ${sistemaVisible('sitioweb') && tieneSistema(user, 'sitioweb') ? `
       <a class="hub-card" href="/sitioweb/pipeline">
         <span class="hc-ic${deudaPanel('sitioweb')}">${IC('<path d="M10 3a7 7 0 100 14 7 7 0 000-14z"/><path d="M3 10h14M10 3c-2 2.2-2 11.8 0 14M10 3c2 2.2 2 11.8 0 14"/>')}</span>
         <h3>Comercial SitioWeb Digital</h3>
@@ -3860,13 +3968,13 @@ function hubPage({ user }) {
         <h3>Panel de Clientes</h3>
         <p>Generador de prospectos: escanea Google Maps por rubro y zona, y las tomás como leads.</p>
       </a>` : ''}
-      ${tieneSistema(user, 'propuestas') ? `
+      ${sistemaVisible('propuestas') && tieneSistema(user, 'propuestas') ? `
       <a class="hub-card" href="/propuestas">
         <span class="hc-ic">${IC('<path d="M6 2.5h6l3.5 3.5V17a.9.9 0 01-.9.9H6a.9.9 0 01-.9-.9V3.4a.9.9 0 01.9-.9z"/><path d="M12 2.5V6h3.5M7.8 10h4.4M7.8 13h4.4"/>')}</span>
         <h3>Generador de Propuestas</h3>
         <p>Propuestas PDF por rubro: plantilla + nombre, colores y logo del cliente, textos retocables y descarga lista para mandar.</p>
       </a>` : ''}
-      ${tieneSistema(user, 'cobranza') ? `
+      ${sistemaVisible('cobranza') && tieneSistema(user, 'cobranza') ? `
       <a class="hub-card" href="/cobranza">
         <span class="hc-ic">${ICONS.cobranza}</span>
         <h3>Panel de Cobranza</h3>
@@ -3885,7 +3993,7 @@ function hubPage({ user }) {
         <h3>Panel Administración</h3>
         <p>Usuarios, roles (vendedor, developer, admin) y permisos por sistema.</p>
       </a>` : ''}
-      ${tieneSistema(user, 'developers') ? `
+      ${sistemaVisible('developers') ? (tieneSistema(user, 'developers') ? `
       <a class="hub-card" href="/developers">
         <span class="hc-ic">${IC('<path d="M7 6.5L3.5 10 7 13.5M13 6.5l3.5 3.5-3.5 3.5M11.2 4.5l-2.4 11"/>')}</span>
         <h3>Panel de Developers</h3>
@@ -3896,12 +4004,13 @@ function hubPage({ user }) {
         <span class="hc-ic">${IC('<path d="M7 6.5L3.5 10 7 13.5M13 6.5l3.5 3.5-3.5 3.5M11.2 4.5l-2.4 11"/>')}</span>
         <h3>Panel de Developers</h3>
         <p>Proyectos, entregas y documentación técnica del equipo de desarrollo.</p>
-      </div>`}
+      </div>`) : ''}
+      ${sistemaVisible('campus') ? `
       <a class="hub-card" href="/campus">
         <span class="hc-ic">${IC('<path d="M10 4L2.5 7.5 10 11l7.5-3.5L10 4z"/><path d="M5 9v4c0 1.2 2.2 2.5 5 2.5s5-1.3 5-2.5V9"/>')}</span>
         <h3>Campus de formación</h3>
         <p>Documentación y videos de capacitación por empresa, subidos por administración.</p>
-      </a>
+      </a>` : ''}
       ${sitiosHub()}
     </div>
   </div>`
