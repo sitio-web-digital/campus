@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.54.0',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'nuevo', texto: 'WhatsApp en el campus (etapa de prueba, SOLO administradores): bandeja de conversaciones conectada a la API oficial de Meta. Los mensajes al número de la empresa entran al campus, se ligan solos a la lead si el teléfono coincide, y se responde desde adentro con tildes de entregado/leído, notificaciones y la ventana de 24 hs manejada en pantalla.' },
+      { tipo: 'nuevo', texto: 'Desde una conversación desconocida se puede Crear lead (nace en CFD con origen "WhatsApp entrante") o ligarla a una lead existente, y asignarla a un vendedor. Todo queda en el historial de la lead.' },
+      { tipo: 'mejora', texto: 'Configuración por .env del servidor: WHATSAPP_TOKEN, WHATSAPP_PHONE_ID y WHATSAPP_VERIFY_TOKEN (docker-compose ya los pasa). Cuando pasemos a producción se abre a los vendedores por permiso.' },
+    ],
+  },
+  {
     version: '2.53.1',
     fecha: '2026-09-09',
     cambios: [

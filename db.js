@@ -326,6 +326,31 @@ CREATE TABLE IF NOT EXISTS prospecto_scans (
 if (!db.prepare('PRAGMA table_info(prospecto_scans)').all().some((c) => c.name === 'consultas')) {
   db.exec('ALTER TABLE prospecto_scans ADD COLUMN consultas INTEGER NOT NULL DEFAULT 1');
 }
+// 2.54.0: WhatsApp Cloud API — bandeja de conversaciones (por ahora solo admins).
+db.exec(`CREATE TABLE IF NOT EXISTS wa_conversaciones (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  telefono TEXT NOT NULL UNIQUE,
+  nombre TEXT,
+  deal_id INTEGER REFERENCES deals(id),
+  vendedor_id INTEGER REFERENCES users(id),
+  ultimo_entrante_at TEXT,
+  ultimo_mensaje_at TEXT,
+  no_leidos INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS wa_mensajes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  conversacion_id INTEGER NOT NULL REFERENCES wa_conversaciones(id) ON DELETE CASCADE,
+  wamid TEXT,
+  dir TEXT NOT NULL CHECK (dir IN ('in', 'out')),
+  tipo TEXT NOT NULL DEFAULT 'text',
+  texto TEXT,
+  user_id INTEGER REFERENCES users(id),
+  estado TEXT,
+  error_detalle TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);`);
+
 // 2.48.0: generador de propuestas PDF por rubro (plantillas en plantillas-propuestas/).
 db.exec(`CREATE TABLE IF NOT EXISTS propuestas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1710,6 +1710,194 @@ app.post('/clientes/:id/estado', requireAuth, requireSistema('clientes'), (req, 
   res.redirect('/clientes');
 });
 
+/* ---------------- WhatsApp (Cloud API oficial de Meta) ---------------- */
+// Etapa 0/1: webhook + envío + bandeja interna. Por ahora SOLO administradores;
+// cuando pasemos a producción se abre a los vendedores por permiso de sistema.
+const WA_API_BASE = process.env.WHATSAPP_API_BASE || 'https://graph.facebook.com/v21.0';
+const WA_TOKEN = process.env.WHATSAPP_TOKEN || '';
+const WA_PHONE_ID = process.env.WHATSAPP_PHONE_ID || '';
+const WA_VERIFY = process.env.WHATSAPP_VERIFY_TOKEN || 'campus-c4d-wa';
+
+const soloDigitos = (t) => String(t || '').replace(/\D/g, '');
+// ¿El teléfono de una lead matchea un wa_id? Compara los últimos 8 dígitos (banca +54 9, 15, guiones, etc.)
+function telCoincide(a, b) {
+  const x = soloDigitos(a), y = soloDigitos(b);
+  if (x.length < 6 || y.length < 6) return false;
+  return x.slice(-8) === y.slice(-8);
+}
+function dealPorTelefonoWA(waId) {
+  const abiertas = db.prepare(`SELECT id, empresa, user_id, telefono FROM deals
+    WHERE panel = 'cfd' AND telefono IS NOT NULL AND telefono != '' ORDER BY updated_at DESC LIMIT 800`).all();
+  return abiertas.find((d) => telCoincide(d.telefono, waId)) || null;
+}
+
+// Busca o crea la conversación de un número; si el número matchea una lead de CFD, la liga sola.
+function waConversacion(telefono, nombre) {
+  let c = db.prepare('SELECT * FROM wa_conversaciones WHERE telefono = ?').get(telefono);
+  if (!c) {
+    const deal = dealPorTelefonoWA(telefono);
+    db.prepare('INSERT INTO wa_conversaciones (telefono, nombre, deal_id, vendedor_id) VALUES (?, ?, ?, ?)')
+      .run(telefono, nombre || null, deal ? deal.id : null, deal ? deal.user_id : null);
+    c = db.prepare('SELECT * FROM wa_conversaciones WHERE telefono = ?').get(telefono);
+  } else if (nombre && nombre !== c.nombre) {
+    db.prepare('UPDATE wa_conversaciones SET nombre = ? WHERE id = ?').run(nombre, c.id);
+    c.nombre = nombre;
+  }
+  return c;
+}
+
+// Ventana de 24 hs de Meta: solo se puede responder libre si el cliente escribió hace menos de 24 hs.
+function ventanaAbiertaWA(conv) {
+  if (!conv || !conv.ultimo_entrante_at) return false;
+  return Date.now() - Date.parse(conv.ultimo_entrante_at.replace(' ', 'T') + 'Z') < 24 * 3600 * 1000;
+}
+
+// --- Webhook de Meta ---
+app.get('/whatsapp/webhook', (req, res) => {
+  if (req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === WA_VERIFY) {
+    return res.send(req.query['hub.challenge'] || '');
+  }
+  res.sendStatus(403);
+});
+
+app.post('/whatsapp/webhook', express.json({ limit: '1mb' }), (req, res) => {
+  res.sendStatus(200); // responder rápido siempre: si no, Meta reintenta y duplica
+  try { procesarWebhookWA(req.body || {}); } catch (e) { console.error('WA webhook:', e.message); }
+});
+
+function procesarWebhookWA(body) {
+  for (const entry of body.entry || []) {
+    for (const cambio of entry.changes || []) {
+      const v = cambio.value || {};
+      const nombres = {};
+      for (const ct of v.contacts || []) nombres[ct.wa_id] = ct.profile && ct.profile.name;
+      for (const m of v.messages || []) {
+        if (db.prepare('SELECT id FROM wa_mensajes WHERE wamid = ?').get(m.id || '')) continue; // reintento de Meta
+        const texto = m.type === 'text'
+          ? (m.text && m.text.body) || ''
+          : `[${m.type}]` + (m[m.type] && m[m.type].caption ? ' ' + m[m.type].caption : '');
+        const conv = waConversacion(m.from, nombres[m.from]);
+        db.prepare(`INSERT INTO wa_mensajes (conversacion_id, wamid, dir, tipo, texto) VALUES (?, ?, 'in', ?, ?)`)
+          .run(conv.id, m.id || null, m.type || 'text', texto);
+        db.prepare(`UPDATE wa_conversaciones SET ultimo_entrante_at = datetime('now'), ultimo_mensaje_at = datetime('now'), no_leidos = no_leidos + 1 WHERE id = ?`).run(conv.id);
+        // Aviso a todos los admins (sin actor: lo generó el cliente por WhatsApp).
+        const avisoWA = db.prepare('INSERT INTO notifications (user_id, texto, url) VALUES (?, ?, ?)');
+        for (const a of db.prepare("SELECT id FROM users WHERE role = 'admin' AND active = 1").all()) {
+          avisoWA.run(a.id, `WhatsApp de ${conv.nombre || conv.telefono}: ${texto.slice(0, 80)}`, `/whatsapp?c=${conv.id}`);
+        }
+      }
+      for (const st of v.statuses || []) {
+        const estado = st.status === 'read' ? 'leido' : st.status === 'delivered' ? 'entregado' : st.status === 'failed' ? 'error' : 'enviado';
+        db.prepare('UPDATE wa_mensajes SET estado = ?, error_detalle = COALESCE(?, error_detalle) WHERE wamid = ?')
+          .run(estado, st.errors ? JSON.stringify(st.errors).slice(0, 400) : null, st.id || '');
+      }
+    }
+  }
+}
+
+// --- Envío por la Cloud API ---
+async function enviarWA(conv, texto, userId) {
+  const r = db.prepare(`INSERT INTO wa_mensajes (conversacion_id, dir, tipo, texto, user_id, estado) VALUES (?, 'out', 'text', ?, ?, 'enviando')`)
+    .run(conv.id, texto, userId);
+  const msgId = r.lastInsertRowid;
+  db.prepare(`UPDATE wa_conversaciones SET ultimo_mensaje_at = datetime('now') WHERE id = ?`).run(conv.id);
+  try {
+    if (!WA_TOKEN || !WA_PHONE_ID) throw new Error('Falta configurar WHATSAPP_TOKEN y WHATSAPP_PHONE_ID en el .env');
+    const resp = await fetch(`${WA_API_BASE}/${WA_PHONE_ID}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${WA_TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ messaging_product: 'whatsapp', to: conv.telefono, type: 'text', text: { preview_url: true, body: texto } }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error((data.error && data.error.message) || 'HTTP ' + resp.status);
+    const wamid = data.messages && data.messages[0] && data.messages[0].id;
+    db.prepare(`UPDATE wa_mensajes SET estado = 'enviado', wamid = ? WHERE id = ?`).run(wamid || null, msgId);
+    return { ok: true };
+  } catch (e) {
+    db.prepare(`UPDATE wa_mensajes SET estado = 'error', error_detalle = ? WHERE id = ?`).run(String(e.message).slice(0, 300), msgId);
+    return { ok: false, error: String(e.message) };
+  }
+}
+
+// --- Bandeja (solo admins por ahora) ---
+app.get('/whatsapp', requireAuth, requireAdmin, (req, res) => {
+  const convs = db.prepare(`SELECT c.*, d.empresa AS lead, u.name AS vendedor FROM wa_conversaciones c
+    LEFT JOIN deals d ON d.id = c.deal_id LEFT JOIN users u ON u.id = c.vendedor_id
+    ORDER BY COALESCE(c.ultimo_mensaje_at, c.created_at) DESC LIMIT 200`).all();
+  const sel = parseInt(req.query.c, 10) || null;
+  let conv = null, mensajes = [];
+  if (sel) {
+    conv = db.prepare(`SELECT c.*, d.empresa AS lead, d.etapa AS lead_etapa, u.name AS vendedor FROM wa_conversaciones c
+      LEFT JOIN deals d ON d.id = c.deal_id LEFT JOIN users u ON u.id = c.vendedor_id WHERE c.id = ?`).get(sel);
+    if (conv) {
+      mensajes = db.prepare(`SELECT m.*, u.name AS autor FROM wa_mensajes m LEFT JOIN users u ON u.id = m.user_id
+        WHERE m.conversacion_id = ? ORDER BY m.id LIMIT 500`).all(conv.id);
+      db.prepare('UPDATE wa_conversaciones SET no_leidos = 0 WHERE id = ?').run(conv.id);
+    }
+  }
+  const vendedores = db.prepare("SELECT id, name FROM users WHERE active = 1 AND role IN ('vendedor', 'admin') ORDER BY role = 'admin', name").all();
+  const leads = db.prepare("SELECT id, empresa FROM deals WHERE panel = 'cfd' AND etapa NOT IN ('Ganado', 'Perdido') ORDER BY empresa LIMIT 400").all();
+  res.send(V.whatsappPage({
+    user: req.user, convs, conv, mensajes, vendedores, leads,
+    ventana: conv ? ventanaAbiertaWA(conv) : false,
+    configurado: !!(WA_TOKEN && WA_PHONE_ID),
+    msg: clean(req.query.msg), err: clean(req.query.err),
+  }));
+});
+
+app.post('/whatsapp/enviar', requireAuth, requireAdmin, async (req, res) => {
+  const conv = db.prepare('SELECT * FROM wa_conversaciones WHERE id = ?').get(parseInt(req.body.conversacion_id, 10));
+  const texto = clean(req.body.texto);
+  if (!conv || !texto) return res.redirect('/whatsapp?err=' + encodeURIComponent('Escribí el mensaje antes de enviar.'));
+  if (!ventanaAbiertaWA(conv)) {
+    return res.redirect(`/whatsapp?c=${conv.id}&err=` + encodeURIComponent('La ventana de 24 hs está vencida: Meta solo permite responder libre dentro de las 24 hs del último mensaje del cliente. Las plantillas para reabrir llegan en la próxima etapa.'));
+  }
+  const r = await enviarWA(conv, texto, req.user.id);
+  res.redirect(`/whatsapp?c=${conv.id}` + (r.ok ? '' : '&err=' + encodeURIComponent('No se pudo enviar: ' + r.error)));
+});
+
+// Polling liviano de la bandeja (recarga cuando entra algo nuevo).
+app.get('/whatsapp/nuevos', requireAuth, requireAdmin, (req, res) => {
+  const c = parseInt(req.query.c, 10) || 0;
+  const desde = parseInt(req.query.desde, 10) || 0;
+  const nuevos = c ? db.prepare('SELECT COUNT(*) n FROM wa_mensajes WHERE conversacion_id = ? AND id > ?').get(c, desde).n : 0;
+  const sinLeer = db.prepare('SELECT COALESCE(SUM(no_leidos), 0) t FROM wa_conversaciones').get().t;
+  res.json({ nuevos, sinLeer });
+});
+
+app.post('/whatsapp/:id/asignar', requireAuth, requireAdmin, (req, res) => {
+  const conv = db.prepare('SELECT id FROM wa_conversaciones WHERE id = ?').get(req.params.id);
+  const vend = parseInt(req.body.vendedor_id, 10) || null;
+  if (conv) db.prepare('UPDATE wa_conversaciones SET vendedor_id = ? WHERE id = ?').run(vend, conv.id);
+  res.redirect('/whatsapp?c=' + req.params.id);
+});
+
+// Ligar la conversación a una lead existente de CFD.
+app.post('/whatsapp/:id/ligar', requireAuth, requireAdmin, (req, res) => {
+  const conv = db.prepare('SELECT * FROM wa_conversaciones WHERE id = ?').get(req.params.id);
+  const deal = db.prepare("SELECT id, empresa, user_id FROM deals WHERE id = ? AND panel = 'cfd'").get(parseInt(req.body.deal_id, 10));
+  if (conv && deal) {
+    db.prepare('UPDATE wa_conversaciones SET deal_id = ?, vendedor_id = COALESCE(vendedor_id, ?) WHERE id = ?').run(deal.id, deal.user_id, conv.id);
+    logDealEvent(deal.id, req.user.id, 'edicion', `Nota: Conversación de WhatsApp ligada a esta lead (${conv.nombre || conv.telefono}) — /whatsapp`);
+  }
+  res.redirect('/whatsapp?c=' + req.params.id);
+});
+
+// Crear una lead nueva de CFD desde una conversación desconocida.
+app.post('/whatsapp/:id/lead', requireAuth, requireAdmin, (req, res) => {
+  const conv = db.prepare('SELECT * FROM wa_conversaciones WHERE id = ?').get(req.params.id);
+  if (!conv) return res.redirect('/whatsapp');
+  if (conv.deal_id) return res.redirect('/whatsapp?c=' + conv.id);
+  const etapa = etapasDePanel('cfd')[0] || 'Lead';
+  const r = db.prepare(`INSERT INTO deals (empresa, user_id, panel, etapa, telefono, origen, etapa_movida_at)
+    VALUES (?, ?, 'cfd', ?, ?, 'WhatsApp entrante', datetime('now'))`)
+    .run(conv.nombre || 'WhatsApp +' + conv.telefono, req.user.id, etapa, '+' + conv.telefono);
+  logDealEvent(r.lastInsertRowid, req.user.id, 'creado', `Deal creado en etapa ${etapa}`);
+  logDealEvent(r.lastInsertRowid, req.user.id, 'edicion', 'Nota: Lead nacida de un WhatsApp entrante a la bandeja del campus');
+  db.prepare('UPDATE wa_conversaciones SET deal_id = ?, vendedor_id = COALESCE(vendedor_id, ?) WHERE id = ?').run(r.lastInsertRowid, req.user.id, conv.id);
+  res.redirect('/whatsapp?c=' + conv.id + '&msg=' + encodeURIComponent('Lead creada y ligada a la conversación.'));
+});
+
 /* ---------------- generador de propuestas (PDF por rubro) ---------------- */
 
 // Las plantillas viven en plantillas-propuestas/<slug>/ (template.html + meta.json + assets/).

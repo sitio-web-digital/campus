@@ -40,7 +40,7 @@ const ICONS = {
 };
 const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F3459'/%3E%3Ctext x='16' y='21' font-size='12' font-family='Helvetica,Arial' font-weight='bold' fill='white' text-anchor='middle'%3EC4D%3C/text%3E%3C/svg%3E";
 
-const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', developers: 'Panel de Developers', clientes: 'Panel de Clientes', propuestas: 'Generador de Propuestas', hub: 'Campus C4D' };
+const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', developers: 'Panel de Developers', clientes: 'Panel de Clientes', propuestas: 'Generador de Propuestas', whatsapp: 'WhatsApp', hub: 'Campus C4D' };
 const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permisos || []).includes(s));
 
 // Ícono hoja para PuntoCO2 (plataforma de huella de carbono).
@@ -105,6 +105,7 @@ function sysSwitch(sistema, user) {
       ${tieneSistema(user, 'sitioweb') ? `<a href="/sitioweb/pipeline"><span>Comercial SitioWeb Digital</span>${infoPanel('sitioweb')}</a>` : ''}
       ${tieneSistema(user, 'clientes') ? `<a href="/clientes"><span>Panel de Clientes</span></a>` : ''}
       ${tieneSistema(user, 'propuestas') ? `<a href="/propuestas"><span>Generador de Propuestas</span></a>` : ''}
+      ${user && user.role === 'admin' ? `<a href="/whatsapp"><span>WhatsApp</span><span class="soon-chip">Prueba</span></a>` : ''}
       ${tieneSistema(user, 'cobranza') ? `<a href="/cobranza"><span>Panel de Cobranza</span>${infoCobranza()}</a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
       ${tieneSistema(user, 'developers') ? '<a href="/developers"><span>Panel de Developers</span></a>' : '<span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>'}
@@ -300,6 +301,9 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
   } else if (sistema === 'developers') {
     links = `
         <a href="/developers" class="${active === 'developers' ? 'on' : ''}">${IC('<path d="M7 6.5L3.5 10 7 13.5M13 6.5l3.5 3.5-3.5 3.5M11.2 4.5l-2.4 11"/>')}<span>Proyectos</span></a>`;
+  } else if (sistema === 'whatsapp') {
+    links = `
+        <a href="/whatsapp" class="${active === 'whatsapp' ? 'on' : ''}">${IC('<path d="M10 2.5a7.5 7.5 0 00-6.5 11.2L2.6 17.4l3.8-.9A7.5 7.5 0 1010 2.5z"/>')}<span>Bandeja</span></a>`;
   } else if (sistema === 'gondolas' || sistema === 'estanterias' || sistema === 'sitioweb') {
     const b = '/' + sistema;
     const dd = (user && user.deudas) || {};
@@ -1328,6 +1332,44 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .cl-lista { list-style:none; margin:.35rem 0 0; padding:0; display:grid; gap:.5rem; }
 .cl-lista li { display:flex; gap:.5rem; align-items:baseline; font-size:.85rem; line-height:1.5; }
 .cl-lista .chip { flex-shrink:0; }
+
+/* ---------- WhatsApp: bandeja ---------- */
+.wa-cont { display:grid; grid-template-columns:19rem minmax(0, 1fr); gap:0; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--surface); box-shadow:var(--sh); height:calc(100vh - 11rem); min-height:26rem; }
+.wa-lista { border-right:1px solid var(--line); overflow-y:auto; background:var(--surface); }
+.wa-item { display:block; position:relative; padding:.6rem .75rem; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); }
+.wa-item:hover { background:var(--accent-soft); text-decoration:none; }
+.wa-item.on { background:var(--accent-soft); box-shadow:inset 3px 0 0 var(--accent); }
+.wa-item-top { display:flex; justify-content:space-between; gap:.5rem; align-items:baseline; font-size:.85rem; }
+.wa-hora { font-size:.66rem; color:var(--faint); flex-shrink:0; }
+.wa-item-sub { font-size:.72rem; color:var(--muted); margin-top:.12rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wa-badge { position:absolute; right:.7rem; bottom:.55rem; background:#1A9E56; color:#fff; font-size:.62rem; font-weight:700; border-radius:999px; min-width:1.15rem; height:1.15rem; display:inline-flex; align-items:center; justify-content:center; padding:0 .3rem; }
+.wa-chat { display:flex; flex-direction:column; min-width:0; }
+.wa-chat-head { display:flex; justify-content:space-between; gap:.8rem; align-items:flex-start; flex-wrap:wrap; padding:.6rem .85rem; border-bottom:1px solid var(--line); }
+.wa-inline { display:inline-flex; gap:.35rem; align-items:center; margin:.2rem .4rem 0 0; }
+.wa-inline select { max-width:14rem; margin:0; padding:.3rem .4rem; font-size:.78rem; }
+.wa-mensajes { flex:1; overflow-y:auto; padding:.9rem; display:flex; flex-direction:column; gap:.45rem; background:var(--bg); }
+.wa-b { max-width:72%; padding:.45rem .65rem; border-radius:12px; font-size:.85rem; line-height:1.45; white-space:pre-wrap; overflow-wrap:anywhere; }
+.wa-in { align-self:flex-start; background:var(--surface); border:1px solid var(--line); border-bottom-left-radius:4px; }
+.wa-out { align-self:flex-end; background:#D7F4E2; border:1px solid #B9E4C9; border-bottom-right-radius:4px; }
+html.dark .wa-out { background:#144D33; border-color:#1C6A46; color:#E6F4EC; }
+.wa-autor { font-size:.62rem; font-weight:700; color:#177A45; margin-bottom:.1rem; }
+html.dark .wa-autor { color:#6FCF97; }
+.wa-meta { font-size:.6rem; color:var(--faint); text-align:right; margin-top:.15rem; }
+.wa-tilde.azul { color:#2D9CDB; }
+.wa-tilde.rojo { color:#E05550; }
+.wa-composer { display:flex; gap:.5rem; padding:.6rem; border-top:1px solid var(--line); align-items:flex-end; }
+.wa-composer textarea { flex:1; margin:0; resize:none; }
+.wa-cerrada { padding:.7rem .9rem; border-top:1px solid var(--line); font-size:.78rem; color:var(--muted); background:var(--warn-soft); }
+.wa-vacio { display:flex; align-items:center; justify-content:center; height:100%; padding:1rem; }
+.wa-volver { display:none; padding:.5rem .75rem; border-bottom:1px solid var(--line); }
+@media (max-width: 860px) {
+  .wa-cont { grid-template-columns:1fr; height:calc(100vh - 12.5rem); }
+  .wa-cont.con-chat .wa-lista { display:none; }
+  .wa-cont:not(.con-chat) .wa-chat { display:none; }
+  .wa-cont.con-chat .wa-volver { display:block; }
+  .wa-b { max-width:86%; }
+}
+@media (max-width: 860px) { .wa-cont.con-chat .wa-lista.forzar { display:block; } }
 
 /* ---------- generador de propuestas ---------- */
 .prop-toolbar { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
@@ -3783,6 +3825,12 @@ function hubPage({ user }) {
         ${chipsCobranza()}
       </a>` : ''}
       ${user.role === 'admin' ? `
+      <a class="hub-card" href="/whatsapp">
+        <span class="hc-ic">${IC('<path d="M10 2.5a7.5 7.5 0 00-6.5 11.2L2.6 17.4l3.8-.9A7.5 7.5 0 1010 2.5z"/><path d="M7.2 7.4c.2-.5.5-.5.8-.5h.6c.2 0 .4 0 .5.4l.7 1.6c.1.2 0 .4-.1.5l-.5.6c-.1.2-.1.3 0 .5.5.9 1.3 1.6 2.3 2.1.2.1.4.1.5-.1l.5-.6c.2-.2.3-.2.5-.1l1.6.8c.3.1.4.3.4.5v.6c0 .4-.3.8-.7.9-.7.2-1.8.2-3.3-.6a9 9 0 01-3.4-3.3c-.8-1.4-.8-2.4-.4-2.9z"/>')}</span>
+        <h3>WhatsApp <span class="chip" style="background:#1A9E56">Prueba</span></h3>
+        <p>Bandeja de conversaciones con la API oficial de Meta: los mensajes del número de la empresa, ligados a las leads. Solo admins por ahora.</p>
+      </a>` : ''}
+      ${user.role === 'admin' ? `
       <a class="hub-card" href="/admin">
         <span class="hc-ic">${ICONS.equipo}</span>
         <h3>Panel Administración</h3>
@@ -5143,8 +5191,92 @@ function propuestaVerPage({ user, p }) {
   return layout({ title: 'Propuesta — ' + p.empresa, user, active: 'propuestas', sistema: 'propuestas', body, bodyClass: 'prop-full' });
 }
 
+/* ---------------- WhatsApp: bandeja (solo admins por ahora) ---------------- */
+
+function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads = [], ventana, configurado, msg, err }) {
+  const hora = (t) => (t || '').replace(' ', 'T').slice(11, 16);
+  const diaHora = (t) => {
+    if (!t) return '';
+    const f = t.slice(0, 10).split('-');
+    return `${+f[2]}/${+f[1]} ${hora(t)}`;
+  };
+  const tilde = (m) => m.dir !== 'out' ? '' : m.estado === 'leido' ? '✓✓' : m.estado === 'entregado' ? '✓✓' : m.estado === 'enviado' ? '✓' : m.estado === 'error' ? '⚠' : '·';
+  const lista = convs.map((c) => `
+    <a class="wa-item ${conv && conv.id === c.id ? 'on' : ''}" href="/whatsapp?c=${c.id}">
+      <div class="wa-item-top"><strong>${esc(c.nombre || '+' + c.telefono)}</strong><span class="wa-hora">${diaHora(c.ultimo_mensaje_at || c.created_at)}</span></div>
+      <div class="wa-item-sub">${c.lead ? `🔗 ${esc(c.lead)}` : '<span class="muted">Sin lead</span>'}${c.vendedor ? ` · ${esc(c.vendedor.split(' ')[0])}` : ''}</div>
+      ${c.no_leidos > 0 ? `<span class="wa-badge">${c.no_leidos}</span>` : ''}
+    </a>`).join('');
+  const chat = !conv ? `<div class="wa-vacio"><p class="muted">Elegí una conversación de la izquierda${convs.length ? '' : ' — todavía no entró ningún mensaje. Cuando alguien le escriba al número de WhatsApp de la empresa, aparece acá'}.</p></div>` : `
+    <div class="wa-chat-head">
+      <div>
+        <strong>${esc(conv.nombre || '+' + conv.telefono)}</strong> <span class="small muted">+${esc(conv.telefono)}</span>
+        <div class="small">${conv.deal_id
+          ? `Lead: <a href="/deals/${conv.deal_id}"><strong>${esc(conv.lead || 'ver')}</strong></a> <span class="muted">(${esc(conv.lead_etapa || '')})</span>`
+          : `<form method="post" action="/whatsapp/${conv.id}/ligar" class="wa-inline">
+              <select name="deal_id" required><option value="">Ligar a una lead…</option>${leads.map((l) => `<option value="${l.id}">${esc(l.empresa)}</option>`).join('')}</select>
+              <button class="btn secondary small">Ligar</button>
+            </form>
+            <form method="post" action="/whatsapp/${conv.id}/lead" class="wa-inline"><button class="btn small">+ Crear lead</button></form>`}
+        </div>
+      </div>
+      <form method="post" action="/whatsapp/${conv.id}/asignar" class="wa-inline">
+        <label class="small muted">Asignada a</label>
+        <select name="vendedor_id" onchange="this.form.submit()">
+          <option value="">— Nadie —</option>
+          ${vendedores.map((v) => `<option value="${v.id}" ${conv.vendedor_id === v.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}
+        </select>
+      </form>
+    </div>
+    <div class="wa-mensajes" id="waMensajes">
+      ${mensajes.map((m) => `
+      <div class="wa-b ${m.dir === 'out' ? 'wa-out' : 'wa-in'}">
+        ${m.dir === 'out' && m.autor ? `<div class="wa-autor">${esc(m.autor.split(' ')[0])}</div>` : ''}
+        <div class="wa-texto">${esc(m.texto || '')}</div>
+        <div class="wa-meta">${hora(m.created_at)} <span class="wa-tilde ${m.estado === 'leido' ? 'azul' : ''} ${m.estado === 'error' ? 'rojo' : ''}" title="${esc(m.estado || '')}${m.error_detalle ? ': ' + esc(m.error_detalle) : ''}">${tilde(m)}</span></div>
+      </div>`).join('') || '<p class="muted small" style="text-align:center">Sin mensajes todavía.</p>'}
+    </div>
+    ${ventana ? `
+    <form method="post" action="/whatsapp/enviar" class="wa-composer">
+      <input type="hidden" name="conversacion_id" value="${conv.id}">
+      <textarea name="texto" rows="2" required placeholder="Escribí la respuesta… (Enter envía, Shift+Enter salto de línea)"></textarea>
+      <button class="btn">Enviar</button>
+    </form>` : `
+    <div class="wa-cerrada">⏳ Ventana de 24 hs vencida: Meta solo permite responder libre dentro de las 24 hs del último mensaje del cliente. Las <strong>plantillas</strong> para reabrir la conversación llegan en la próxima etapa.</div>`}`;
+  const body = `
+  <h1>WhatsApp <span class="chip" style="background:#1A9E56">solo admins · etapa de prueba</span></h1>
+  ${configurado ? '' : `<div class="flash bad">Falta configurar la conexión con Meta: definí <code>WHATSAPP_TOKEN</code> y <code>WHATSAPP_PHONE_ID</code> en el .env del servidor (y <code>WHATSAPP_VERIFY_TOKEN</code> para el webhook). La bandeja funciona, pero el envío va a fallar hasta entonces.</div>`}
+  <div class="wa-cont ${conv ? 'con-chat' : ''}">
+    <aside class="wa-lista">
+      ${conv ? '<a class="wa-volver small" href="/whatsapp">← Todas las conversaciones</a>' : ''}
+      ${lista || '<p class="muted small" style="padding:.8rem">Sin conversaciones todavía.</p>'}
+    </aside>
+    <section class="wa-chat">${chat}</section>
+  </div>
+  <script>
+    var caja = document.getElementById('waMensajes');
+    if (caja) caja.scrollTop = caja.scrollHeight;
+    var ta = document.querySelector('.wa-composer textarea');
+    if (ta) {
+      ta.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ta.form.submit(); }
+      });
+      ta.focus();
+    }
+    var ultimo = ${conv && mensajes.length ? mensajes[mensajes.length - 1].id : 0};
+    var convId = ${conv ? conv.id : 0};
+    setInterval(function () {
+      fetch('/whatsapp/nuevos?c=' + convId + '&desde=' + ultimo)
+        .then(function (r) { return r.json(); })
+        .then(function (d) { if (d.nuevos > 0) location.reload(); })
+        .catch(function () {});
+    }, 6000);
+  </script>`;
+  return layout({ title: 'WhatsApp', user, active: 'whatsapp', sistema: 'whatsapp', body, msg, err });
+}
+
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage, agendaPage, propuestasPage, propuestaNuevaPage, propuestaVerPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage, agendaPage, propuestasPage, propuestaNuevaPage, propuestaVerPage, whatsappPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusCursoPage, campusQuizPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,
