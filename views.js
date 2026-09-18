@@ -1335,7 +1335,7 @@ body.login-bg .wrap { max-width:none; padding:0; }
 
 /* ---------- WhatsApp: bandeja ---------- */
 .wa-cont { display:grid; grid-template-columns:21rem minmax(0, 1fr); border:1px solid var(--line); border-radius:16px; overflow:hidden; background:var(--surface); box-shadow:var(--sh-lg); height:calc(100vh - 7.6rem); height:calc(100dvh - 7.6rem); min-height:24rem; }
-.wa-lista { border-right:1px solid var(--line); overflow-y:auto; background:var(--surface); }
+.wa-lista { border-right:1px solid var(--line); overflow-y:auto; background:var(--surface); min-height:0; }
 .wa-lista-head { display:flex; align-items:center; gap:.5rem; padding:.8rem .9rem; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--surface); z-index:2; }
 .wa-lista-head strong { font-size:1rem; }
 .wa-item { display:flex; gap:.65rem; align-items:center; padding:.65rem .8rem; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); }
@@ -1356,7 +1356,7 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .wa-mini-chip.grande { font-size:.74rem; padding:.25rem .6rem; }
 a.wa-mini-chip:hover { text-decoration:none; filter:brightness(1.05); }
 
-.wa-chat { display:flex; flex-direction:column; min-width:0; background:var(--bg); }
+.wa-chat { display:flex; flex-direction:column; min-width:0; min-height:0; background:var(--bg); }
 .wa-head { display:flex; gap:.6rem; align-items:center; padding:.55rem .8rem; border-bottom:1px solid var(--line); background:var(--surface); flex-wrap:wrap; }
 .wa-head-quien { display:flex; flex-direction:column; min-width:0; line-height:1.25; }
 .wa-head-quien strong { font-size:.92rem; }
@@ -1367,7 +1367,7 @@ a.wa-mini-chip:hover { text-decoration:none; filter:brightness(1.05); }
 .wa-volver { display:none; font-size:1.25rem; text-decoration:none; color:var(--ink); padding:.2rem .5rem; border-radius:8px; }
 .wa-volver:hover { background:var(--accent-soft); text-decoration:none; }
 
-.wa-mensajes { flex:1; overflow-y:auto; padding:1rem .9rem; display:flex; flex-direction:column; gap:.3rem;
+.wa-mensajes { flex:1; min-height:0; overflow-y:auto; padding:1rem .9rem; display:flex; flex-direction:column; gap:.3rem;
   background:
     radial-gradient(circle at 20% 30%, rgba(26,158,86,.05) 0, transparent 32%),
     radial-gradient(circle at 80% 70%, rgba(26,158,86,.05) 0, transparent 32%),

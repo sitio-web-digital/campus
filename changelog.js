@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.0.2',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'fix', texto: 'WhatsApp: el chat ahora scrollea bien — los mensajes anteriores no se pierden más: la conversación arranca en el último mensaje y podés subir a leer todo el historial.' },
+    ],
+  },
+  {
     version: '3.0.1',
     fecha: '2026-09-18',
     cambios: [
