@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.0.4',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'fix', texto: 'WhatsApp: el campo de escribir mensaje ya no muestra barra de scroll mientras tipeás — crece solo con el texto y recién scrollea (con barra finita) si superás las ~5 líneas.' },
+    ],
+  },
+  {
     version: '3.0.3',
     fecha: '2026-09-18',
     cambios: [

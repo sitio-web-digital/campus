@@ -1395,7 +1395,9 @@ html.dark .wa-autor { color:#6FCF97; }
 .wa-tilde.rojo { color:#E05550; }
 
 .wa-composer { display:flex; gap:.5rem; padding:.55rem .7rem; border-top:1px solid var(--line); align-items:flex-end; background:var(--surface); }
-.wa-composer textarea { flex:1; margin:0; resize:none; border-radius:20px; padding:.55rem .95rem; max-height:120px; font-size:.9rem; }
+.wa-composer textarea { flex:1; margin:0; resize:none; border-radius:20px; padding:.55rem .95rem; max-height:120px; font-size:.9rem; overflow-y:hidden; scrollbar-width:thin; scrollbar-color:rgba(120, 130, 140, .35) transparent; }
+.wa-composer textarea::-webkit-scrollbar { width:5px; }
+.wa-composer textarea::-webkit-scrollbar-thumb { background:rgba(120, 130, 140, .3); border-radius:999px; }
 .wa-enviar { width:2.6rem; height:2.6rem; border-radius:50%; border:0; background:#1A9E56; color:#fff; font-size:1.05rem; cursor:pointer; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; transition:transform .12s, background .12s; }
 .wa-enviar:hover { background:#158549; transform:scale(1.06); }
 .wa-cerrada { padding:.7rem .9rem; border-top:1px solid var(--line); font-size:.78rem; color:var(--muted); background:var(--warn-soft); }
@@ -5339,7 +5341,7 @@ function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads
     if (caja) caja.scrollTop = caja.scrollHeight;
     var ta = document.querySelector('.wa-composer textarea');
     if (ta) {
-      var ajustar = function () { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'; };
+      var ajustar = function () { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'; ta.style.overflowY = ta.scrollHeight > 120 ? 'auto' : 'hidden'; };
       ta.addEventListener('input', ajustar);
       ta.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (ta.value.trim()) ta.form.submit(); }
