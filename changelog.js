@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.0.0',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'nuevo', texto: '🚀 Campus 3.0 — la era WhatsApp. El campus se conecta a la API oficial de Meta: los clientes le escriben al número de la empresa y las conversaciones viven ADENTRO del campus, ligadas a las leads del CRM, con bandeja estilo WhatsApp, asignación por vendedor, notificaciones y la ventana de 24 hs manejada sola. Los vendedores van a poder vender por WhatsApp sin exponer sus números personales ni riesgo de bloqueos. Hoy en etapa de prueba (solo administradores); próximas etapas: plantillas para reabrir conversaciones, apertura a vendedores por permiso, prospección y métricas.' },
+    ],
+  },
+  {
     version: '2.54.1',
     fecha: '2026-09-18',
     cambios: [
