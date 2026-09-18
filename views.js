@@ -1357,6 +1357,15 @@ body.login-bg .wrap { max-width:none; padding:0; }
 a.wa-mini-chip:hover { text-decoration:none; filter:brightness(1.05); }
 
 .wa-chat { display:flex; flex-direction:column; min-width:0; min-height:0; background:var(--bg); }
+/* scrollbars finitas y discretas en la bandeja */
+.wa-mensajes, .wa-lista { scrollbar-width:thin; scrollbar-color:rgba(120, 130, 140, .35) transparent; }
+.wa-mensajes::-webkit-scrollbar, .wa-lista::-webkit-scrollbar { width:5px; }
+.wa-mensajes::-webkit-scrollbar-track, .wa-lista::-webkit-scrollbar-track { background:transparent; }
+.wa-mensajes::-webkit-scrollbar-thumb, .wa-lista::-webkit-scrollbar-thumb { background:rgba(120, 130, 140, .3); border-radius:999px; }
+.wa-mensajes::-webkit-scrollbar-thumb:hover, .wa-lista::-webkit-scrollbar-thumb:hover { background:rgba(120, 130, 140, .55); }
+html.dark .wa-mensajes, html.dark .wa-lista { scrollbar-color:rgba(255, 255, 255, .18) transparent; }
+html.dark .wa-mensajes::-webkit-scrollbar-thumb, html.dark .wa-lista::-webkit-scrollbar-thumb { background:rgba(255, 255, 255, .16); }
+html.dark .wa-mensajes::-webkit-scrollbar-thumb:hover, html.dark .wa-lista::-webkit-scrollbar-thumb:hover { background:rgba(255, 255, 255, .32); }
 .wa-head { display:flex; gap:.6rem; align-items:center; padding:.55rem .8rem; border-bottom:1px solid var(--line); background:var(--surface); flex-wrap:wrap; }
 .wa-head-quien { display:flex; flex-direction:column; min-width:0; line-height:1.25; }
 .wa-head-quien strong { font-size:.92rem; }

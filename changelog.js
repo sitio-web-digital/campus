@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.0.3',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'mejora', texto: 'WhatsApp: barra de scroll finita y discreta en el chat y la lista de conversaciones (5px, redondeada, se acentúa al pasar el mouse), en claro y oscuro.' },
+    ],
+  },
+  {
     version: '3.0.2',
     fecha: '2026-09-18',
     cambios: [
