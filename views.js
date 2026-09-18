@@ -1334,42 +1334,80 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .cl-lista .chip { flex-shrink:0; }
 
 /* ---------- WhatsApp: bandeja ---------- */
-.wa-cont { display:grid; grid-template-columns:19rem minmax(0, 1fr); gap:0; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--surface); box-shadow:var(--sh); height:calc(100vh - 11rem); min-height:26rem; }
+.wa-cont { display:grid; grid-template-columns:21rem minmax(0, 1fr); border:1px solid var(--line); border-radius:16px; overflow:hidden; background:var(--surface); box-shadow:var(--sh-lg); height:calc(100vh - 7.6rem); height:calc(100dvh - 7.6rem); min-height:24rem; }
 .wa-lista { border-right:1px solid var(--line); overflow-y:auto; background:var(--surface); }
-.wa-item { display:block; position:relative; padding:.6rem .75rem; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); }
+.wa-lista-head { display:flex; align-items:center; gap:.5rem; padding:.8rem .9rem; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--surface); z-index:2; }
+.wa-lista-head strong { font-size:1rem; }
+.wa-item { display:flex; gap:.65rem; align-items:center; padding:.65rem .8rem; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); }
 .wa-item:hover { background:var(--accent-soft); text-decoration:none; }
-.wa-item.on { background:var(--accent-soft); box-shadow:inset 3px 0 0 var(--accent); }
-.wa-item-top { display:flex; justify-content:space-between; gap:.5rem; align-items:baseline; font-size:.85rem; }
-.wa-hora { font-size:.66rem; color:var(--faint); flex-shrink:0; }
-.wa-item-sub { font-size:.72rem; color:var(--muted); margin-top:.12rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.wa-badge { position:absolute; right:.7rem; bottom:.55rem; background:#1A9E56; color:#fff; font-size:.62rem; font-weight:700; border-radius:999px; min-width:1.15rem; height:1.15rem; display:inline-flex; align-items:center; justify-content:center; padding:0 .3rem; }
-.wa-chat { display:flex; flex-direction:column; min-width:0; }
-.wa-chat-head { display:flex; justify-content:space-between; gap:.8rem; align-items:flex-start; flex-wrap:wrap; padding:.6rem .85rem; border-bottom:1px solid var(--line); }
-.wa-inline { display:inline-flex; gap:.35rem; align-items:center; margin:.2rem .4rem 0 0; }
-.wa-inline select { max-width:14rem; margin:0; padding:.3rem .4rem; font-size:.78rem; }
-.wa-mensajes { flex:1; overflow-y:auto; padding:.9rem; display:flex; flex-direction:column; gap:.45rem; background:var(--bg); }
-.wa-b { max-width:72%; padding:.45rem .65rem; border-radius:12px; font-size:.85rem; line-height:1.45; white-space:pre-wrap; overflow-wrap:anywhere; }
-.wa-in { align-self:flex-start; background:var(--surface); border:1px solid var(--line); border-bottom-left-radius:4px; }
-.wa-out { align-self:flex-end; background:#D7F4E2; border:1px solid #B9E4C9; border-bottom-right-radius:4px; }
-html.dark .wa-out { background:#144D33; border-color:#1C6A46; color:#E6F4EC; }
-.wa-autor { font-size:.62rem; font-weight:700; color:#177A45; margin-bottom:.1rem; }
+.wa-item.on { background:var(--accent-soft); box-shadow:inset 3px 0 0 #1A9E56; }
+.wa-avatar { width:2.5rem; height:2.5rem; border-radius:50%; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:1rem; flex-shrink:0; }
+.wa-item-cuerpo { flex:1; min-width:0; display:flex; flex-direction:column; gap:.1rem; }
+.wa-item-top { display:flex; justify-content:space-between; gap:.5rem; align-items:baseline; }
+.wa-item-top strong { font-size:.87rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wa-item-top time { font-size:.64rem; color:var(--faint); flex-shrink:0; }
+.wa-item-bajo { display:flex; justify-content:space-between; gap:.5rem; align-items:center; }
+.wa-snippet { font-size:.75rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wa-snip-yo { color:var(--faint); }
+.wa-badge { background:#1A9E56; color:#fff; font-size:.62rem; font-weight:700; border-radius:999px; min-width:1.2rem; height:1.2rem; display:inline-flex; align-items:center; justify-content:center; padding:0 .32rem; flex-shrink:0; }
+.wa-item-meta { display:flex; gap:.3rem; flex-wrap:wrap; }
+.wa-mini-chip { display:inline-flex; align-items:center; gap:.2rem; font-size:.62rem; font-weight:600; color:var(--muted); background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:.06rem .45rem; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wa-mini-chip.lead { color:#177A45; border-color:rgba(26,158,86,.4); background:rgba(26,158,86,.08); text-decoration:none; }
+.wa-mini-chip.grande { font-size:.74rem; padding:.25rem .6rem; }
+a.wa-mini-chip:hover { text-decoration:none; filter:brightness(1.05); }
+
+.wa-chat { display:flex; flex-direction:column; min-width:0; background:var(--bg); }
+.wa-head { display:flex; gap:.6rem; align-items:center; padding:.55rem .8rem; border-bottom:1px solid var(--line); background:var(--surface); flex-wrap:wrap; }
+.wa-head-quien { display:flex; flex-direction:column; min-width:0; line-height:1.25; }
+.wa-head-quien strong { font-size:.92rem; }
+.wa-vivo { color:#1A9E56; font-weight:600; }
+.wa-head-acciones { margin-left:auto; display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
+.wa-inline { display:inline-flex; gap:.3rem; align-items:center; margin:0; }
+.wa-inline select { max-width:11.5rem; margin:0; padding:.32rem .45rem; font-size:.76rem; }
+.wa-volver { display:none; font-size:1.25rem; text-decoration:none; color:var(--ink); padding:.2rem .5rem; border-radius:8px; }
+.wa-volver:hover { background:var(--accent-soft); text-decoration:none; }
+
+.wa-mensajes { flex:1; overflow-y:auto; padding:1rem .9rem; display:flex; flex-direction:column; gap:.3rem;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(26,158,86,.05) 0, transparent 32%),
+    radial-gradient(circle at 80% 70%, rgba(26,158,86,.05) 0, transparent 32%),
+    var(--bg); }
+.wa-dia { text-align:center; margin:.55rem 0 .35rem; }
+.wa-dia span { display:inline-block; font-size:.64rem; font-weight:600; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:.14rem .7rem; box-shadow:var(--sh); }
+.wa-b { max-width:min(72%, 34rem); padding:.45rem .65rem .3rem; border-radius:14px; font-size:.86rem; line-height:1.45; overflow-wrap:anywhere; box-shadow:0 1px 1px rgba(15,29,46,.08); }
+.wa-texto { white-space:pre-wrap; }
+.wa-in { align-self:flex-start; background:var(--surface); border:1px solid var(--line); border-bottom-left-radius:5px; }
+.wa-out { align-self:flex-end; background:#D8F6E3; border:1px solid #BCE8CB; border-bottom-right-radius:5px; }
+html.dark .wa-out { background:#14503A; border-color:#1C6A4B; color:#E6F4EC; }
+.wa-autor { font-size:.62rem; font-weight:700; color:#177A45; margin-bottom:.08rem; }
 html.dark .wa-autor { color:#6FCF97; }
-.wa-meta { font-size:.6rem; color:var(--faint); text-align:right; margin-top:.15rem; }
+.wa-meta { font-size:.6rem; color:var(--faint); text-align:right; margin-top:.1rem; }
 .wa-tilde.azul { color:#2D9CDB; }
 .wa-tilde.rojo { color:#E05550; }
-.wa-composer { display:flex; gap:.5rem; padding:.6rem; border-top:1px solid var(--line); align-items:flex-end; }
-.wa-composer textarea { flex:1; margin:0; resize:none; }
+
+.wa-composer { display:flex; gap:.5rem; padding:.55rem .7rem; border-top:1px solid var(--line); align-items:flex-end; background:var(--surface); }
+.wa-composer textarea { flex:1; margin:0; resize:none; border-radius:20px; padding:.55rem .95rem; max-height:120px; font-size:.9rem; }
+.wa-enviar { width:2.6rem; height:2.6rem; border-radius:50%; border:0; background:#1A9E56; color:#fff; font-size:1.05rem; cursor:pointer; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; transition:transform .12s, background .12s; }
+.wa-enviar:hover { background:#158549; transform:scale(1.06); }
 .wa-cerrada { padding:.7rem .9rem; border-top:1px solid var(--line); font-size:.78rem; color:var(--muted); background:var(--warn-soft); }
-.wa-vacio { display:flex; align-items:center; justify-content:center; height:100%; padding:1rem; }
-.wa-volver { display:none; padding:.5rem .75rem; border-bottom:1px solid var(--line); }
+.wa-vacio { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:1.5rem; text-align:center; gap:.2rem; }
+.wa-vacio-ico { font-size:2.6rem; opacity:.5; margin-bottom:.4rem; }
+
+/* móvil: una columna, lista ↔ chat, composer cómodo */
 @media (max-width: 860px) {
-  .wa-cont { grid-template-columns:1fr; height:calc(100vh - 12.5rem); }
+  body.wa-full .wrap { padding-left:0; padding-right:0; padding-bottom:0; }
+  .wa-cont { grid-template-columns:1fr; border-radius:0; border-left:0; border-right:0; height:calc(100vh - 6.6rem); height:calc(100dvh - 6.6rem); }
   .wa-cont.con-chat .wa-lista { display:none; }
   .wa-cont:not(.con-chat) .wa-chat { display:none; }
-  .wa-cont.con-chat .wa-volver { display:block; }
+  .wa-cont.con-chat .wa-volver { display:inline-block; }
   .wa-b { max-width:86%; }
+  .wa-head { padding:.5rem .6rem; }
+  .wa-head-acciones { width:100%; margin-left:0; }
+  .wa-head-acciones .wa-inline { flex:1 1 10rem; min-width:0; }
+  .wa-inline select { width:100%; min-width:0; max-width:none; }
+  .wa-composer { padding:.5rem .6rem calc(.5rem + env(safe-area-inset-bottom)); }
+  .wa-composer textarea { font-size:16px; }
 }
-@media (max-width: 860px) { .wa-cont.con-chat .wa-lista.forzar { display:block; } }
 
 /* ---------- generador de propuestas ---------- */
 .prop-toolbar { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
@@ -5195,61 +5233,95 @@ function propuestaVerPage({ user, p }) {
 
 function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads = [], ventana, configurado, msg, err }) {
   const hora = (t) => (t || '').replace(' ', 'T').slice(11, 16);
-  const diaHora = (t) => {
+  const diaCorto = (t) => {
     if (!t) return '';
     const f = t.slice(0, 10).split('-');
-    return `${+f[2]}/${+f[1]} ${hora(t)}`;
+    return `${+f[2]}/${+f[1]}`;
   };
-  const tilde = (m) => m.dir !== 'out' ? '' : m.estado === 'leido' ? '✓✓' : m.estado === 'entregado' ? '✓✓' : m.estado === 'enviado' ? '✓' : m.estado === 'error' ? '⚠' : '·';
+  const hoyUTC = new Date().toISOString().slice(0, 10);
+  const cuando = (t) => !t ? '' : (t.slice(0, 10) === hoyUTC ? hora(t) : diaCorto(t));
+  // avatar con inicial y color estable por número
+  const PALETA = ['#0E6E66', '#2B6CB0', '#7C4DBC', '#C05450', '#A8791F', '#1A6B3F', '#B0532D'];
+  const avatarWA = (c) => {
+    const color = PALETA[(parseInt(String(c.telefono).slice(-3), 10) || 0) % PALETA.length];
+    const inicial = (c.nombre || '#').trim().charAt(0).toUpperCase();
+    return `<span class="wa-avatar" style="background:${color}">${esc(inicial)}</span>`;
+  };
+  const tilde = (m) => m.dir !== 'out' ? '' : m.estado === 'leido' ? '✓✓' : m.estado === 'entregado' ? '✓✓' : m.estado === 'enviado' ? '✓' : m.estado === 'error' ? '⚠' : '🕓';
+
   const lista = convs.map((c) => `
     <a class="wa-item ${conv && conv.id === c.id ? 'on' : ''}" href="/whatsapp?c=${c.id}">
-      <div class="wa-item-top"><strong>${esc(c.nombre || '+' + c.telefono)}</strong><span class="wa-hora">${diaHora(c.ultimo_mensaje_at || c.created_at)}</span></div>
-      <div class="wa-item-sub">${c.lead ? `🔗 ${esc(c.lead)}` : '<span class="muted">Sin lead</span>'}${c.vendedor ? ` · ${esc(c.vendedor.split(' ')[0])}` : ''}</div>
-      ${c.no_leidos > 0 ? `<span class="wa-badge">${c.no_leidos}</span>` : ''}
+      ${avatarWA(c)}
+      <span class="wa-item-cuerpo">
+        <span class="wa-item-top"><strong>${esc(c.nombre || '+' + c.telefono)}</strong><time>${cuando(c.ultimo_mensaje_at || c.created_at)}</time></span>
+        <span class="wa-item-bajo">
+          <span class="wa-snippet">${c.ultimo_dir === 'out' ? '<span class="wa-snip-yo">Tú:</span> ' : ''}${esc((c.ultimo_texto || 'Sin mensajes').slice(0, 46))}</span>
+          ${c.no_leidos > 0 ? `<span class="wa-badge">${c.no_leidos}</span>` : ''}
+        </span>
+        <span class="wa-item-meta">${c.lead ? `<span class="wa-mini-chip lead">🔗 ${esc(c.lead)}</span>` : '<span class="wa-mini-chip">sin lead</span>'}${c.vendedor ? `<span class="wa-mini-chip">${esc(c.vendedor.split(' ')[0])}</span>` : ''}</span>
+      </span>
     </a>`).join('');
-  const chat = !conv ? `<div class="wa-vacio"><p class="muted">Elegí una conversación de la izquierda${convs.length ? '' : ' — todavía no entró ningún mensaje. Cuando alguien le escriba al número de WhatsApp de la empresa, aparece acá'}.</p></div>` : `
-    <div class="wa-chat-head">
-      <div>
-        <strong>${esc(conv.nombre || '+' + conv.telefono)}</strong> <span class="small muted">+${esc(conv.telefono)}</span>
-        <div class="small">${conv.deal_id
-          ? `Lead: <a href="/deals/${conv.deal_id}"><strong>${esc(conv.lead || 'ver')}</strong></a> <span class="muted">(${esc(conv.lead_etapa || '')})</span>`
-          : `<form method="post" action="/whatsapp/${conv.id}/ligar" class="wa-inline">
-              <select name="deal_id" required><option value="">Ligar a una lead…</option>${leads.map((l) => `<option value="${l.id}">${esc(l.empresa)}</option>`).join('')}</select>
-              <button class="btn secondary small">Ligar</button>
-            </form>
-            <form method="post" action="/whatsapp/${conv.id}/lead" class="wa-inline"><button class="btn small">+ Crear lead</button></form>`}
-        </div>
-      </div>
-      <form method="post" action="/whatsapp/${conv.id}/asignar" class="wa-inline">
-        <label class="small muted">Asignada a</label>
-        <select name="vendedor_id" onchange="this.form.submit()">
-          <option value="">— Nadie —</option>
-          ${vendedores.map((v) => `<option value="${v.id}" ${conv.vendedor_id === v.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}
-        </select>
-      </form>
-    </div>
-    <div class="wa-mensajes" id="waMensajes">
-      ${mensajes.map((m) => `
+
+  // mensajes con separadores por día
+  let diaPrev = '';
+  const burbujas = mensajes.map((m) => {
+    const d = (m.created_at || '').slice(0, 10);
+    const sep = d !== diaPrev ? `<div class="wa-dia"><span>${d === hoyUTC ? 'Hoy' : diaCorto(m.created_at)}</span></div>` : '';
+    diaPrev = d;
+    return `${sep}
       <div class="wa-b ${m.dir === 'out' ? 'wa-out' : 'wa-in'}">
         ${m.dir === 'out' && m.autor ? `<div class="wa-autor">${esc(m.autor.split(' ')[0])}</div>` : ''}
         <div class="wa-texto">${esc(m.texto || '')}</div>
         <div class="wa-meta">${hora(m.created_at)} <span class="wa-tilde ${m.estado === 'leido' ? 'azul' : ''} ${m.estado === 'error' ? 'rojo' : ''}" title="${esc(m.estado || '')}${m.error_detalle ? ': ' + esc(m.error_detalle) : ''}">${tilde(m)}</span></div>
-      </div>`).join('') || '<p class="muted small" style="text-align:center">Sin mensajes todavía.</p>'}
+      </div>`;
+  }).join('');
+
+  const chat = !conv ? `
+    <div class="wa-vacio">
+      <div class="wa-vacio-ico">💬</div>
+      <p><strong>${convs.length ? 'Elegí una conversación' : 'Todavía no entró ningún mensaje'}</strong></p>
+      <p class="muted small">${convs.length ? 'Tocá una conversación de la lista para abrir el chat.' : 'Cuando alguien le escriba al WhatsApp de la empresa, aparece acá y te llega una notificación.'}</p>
+    </div>` : `
+    <header class="wa-head">
+      <a class="wa-volver" href="/whatsapp" aria-label="Volver">←</a>
+      ${avatarWA(conv)}
+      <div class="wa-head-quien">
+        <strong>${esc(conv.nombre || '+' + conv.telefono)}</strong>
+        <span class="small muted">+${esc(conv.telefono)}${ventana ? ' · <span class="wa-vivo">ventana abierta</span>' : ' · ventana de 24 hs vencida'}</span>
+      </div>
+      <div class="wa-head-acciones">
+        ${conv.deal_id
+          ? `<a class="wa-mini-chip lead grande" href="/deals/${conv.deal_id}" title="Etapa: ${esc(conv.lead_etapa || '')}">🔗 ${esc(conv.lead || 'ver lead')}</a>`
+          : `<form method="post" action="/whatsapp/${conv.id}/ligar" class="wa-inline">
+              <select name="deal_id" required><option value="">Ligar a lead…</option>${leads.map((l) => `<option value="${l.id}">${esc(l.empresa)}</option>`).join('')}</select>
+              <button class="btn secondary small">Ligar</button>
+            </form>
+            <form method="post" action="/whatsapp/${conv.id}/lead" class="wa-inline"><button class="btn small">+ Crear lead</button></form>`}
+        <form method="post" action="/whatsapp/${conv.id}/asignar" class="wa-inline" title="Vendedor asignado">
+          <select name="vendedor_id" onchange="this.form.submit()">
+            <option value="">Sin asignar</option>
+            ${vendedores.map((v) => `<option value="${v.id}" ${conv.vendedor_id === v.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}
+          </select>
+        </form>
+      </div>
+    </header>
+    <div class="wa-mensajes" id="waMensajes">
+      ${burbujas || '<p class="muted small" style="text-align:center;margin-top:2rem">Sin mensajes todavía.</p>'}
     </div>
     ${ventana ? `
     <form method="post" action="/whatsapp/enviar" class="wa-composer">
       <input type="hidden" name="conversacion_id" value="${conv.id}">
-      <textarea name="texto" rows="2" required placeholder="Escribí la respuesta… (Enter envía, Shift+Enter salto de línea)"></textarea>
-      <button class="btn">Enviar</button>
+      <textarea name="texto" rows="1" required placeholder="Escribí un mensaje"></textarea>
+      <button class="wa-enviar" aria-label="Enviar" title="Enviar (Enter)">➤</button>
     </form>` : `
-    <div class="wa-cerrada">⏳ Ventana de 24 hs vencida: Meta solo permite responder libre dentro de las 24 hs del último mensaje del cliente. Las <strong>plantillas</strong> para reabrir la conversación llegan en la próxima etapa.</div>`}`;
+    <div class="wa-cerrada">⏳ <strong>Ventana de 24 hs vencida.</strong> Meta solo permite responder libre dentro de las 24 hs del último mensaje del cliente — las plantillas para reabrir llegan en la próxima etapa.</div>`}`;
+
   const body = `
-  <h1>WhatsApp <span class="chip" style="background:#1A9E56">solo admins · etapa de prueba</span></h1>
-  ${configurado ? '' : `<div class="flash bad">Falta configurar la conexión con Meta: definí <code>WHATSAPP_TOKEN</code> y <code>WHATSAPP_PHONE_ID</code> en el .env del servidor (y <code>WHATSAPP_VERIFY_TOKEN</code> para el webhook). La bandeja funciona, pero el envío va a fallar hasta entonces.</div>`}
+  ${configurado ? '' : `<div class="flash bad">Falta configurar la conexión con Meta: definí <code>WHATSAPP_TOKEN</code> y <code>WHATSAPP_PHONE_ID</code> en el .env del servidor.</div>`}
   <div class="wa-cont ${conv ? 'con-chat' : ''}">
     <aside class="wa-lista">
-      ${conv ? '<a class="wa-volver small" href="/whatsapp">← Todas las conversaciones</a>' : ''}
-      ${lista || '<p class="muted small" style="padding:.8rem">Sin conversaciones todavía.</p>'}
+      <div class="wa-lista-head"><strong>WhatsApp</strong><span class="wa-mini-chip">solo admins · prueba</span></div>
+      ${lista || '<p class="muted small" style="padding:1rem">Sin conversaciones todavía.</p>'}
     </aside>
     <section class="wa-chat">${chat}</section>
   </div>
@@ -5258,21 +5330,24 @@ function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads
     if (caja) caja.scrollTop = caja.scrollHeight;
     var ta = document.querySelector('.wa-composer textarea');
     if (ta) {
+      var ajustar = function () { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'; };
+      ta.addEventListener('input', ajustar);
       ta.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ta.form.submit(); }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (ta.value.trim()) ta.form.submit(); }
       });
       ta.focus();
+      ajustar();
     }
     var ultimo = ${conv && mensajes.length ? mensajes[mensajes.length - 1].id : 0};
     var convId = ${conv ? conv.id : 0};
     setInterval(function () {
       fetch('/whatsapp/nuevos?c=' + convId + '&desde=' + ultimo)
         .then(function (r) { return r.json(); })
-        .then(function (d) { if (d.nuevos > 0) location.reload(); })
+        .then(function (d) { if (d.nuevos > 0 || (convId === 0 && d.sinLeer > 0)) location.reload(); })
         .catch(function () {});
     }, 6000);
   </script>`;
-  return layout({ title: 'WhatsApp', user, active: 'whatsapp', sistema: 'whatsapp', body, msg, err });
+  return layout({ title: 'WhatsApp', user, active: 'whatsapp', sistema: 'whatsapp', body, msg, err, bodyClass: 'wa-full' });
 }
 
 module.exports = {

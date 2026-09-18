@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '2.54.1',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'mejora', texto: 'La bandeja de WhatsApp quedó con cara de WhatsApp de verdad: avatares de color por contacto, lista con el último mensaje y hora, contador verde de no leídos, chips de lead y vendedor, separadores por día ("Hoy"), burbujas compactas con tildes, indicador de "ventana abierta", y composer redondeado con botón de enviar verde que crece mientras escribís.' },
+      { tipo: 'mejora', texto: 'Responsive de verdad en celular: una sola columna, tocás una conversación y entrás al chat con botón ← para volver, todo ocupando la pantalla completa sin desbordes.' },
+    ],
+  },
+  {
     version: '2.54.0',
     fecha: '2026-09-18',
     cambios: [

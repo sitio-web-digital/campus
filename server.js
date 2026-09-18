@@ -1821,7 +1821,10 @@ async function enviarWA(conv, texto, userId) {
 
 // --- Bandeja (solo admins por ahora) ---
 app.get('/whatsapp', requireAuth, requireAdmin, (req, res) => {
-  const convs = db.prepare(`SELECT c.*, d.empresa AS lead, u.name AS vendedor FROM wa_conversaciones c
+  const convs = db.prepare(`SELECT c.*, d.empresa AS lead, u.name AS vendedor,
+      (SELECT m.texto FROM wa_mensajes m WHERE m.conversacion_id = c.id ORDER BY m.id DESC LIMIT 1) AS ultimo_texto,
+      (SELECT m.dir FROM wa_mensajes m WHERE m.conversacion_id = c.id ORDER BY m.id DESC LIMIT 1) AS ultimo_dir
+    FROM wa_conversaciones c
     LEFT JOIN deals d ON d.id = c.deal_id LEFT JOIN users u ON u.id = c.vendedor_id
     ORDER BY COALESCE(c.ultimo_mensaje_at, c.created_at) DESC LIMIT 200`).all();
   const sel = parseInt(req.query.c, 10) || null;
