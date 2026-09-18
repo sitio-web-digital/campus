@@ -801,7 +801,8 @@ app.get('/admin/preferencias', requireAuth, requireAdmin, (req, res) => {
       acc.usd += (r.ti / 1e6) * m.entrada + (r.tsal / 1e6) * m.salida; acc.n += r.n; return acc;
     }, { usd: 0, n: 0 });
   const mesIA = costoIA(true), totalIA = costoIA(false);
-  res.send(V.adminPreferenciasPage({ user: req.user, prefs, ia: {
+  const usoGoogle = db.prepare("SELECT COALESCE(SUM(consultas), 0) AS c, COUNT(*) AS escaneos FROM prospecto_scans WHERE substr(datetime(created_at, '-3 hours'), 1, 7) = ?").get(hoyAR().slice(0, 7));
+  res.send(V.adminPreferenciasPage({ user: req.user, prefs, google: usoGoogle, ia: {
     ...cfgIA, keyOk: !!process.env.ANTHROPIC_API_KEY, modelos: IA_MODELOS,
     hoy: db.prepare("SELECT COUNT(*) AS c FROM ia_consultas WHERE substr(datetime(created_at, '-3 hours'), 1, 10) = ?").get(hoyAR()).c,
     mes: mesIA, costoMes: mesIA.usd, gastoTotal: totalIA.usd, restante: Math.max(0, cfgIA.credito - totalIA.usd),

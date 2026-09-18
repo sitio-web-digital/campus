@@ -45,7 +45,7 @@ const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permis
 
 // Simplificación 3.1: sistemas que EXISTEN pero se esconden de la vista de todos
 // (los usarán a futuro; para reactivar uno, sacarlo de este set y listo).
-const SISTEMAS_OCULTOS = new Set(['gondolas', 'estanterias', 'sitioweb', 'campus', 'propuestas', 'cobranza', 'developers']);
+const SISTEMAS_OCULTOS = new Set(['gondolas', 'estanterias', 'sitioweb', 'campus', 'propuestas', 'cobranza', 'developers', 'whatsapp']); // whatsapp vive como pestaña del panel CFD
 const SITIOS_OCULTOS = new Set(['pco2']);
 const sistemaVisible = (slug) => !SISTEMAS_OCULTOS.has(slug);
 
@@ -111,7 +111,7 @@ function sysSwitch(sistema, user) {
       ${sistemaVisible('sitioweb') && tieneSistema(user, 'sitioweb') ? `<a href="/sitioweb/pipeline"><span>Comercial SitioWeb Digital</span>${infoPanel('sitioweb')}</a>` : ''}
       ${tieneSistema(user, 'clientes') ? `<a href="/clientes"><span>Panel de Clientes</span></a>` : ''}
       ${sistemaVisible('propuestas') && tieneSistema(user, 'propuestas') ? `<a href="/propuestas"><span>Generador de Propuestas</span></a>` : ''}
-      ${user && user.role === 'admin' ? `<a href="/whatsapp"><span>WhatsApp</span><span class="soon-chip">Prueba</span></a>` : ''}
+      ${sistemaVisible('whatsapp') && user && user.role === 'admin' ? `<a href="/whatsapp"><span>WhatsApp</span><span class="soon-chip">Prueba</span></a>` : ''}
       ${sistemaVisible('cobranza') && tieneSistema(user, 'cobranza') ? `<a href="/cobranza"><span>Panel de Cobranza</span>${infoCobranza()}</a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
       ${sistemaVisible('developers') ? (tieneSistema(user, 'developers') ? '<a href="/developers"><span>Panel de Developers</span></a>' : '<span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>') : ''}
@@ -329,20 +329,18 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         </div>` : ''}`;
   } else {
     const dd = (user && user.deudas) || {};
-    const enMas = ['dashboard', 'ianegocio', 'contactos', 'config', 'equipo'].includes(active);
+    const enMas = ['dashboard', 'ianegocio', 'contactos', 'config'].includes(active);
     links = `
         <a href="/pipeline" class="${active === 'pipeline' ? 'on' : ''}${dd.pipeline ? ' deuda' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
         <a href="/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
         <a href="/agenda" class="${active === 'agenda' ? 'on' : ''}">${IC('<rect x="3" y="4.5" width="14" height="12" rx="2"/><path d="M3 8.5h14M7 3v3M13 3v3"/>')}<span>Agenda</span></a>
         <a href="/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
+        ${user && user.role === 'admin' ? `<a href="/whatsapp" class="${active === 'whatsapp' ? 'on' : ''}">${IC('<path d="M10 2.5a7.5 7.5 0 00-6.5 11.2L2.6 17.4l3.8-.9A7.5 7.5 0 1010 2.5z"/><path d="M7.2 7.4c.2-.5.5-.5.8-.5h.6c.2 0 .4 0 .5.4l.7 1.6c.1.2 0 .4-.1.5l-.5.6c-.1.2-.1.3 0 .5.5.9 1.3 1.6 2.3 2.1.2.1.4.1.5-.1l.5-.6c.2-.2.3-.2.5-.1l1.6.8c.3.1.4.3.4.5v.6c0 .4-.3.8-.7.9-.7.2-1.8.2-3.3-.6a9 9 0 01-3.4-3.3c-.8-1.4-.8-2.4-.4-2.9z"/>')}<span>WhatsApp</span></a>` : ''}
         ${user && user.role === 'admin' ? `<div class="nav-mas${enMas ? ' tiene-on' : ''}">
         <button type="button" class="nav-mas-btn">${IC('<circle cx="4.2" cy="10" r="1.7"/><circle cx="10" cy="10" r="1.7"/><circle cx="15.8" cy="10" r="1.7"/>')}<span>Más</span></button>
         <div class="nav-extra">
-        <a href="/dashboard" class="${active === 'dashboard' ? 'on' : ''}">${ICONS.dashboard}<span>Dashboard</span></a>
-        <a href="/ia/negocio" class="${active === 'ianegocio' ? 'on' : ''}">${IC('<path d="M4 16V9M10 16V4M16 16v-5"/><circle cx="10" cy="10" r="8.2"/>')}<span>IA Negocio</span></a>
-        <a href="/contactos" class="${active === 'contactos' ? 'on' : ''}">${IC('<path d="M4.2 3.5h2.6l1.4 3.3-1.9 1.5a11.4 11.4 0 005.4 5.4l1.5-1.9 3.3 1.4v2.6a1.4 1.4 0 01-1.5 1.4C8.8 16.7 3.3 11.2 2.8 5A1.4 1.4 0 014.2 3.5z"/>')}<span>Contactos</span></a>
+        <a href="/dashboard" class="${active === 'dashboard' || active === 'contactos' || active === 'ianegocio' ? 'on' : ''}">${ICONS.dashboard}<span>Estadísticas</span></a>
         <a href="/config" class="${active === 'config' ? 'on' : ''}">${ICONS.docs}<span>Config</span></a>
-        <a href="/admin" class="${active === 'equipo' ? 'on' : ''}">${ICONS.equipo}<span>Equipo</span></a>
         </div>
         </div>` : ''}`;
   }
@@ -1622,7 +1620,7 @@ html.dark .login-bg .btn:hover { background:var(--login-ink); }
     display:flex; justify-content:flex-start; flex-wrap:nowrap; gap:0;
     padding:.3rem .25rem calc(.3rem + env(safe-area-inset-bottom));
   }
-  .nav-links a { flex:1 0 auto; min-width:4.2rem; min-height:44px; flex-direction:column; gap:.15rem;
+  .nav-links a { flex:1 1 0; min-width:3.3rem; min-height:44px; flex-direction:column; gap:.15rem;
     justify-content:center; text-align:center; font-size:.66rem; font-weight:500; letter-spacing:0;
     color:var(--muted); border-radius:8px; padding:.25rem .2rem; }
   .nav-links a:hover { background:transparent; color:var(--accent); }
@@ -1630,7 +1628,7 @@ html.dark .login-bg .btn:hover { background:var(--login-ink); }
   .nav-links .ic { width:1.15rem; height:1.15rem; opacity:.9; }
 
   /* "Más": en celular es un botón más de la barra y abre un panel con el resto de opciones */
-  .nav-mas { display:block; flex:1 0 auto; min-width:4.2rem; }
+  .nav-mas { display:block; flex:1 1 0; min-width:3.3rem; }
   .nav-mas-btn { display:flex; flex-direction:column; gap:.15rem; align-items:center; justify-content:center; width:100%;
     min-height:44px; font-size:.66rem; font-weight:500; color:var(--muted); border-radius:8px; padding:.25rem .2rem;
     cursor:pointer; background:none; border:none; font-family:inherit; }
@@ -1882,6 +1880,17 @@ body.wa-full .wrap > * { animation:none; }
 html.dark * { scrollbar-color:rgba(255,255,255,.18) transparent; }
 html.dark *::-webkit-scrollbar-thumb { background:rgba(255,255,255,.15); }
 html.dark *::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.3); }
+
+/* comunicacion compacta */
+.comu-grid { display:grid; gap:1rem; align-items:start; }
+@media (min-width: 1100px) { .comu-grid { grid-template-columns:1fr 1fr; } .comu-grid > .card:nth-child(3) { grid-column:1 / -1; } }
+.hist-plegable { margin-top:1rem; border-top:1px dashed var(--line2); padding-top:.65rem; }
+.hist-plegable summary { cursor:pointer; font-weight:700; font-size:.84rem; list-style:none; display:flex; align-items:center; gap:.45rem; }
+.hist-plegable summary::-webkit-details-marker { display:none; }
+.hist-plegable summary::before { content:"▸"; transition:transform .15s; }
+.hist-plegable[open] summary::before { transform:rotate(90deg); }
+.hist-plegable summary:hover { color:var(--accent); }
+.chip-n { background:var(--surface2); color:var(--muted); font-size:.68rem; font-weight:700; border-radius:999px; padding:.05rem .5rem; }
 
 /* accesibilidad: sin animaciones si el sistema lo pide */
 @media (prefers-reduced-motion: reduce) {
@@ -2419,9 +2428,12 @@ function lineChart(points) {
 
 function dashboardPage({ user, k, campos = [], etapas = ETAPAS_ACTIVAS, colores = ETAPA_COLOR }) {
   return layout({
-    title: 'Dashboard', user, active: 'dashboard', sistema: 'cfd',
+    title: 'Estadísticas', user, active: 'dashboard', sistema: 'cfd',
     body: `
-  <h1>Dashboard global</h1>
+  <h1>Estadísticas</h1>
+  <div class="toolbar">
+    <a class="btn secondary small" href="/contactos">📞 Contactos y recontactos por día →</a>
+  </div>
   ${dashHeader('dashboard')}
   <div class="tiles">
     <div class="tile"><div class="v">${k.activos}</div><div class="l">Deals activos</div></div>
@@ -2561,6 +2573,7 @@ function adminComunicacionPage({ user, users, avisos = [], banners = [], encuest
     title: 'Comunicación', user, active: 'comunicacion', sistema: 'admin',
     body: `
   <h1>Comunicación con el equipo</h1>
+  <div class="comu-grid">
 
   <div class="card card--accent">
     <h3 style="margin-top:0">Enviar aviso al equipo</h3>
@@ -2587,12 +2600,12 @@ function adminComunicacionPage({ user, users, avisos = [], banners = [], encuest
       <div style="margin-top:.9rem"><button class="btn">Enviar aviso</button></div>
     </form>
     ${avisos.length ? `
-    <h4 style="margin:1.1rem 0 .3rem">Avisos enviados</h4>
+    <details class="hist-plegable"><summary>Avisos enviados <span class="chip-n">${avisos.length}</span></summary>
     ${avisos.map((a) => `
     <div class="cfg-row" style="display:block">
       <div class="small"><strong>${esc(a.texto)}</strong> <span class="muted">· ${fechaHora(a.created_at)} · visto por <strong>${a.vistos} de ${a.total}</strong></span></div>
       ${vistosDetalle(a.destinatarios, (d) => `<div class="hist-item"><span class="chip" style="background:${d.leida ? '#3E9B57' : '#8494A6'}">${d.leida ? 'Visto' : 'Sin ver'}</span><span>${esc(d.name)}</span><span class="cuando" style="margin-left:auto">${d.leida_at ? fechaHora(d.leida_at) : ''}</span></div>`)}
-    </div>`).join('')}` : ''}
+    </div>`).join('')}</details>` : ''}
   </div>
 
   <div class="card card--accent">
@@ -2606,7 +2619,7 @@ function adminComunicacionPage({ user, users, avisos = [], banners = [], encuest
       <div style="margin-top:.9rem"><button class="btn">Publicar alerta</button></div>
     </form>
     ${banners.length ? `
-    <h4 style="margin:1.1rem 0 .3rem">Alertas publicadas</h4>
+    <details class="hist-plegable"><summary>Alertas publicadas <span class="chip-n">${banners.length}</span></summary>
     ${banners.map((b) => `
     <div class="cfg-row" style="display:block">
       <div class="small" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
@@ -2617,7 +2630,7 @@ function adminComunicacionPage({ user, users, avisos = [], banners = [], encuest
       </div>
       <div class="small muted">${esc(b.texto)}</div>
       ${vistosDetalle(b.quienes, (q) => `<div class="hist-item"><span class="chip" style="background:#3E9B57">Visto</span><span>${esc(q.name)}</span><span class="cuando" style="margin-left:auto">${fechaHora(q.visto_at)}</span></div>`)}
-    </div>`).join('')}` : ''}
+    </div>`).join('')}</details>` : ''}
   </div>
 
   <div class="card card--accent">
@@ -2635,7 +2648,7 @@ function adminComunicacionPage({ user, users, avisos = [], banners = [], encuest
       <div style="margin-top:.9rem"><button class="btn">Lanzar encuesta</button></div>
     </form>
     ${encuestas.length ? `
-    <h4 style="margin:1.1rem 0 .3rem">Encuestas</h4>
+    <details class="hist-plegable"><summary>Encuestas <span class="chip-n">${encuestas.length}</span></summary>
     ${encuestas.map((e) => {
       const total = e.votos.length;
       return `
@@ -2656,16 +2669,23 @@ function adminComunicacionPage({ user, users, avisos = [], banners = [], encuest
       ${vistosDetalle(e.votos, (v) => `<div class="hist-item"><span style="display:inline-flex;align-items:center;gap:.45rem">${avatar({ id: v.user_id, name: v.name, avatar: v.avatar })}${esc(v.name)}</span><span class="chip" style="background:#0E6E66">${esc(e.opciones[v.opcion] || '?')}</span><span class="cuando" style="margin-left:auto">${fechaHora(v.created_at)}</span></div>`)}
       ${e.sinVotar.length && e.activo ? `<p class="small muted" style="margin:.35rem 0 0">Sin votar todavía: ${e.sinVotar.map(esc).join(', ')}</p>` : ''}
     </div>`;
-    }).join('')}` : ''}
+    }).join('')}</details>` : ''}
+  </div>
   </div>`
   });
 }
 
-function adminPreferenciasPage({ user, prefs = {}, ia = null }) {
+function adminPreferenciasPage({ user, prefs = {}, google = null, ia = null }) {
   return layout({
     title: 'Preferencias', user, active: 'preferencias', sistema: 'admin',
     body: `
   <h1>Mis preferencias</h1>
+  ${google ? `
+  <div class="card">
+    <h3 style="margin-top:0">Integraciones — uso del mes</h3>
+    <p class="small muted">Consumo de las APIs conectadas (los costos de MiniJuan están en su propia sección, abajo).</p>
+    <div class="prog-row"><span class="pl">Google Maps · Panel de Clientes</span><div class="prog"><i style="width:${Math.min(100, Math.max(2, Math.round((google.c / 5000) * 100)))}%"></i></div><span class="pv"><strong>${google.c}</strong> de ~5.000 búsquedas gratis · ${google.escaneos} escaneo${google.escaneos === 1 ? '' : 's'}</span></div>
+  </div>` : ''}
   ${ia ? `
   <div class="card">
     <h3 style="margin-top:0">MiniJuan — el asesor IA del equipo</h3>
@@ -3118,10 +3138,11 @@ function dashboardUnificadoPage({ user, info, p, off, periodos, desde, hasta, r,
     <tbody>${rows.length ? rows.map((d) => `<tr><td><a href="/deals/${d.id}">${esc(d.empresa)}</a></td><td>${esc(d.vendedor_name)}</td><td><span class="chip" style="background:${colores[d.etapa] || '#8494A6'}">${esc(d.etapa)}</span></td><td>${fecha(d.updated_at)}</td></tr>`).join('') : `<tr><td colspan="4" class="muted">${vacio}</td></tr>`}</tbody>
   </table></div>`;
   return layout({
-    title: `Dashboard · ${info.nombre}`, user, active: 'dashboard', sistema: info.slug,
+    title: 'Estadísticas', user, active: 'dashboard', sistema: info.slug,
     body: `
-  <h1>Dashboard ${esc(info.nombre)}</h1>
+  <h1>Estadísticas</h1>
   <div class="toolbar">
+    ${info.slug === 'cfd' ? '<a class="btn secondary small" href="/contactos">📞 Contactos y recontactos</a><span class="sp"></span>' : ''}
     <div class="seg">
       <a href="${dashUrl}?p=dia" class="${p === 'dia' ? 'on' : ''}">Diario</a>
       <a href="${dashUrl}?p=semana" class="${p === 'semana' ? 'on' : ''}">Semanal</a>
@@ -3582,7 +3603,7 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
     ${(() => { const pct = Math.min(100, Math.round((usoMes.c / 5000) * 100)); return `
     <div class="mj-saldo" style="margin:.6rem 0 0">
       <div class="uso-bar"><span class="${pct >= 85 ? 'lleno' : ''}" style="width:${pct}%"></span></div>
-      <span class="small muted">${usoMes.c} de ~5.000 búsquedas gratis de Google este mes (${pct}%) · ${usoMes.escaneos} escaneo${usoMes.escaneos === 1 ? '' : 's'}</span>
+
     </div>`; })()}
     ${scans.length ? `<p class="caption" style="margin:.5rem 0 0">Últimos escaneos: ${scans.map((sc) => `${esc(sc.rubro)} en ${esc(sc.zona)} (${sc.nuevos} nuevos)`).join(' · ')}</p>` : ''}
   </div>` : ''}
@@ -3981,7 +4002,7 @@ function hubPage({ user }) {
         <p>${user.role === 'admin' ? 'Comisiones del equipo: cuánto, a quién y cuándo pagar.' : 'Tus comisiones: cuánto ganaste, qué está pendiente y cuándo cobrás.'}</p>
         ${chipsCobranza()}
       </a>` : ''}
-      ${user.role === 'admin' ? `
+      ${sistemaVisible('whatsapp') && user.role === 'admin' ? `
       <a class="hub-card" href="/whatsapp">
         <span class="hc-ic">${IC('<path d="M10 2.5a7.5 7.5 0 00-6.5 11.2L2.6 17.4l3.8-.9A7.5 7.5 0 1010 2.5z"/><path d="M7.2 7.4c.2-.5.5-.5.8-.5h.6c.2 0 .4 0 .5.4l.7 1.6c.1.2 0 .4-.1.5l-.5.6c-.1.2-.1.3 0 .5.5.9 1.3 1.6 2.3 2.1.2.1.4.1.5-.1l.5-.6c.2-.2.3-.2.5-.1l1.6.8c.3.1.4.3.4.5v.6c0 .4-.3.8-.7.9-.7.2-1.8.2-3.3-.6a9 9 0 01-3.4-3.3c-.8-1.4-.8-2.4-.4-2.9z"/>')}</span>
         <h3>WhatsApp <span class="chip" style="background:#1A9E56">Prueba</span></h3>
@@ -5467,7 +5488,7 @@ function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads
         .catch(function () {});
     }, 6000);
   </script>`;
-  return layout({ title: 'WhatsApp', user, active: 'whatsapp', sistema: 'whatsapp', body, msg, err, bodyClass: 'wa-full' });
+  return layout({ title: 'WhatsApp', user, active: 'whatsapp', sistema: 'cfd', body, msg, err, bodyClass: 'wa-full' });
 }
 
 module.exports = {

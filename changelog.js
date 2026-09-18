@@ -2,6 +2,16 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.1.1',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'mejora', texto: 'Panel comercial CFD más simple: la barra queda Pipeline · Actividad · Agenda · Metas · WhatsApp (admins), y en "Más" solo Estadísticas y Config. Se fue "Equipo" (ya está en Administración), IA Negocio quedó escondido (la ruta sigue viva) y Contactos ahora vive DENTRO de Estadísticas (el ex Dashboard), con su botón arriba.' },
+      { tipo: 'mejora', texto: 'WhatsApp ahora es una pestaña del panel comercial (con la navegación del panel), en vez de un sistema aparte — desapareció del menú de sistemas y del inicio.' },
+      { tipo: 'mejora', texto: 'Comunicación compacta: los formularios quedan a la vista (en dos columnas en pantallas grandes) y los historiales de avisos, alertas y encuestas se pliegan con su contador — se acabó el scroll eterno.' },
+      { tipo: 'mejora', texto: 'El medidor de búsquedas de Google Maps se mudó del Panel de Clientes a Administración → Preferencias, junto a los costos de MiniJuan: todo el uso de integraciones en un solo lugar.' },
+    ],
+  },
+  {
     version: '3.1.0',
     fecha: '2026-09-18',
     cambios: [
