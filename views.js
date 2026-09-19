@@ -45,7 +45,7 @@ const ICONS = {
 };
 const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F3459'/%3E%3Ctext x='16' y='21' font-size='12' font-family='Helvetica,Arial' font-weight='bold' fill='white' text-anchor='middle'%3EC4D%3C/text%3E%3C/svg%3E";
 
-const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', developers: 'Panel de Developers', clientes: 'Panel de Leads', propuestas: 'Generador de Propuestas', whatsapp: 'WhatsApp', hub: 'Campus C4D' };
+const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', developers: 'Panel de Developers', clientes: 'Panel de Leads', propuestas: 'Generador de Propuestas', whatsapp: 'WhatsApp', b2b: 'Inteligencia B2B', hub: 'Campus C4D' };
 const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permisos || []).includes(s));
 
 // Simplificación 3.1: sistemas que EXISTEN pero se esconden de la vista de todos
@@ -117,6 +117,7 @@ function sysSwitch(sistema, user) {
       ${tieneSistema(user, 'clientes') ? `<a href="/clientes"><span>Panel de Leads</span></a>` : ''}
       ${sistemaVisible('propuestas') && tieneSistema(user, 'propuestas') ? `<a href="/propuestas"><span>Generador de Propuestas</span></a>` : ''}
       ${sistemaVisible('whatsapp') && user && user.role === 'admin' ? `<a href="/whatsapp"><span>WhatsApp</span><span class="soon-chip">Prueba</span></a>` : ''}
+      ${user && user.role === 'admin' ? `<a href="/b2b"><span>Inteligencia B2B</span><span class="soon-chip">Prueba</span></a>` : ''}
       ${sistemaVisible('cobranza') && tieneSistema(user, 'cobranza') ? `<a href="/cobranza"><span>Panel de Cobranza</span>${infoCobranza()}</a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
       ${sistemaVisible('developers') ? (tieneSistema(user, 'developers') ? '<a href="/developers"><span>Panel de Developers</span></a>' : '<span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>') : ''}
@@ -320,7 +321,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="/admin" class="${active === 'admin' ? 'on' : ''}">${ICONS.equipo}<span>Usuarios</span></a>
         <a href="/admin/comunicacion" class="${active === 'comunicacion' ? 'on' : ''}">${ICONS.bell}<span>Comunicación</span></a>
         <a href="/admin/preferencias" class="${active === 'preferencias' ? 'on' : ''}">${ICONS.docs}<span>Preferencias</span></a>`;
-  } else if (sistema === 'clientes') {
+  } else if (sistema === 'clientes' || sistema === 'b2b') {
     links = ''; /* una sola pantalla: no hace falta menú propio */
   } else if (sistema === 'developers') {
     links = `
@@ -2361,6 +2362,66 @@ html.dark .col { background:#262525; border-color:var(--line); }
 .pc-tomar select { flex:1 1 auto; min-width:0; max-width:none; }
 .pc-tomar .btn { flex-shrink:0; }
 
+/* inteligencia B2B */
+.b2b-mini { font-size:.72rem; }
+.b2b-form { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; }
+.b2b-form input, .b2b-form select { margin:0; flex:1 1 10rem; min-width:0; width:auto; }
+.b2b-form button { flex-shrink:0; }
+.b2b-lista { display:flex; flex-direction:column; }
+.b2b-fila { display:flex; align-items:center; gap:.6rem; padding:.6rem .65rem; border-bottom:1px solid var(--line); color:inherit; text-decoration:none; border-radius:8px; }
+.b2b-fila:last-child { border-bottom:none; }
+.b2b-fila:hover { background:var(--surface2); text-decoration:none; }
+.b2b-fila-t { flex:1; min-width:0; display:flex; flex-direction:column; }
+.b2b-fila-t strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.b2b-fila-sub { display:block; font-size:.72rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.b2b-score { font-weight:700; font-size:.8rem; border-radius:999px; padding:.14rem .6rem; flex-shrink:0; }
+.b2b-score-alto { background:var(--ok-soft); color:var(--ok); }
+.b2b-score-medio { background:var(--warn-soft); color:var(--warn); }
+.b2b-score-bajo { background:var(--surface2); color:var(--muted); }
+.b2b-score-nd { background:var(--surface2); color:var(--faint); font-weight:500; }
+.b2b-est { font-size:.62rem; font-weight:700; border-radius:4px; padding:.06rem .35rem; margin-left:.3rem; }
+.b2b-ver { background:var(--ok-soft); color:var(--ok); }
+.b2b-esti { background:var(--warn-soft); color:var(--warn); }
+.b2b-desc { background:var(--surface2); color:var(--faint); }
+.b2b-evid { display:block; font-size:.72rem; color:var(--muted); margin:.15rem 0 0; }
+.b2b-informe { border-left:4px solid var(--accent); }
+.b2b-dims { display:grid; grid-template-columns:repeat(auto-fit, minmax(12rem, 1fr)); gap:.6rem; }
+.b2b-dim { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:.6rem .7rem; }
+.b2b-dim-top { display:flex; justify-content:space-between; gap:.5rem; font-size:.76rem; font-weight:600; color:var(--muted); }
+.b2b-dim-top strong { color:var(--ink); font-variant-numeric:tabular-nums; }
+.b2b-dim-bar { height:.4rem; background:var(--surface2); border-radius:99px; overflow:hidden; margin-top:.35rem; }
+.b2b-dim-bar i { display:block; height:100%; background:var(--accent); border-radius:99px; }
+.b2b-perfil > div { padding:.45rem 0; border-bottom:1px solid var(--line); font-size:.85rem; }
+.b2b-perfil > div:last-child { border-bottom:none; }
+.b2b-k { display:block; font-size:.66rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:.15rem; }
+.b2b-hallazgo { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:.65rem .75rem; margin-bottom:.55rem; }
+.b2b-h-ok { border-color:rgba(9,130,93,.45); }
+.b2b-h-no { opacity:.55; }
+.b2b-h-top { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
+.b2b-h-det { font-size:.84rem; margin:.35rem 0 0; }
+.b2b-h-pie { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; margin-top:.5rem; }
+.b2b-tag { font-size:.62rem; font-weight:700; border-radius:4px; padding:.1rem .4rem; text-transform:uppercase; letter-spacing:.04em; flex-shrink:0; }
+.b2b-conf { background:var(--bad-soft); color:var(--bad); }
+.b2b-obs { background:var(--warn-soft); color:var(--warn); }
+.b2b-hip { background:var(--accent-soft); color:var(--accent-ink); }
+.b2b-cat { background:var(--surface2); color:var(--muted); }
+.b2b-persona, .b2b-evento { display:flex; gap:.6rem; align-items:center; padding:.45rem 0; border-bottom:1px solid var(--line); }
+.b2b-persona:last-of-type, .b2b-evento:last-of-type { border-bottom:none; }
+.b2b-rol select { margin:0; width:auto; max-width:11rem; padding:.3rem .4rem; font-size:.76rem; }
+.b2b-suma summary { cursor:pointer; font-size:.8rem; font-weight:600; color:var(--accent-ink); padding:.3rem 0; }
+.b2b-accion { border-left:4px solid var(--ok); }
+.b2b-falta { margin:0; padding-left:1.1rem; font-size:.84rem; }
+.b2b-falta li { margin:.15rem 0; }
+.b2b-cal { display:flex; flex-direction:column; gap:.3rem; }
+.b2b-cal-fila { display:grid; grid-template-columns:1fr 7rem; gap:.6rem; align-items:center; margin:0; font-size:.82rem; font-weight:500; text-transform:none; letter-spacing:0; color:var(--ink); }
+.b2b-cal-fila select { margin:0; }
+.b2b-cal textarea { margin:0; }
+@media (max-width: 720px) {
+  .b2b-form input, .b2b-form select { flex-basis:100%; }
+  .b2b-form button { flex:1; }
+  .b2b-rol select { max-width:8rem; }
+}
+
 `;
 
 /* ---------------- páginas ---------------- */
@@ -4026,7 +4087,7 @@ function agendaPage({ user, vista, dias = [], semanas = [], admins, dur, ahoraMi
 
 /* --------- panel de clientes: prospectos de Google Maps --------- */
 
-function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fRubro, fWeb = '', q, keyOk, usoMes = { c: 0, escaneos: 0 }, msg, err }) {
+function clientesPage({ user, prospectos, rubros, scans, misPaneles, intel = {}, fEstado, fRubro, fWeb = '', q, keyOk, usoMes = { c: 0, escaneos: 0 }, msg, err }) {
   // ¿La "web" del negocio es una web real o una red social? (muchos negocios ponen su Face/Insta como sitio)
   const webInfo = (w) => {
     if (!w) return null;
@@ -4106,6 +4167,8 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
       ${pr.estado === 'tomado' ? `<div class="pc-quien">Tomada por <strong>${esc(pr.tomado_nombre || '—')}</strong> · ${tiempoRel(pr.tomado_at)}${pr.deal_id ? ` · <a href="/deals/${pr.deal_id}">ver lead</a>` : ''}</div>` : ''}
       <div class="pc-acciones">
         ${pr.telefono ? `<a class="btn secondary small" href="https://wa.me/${tel}" target="_blank" rel="noopener">WhatsApp</a><a class="btn secondary small" href="tel:${tel}">Llamar</a>` : '<span class="caption" style="margin:0">Sin teléfono</span>'}
+        ${esAdmin ? (intel[pr.id] ? `<a class="btn secondary small b2b-mini" href="/b2b/${intel[pr.id].id}">B2B${intel[pr.id].score_total != null ? ` · ${intel[pr.id].score_total}` : ''}</a>`
+          : `<form method="post" action="/b2b/investigar" onsubmit="var b = this.querySelector('button'); b.disabled = true; b.textContent = 'Investigando…';"><input type="hidden" name="prospecto_id" value="${pr.id}"><button class="btn secondary small b2b-mini" title="Investigar con Inteligencia B2B">Investigar</button></form>`) : ''}
         <span style="flex:1"></span>
         ${pr.estado === 'nuevo' ? `
         <form method="post" action="/clientes/${pr.id}/tomar" class="pc-tomar">
@@ -4236,6 +4299,207 @@ function iaConversacionesPage({ user, fecha: fechaSel, vendedorId, filas, dias, 
       </div>
     </details>`).join('')}
   </div>`).join('') : '<div class="card"><p class="muted" style="margin:0">No hubo consultas ese día.</p></div>'}`
+  });
+}
+
+/* --------- Inteligencia B2B (prueba, solo admins) --------- */
+
+const B2B_ROLES = { economic_buyer: 'Economic buyer', decision_maker: 'Decision maker', technical_buyer: 'Technical buyer', champion: 'Champion', end_user: 'End user' };
+const B2B_ESTADOS_H = { CONFIRMED_PAIN: ['Confirmado', 'b2b-conf'], OBSERVED_PROBLEM: ['Observado', 'b2b-obs'], HYPOTHESIZED_PAIN: ['Hipótesis', 'b2b-hip'] };
+const B2B_CATS = { comercial: 'Comercial', operativo: 'Operativo', tecnologico: 'Tecnológico', atencion: 'Atención al cliente' };
+const B2B_DIMS = { account_fit: 'Fit de cuenta', pain_evidence: 'Evidencia de dolor', buying_intent: 'Intención de compra', trigger_events: 'Eventos gatillo', contact_readiness: 'Listo para contactar' };
+const jsonDe = (t, d) => { try { const v = JSON.parse(t); return v == null ? d : v; } catch (e) { return d; } };
+const chipDato = (estado) => estado === 'verificado' ? '<span class="b2b-est b2b-ver">verificado</span>'
+  : estado === 'estimado' ? '<span class="b2b-est b2b-esti">estimado</span>' : '<span class="b2b-est b2b-desc">desconocido</span>';
+const scoreChip = (v) => v == null ? '<span class="b2b-score b2b-score-nd">sin score</span>'
+  : `<span class="b2b-score ${v >= 70 ? 'b2b-score-alto' : v >= 40 ? 'b2b-score-medio' : 'b2b-score-bajo'}">${v}</span>`;
+
+function b2bListaPage({ user, cuentas, keyOk, modelo, msg, err }) {
+  const filas = cuentas.map((c) => `
+    <a class="b2b-fila" href="/b2b/${c.id}">
+      <div class="b2b-fila-t">
+        <strong>${esc(c.nombre)}</strong>
+        <span class="b2b-fila-sub">${[c.rubro, c.zona].filter(Boolean).map(esc).join(' · ') || 'sin rubro/zona'}${c.sitio_web ? ' · ' + esc(String(c.sitio_web).replace(/^https?:[/][/](www[.])?/i, '').split('/')[0]) : ''}</span>
+      </div>
+      ${c.estado === 'lista' ? `<span class="pc-chip">${c.hallazgos} hallazgo${c.hallazgos === 1 ? '' : 's'}${c.confirmados ? ` · ${c.confirmados} ✓` : ''}</span>` : ''}
+      ${c.estado === 'investigando' ? '<span class="pc-chip">investigando…</span>' : ''}
+      ${c.estado === 'error' ? '<span class="pc-chip-rojo">falló</span>' : ''}
+      ${c.deal_id ? '<span class="pc-chip pc-verde">con lead</span>' : ''}
+      ${scoreChip(c.score_total)}
+    </a>`).join('');
+  return layout({
+    title: 'Inteligencia B2B', user, active: 'b2b', sistema: 'b2b', msg, err,
+    body: `
+  <h1>Inteligencia B2B</h1>
+  <p class="caption" style="margin:-.3rem 0 .9rem">Investigación automática de cuentas: perfil, dolores con evidencia, decisores, eventos y score explicable. Solo lo que el material respalda — lo desconocido queda desconocido.</p>
+
+  <div class="card pc-scan">
+    <div class="pc-scan-t">${IC24('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>')}<strong>Investigar una empresa</strong><span>a mano, o con el botón Investigar de cada tarjeta del Panel de Leads</span></div>
+    ${keyOk ? '' : '<div class="flash bad">Falta ANTHROPIC_API_KEY en el server: la investigación no va a funcionar.</div>'}
+    <form method="post" action="/b2b/investigar" class="b2b-form" onsubmit="var b = this.querySelector('button'); b.disabled = true; b.textContent = 'Investigando… (30-60 seg)';">
+      <input name="nombre" placeholder="Nombre de la empresa" required>
+      <input name="web" placeholder="Sitio web (opcional)">
+      <input name="rubro" placeholder="Rubro (opcional)">
+      <input name="zona" placeholder="Zona (opcional)">
+      <button class="btn" ${keyOk ? '' : 'disabled'}>Investigar</button>
+    </form>
+    <p class="caption" style="margin:.5rem 0 0">Cada investigación visita el sitio de la empresa, hace chequeos no intrusivos, busca noticias públicas y arma la ficha con IA (${esc(modelo)}). Tarda entre 30 y 60 segundos.</p>
+  </div>
+
+  <div class="pc-sep"><strong>Cuentas investigadas</strong><span>${cuentas.length}</span><i></i></div>
+  ${filas ? `<div class="b2b-lista card" style="padding:.3rem .4rem">${filas}</div>`
+    : '<div class="card"><p class="muted" style="margin:0">Todavía no investigaste ninguna empresa. Arrancá acá arriba o desde el Panel de Leads.</p></div>'}`,
+  });
+}
+
+function b2bFichaPage({ user, c, hallazgos, personas, eventos, misPaneles, msg, err }) {
+  const perfil = jsonDe(c.perfil, {});
+  const scores = jsonDe(c.scores, {});
+  const faltante = jsonDe(c.info_faltante, []);
+  const checks = jsonDe(c.checks, null);
+  const cal = jsonDe(c.calificacion, null);
+  const dato = (d) => d && d.valor ? `${esc(String(d.valor))} ${chipDato(d.estado)}${d.evidencia ? `<span class="b2b-evid">${esc(String(d.evidencia).slice(0, 200))}</span>` : ''}` : `— ${chipDato('desconocido')}`;
+  const porEstado = (est) => hallazgos.filter((h) => h.estado === est);
+  const hallazgoHtml = (h) => `
+    <div class="b2b-hallazgo ${h.validacion === 'confirmada' ? 'b2b-h-ok' : h.validacion === 'rechazada' ? 'b2b-h-no' : ''}">
+      <div class="b2b-h-top">
+        <span class="b2b-tag ${B2B_ESTADOS_H[h.estado][1]}">${B2B_ESTADOS_H[h.estado][0]}</span>
+        <span class="b2b-tag b2b-cat">${B2B_CATS[h.categoria] || esc(h.categoria)}</span>
+        <strong>${esc(h.titulo)}</strong>
+      </div>
+      ${h.detalle ? `<p class="b2b-h-det">${esc(h.detalle)}</p>` : ''}
+      ${h.evidencia ? `<p class="b2b-evid">Evidencia: ${esc(h.evidencia)}${h.fuente_url ? ` · <a href="${esc(h.fuente_url)}" target="_blank" rel="noopener">fuente ↗</a>` : ''}</p>` : ''}
+      <div class="b2b-h-pie">
+        ${h.servicio ? `<span class="pc-chip pc-verde">Servicio: ${esc(h.servicio)}</span>` : ''}
+        ${h.cargo_objetivo ? `<span class="pc-chip">Validar con: ${esc(h.cargo_objetivo)}</span>` : ''}
+        <span style="flex:1"></span>
+        ${h.validacion === 'pendiente' ? `
+        <form method="post" action="/b2b/${c.id}/hallazgo/${h.id}"><input type="hidden" name="accion" value="confirmar"><button class="btn small">Confirmar</button></form>
+        <form method="post" action="/b2b/${c.id}/hallazgo/${h.id}"><input type="hidden" name="accion" value="rechazar"><button class="btn secondary small">Rechazar</button></form>`
+        : `<span class="caption" style="margin:0">${h.validacion === 'confirmada' ? '✓ Confirmado' : '✕ Rechazado'} por ${esc(h.validador || '—')}</span>
+        <form method="post" action="/b2b/${c.id}/hallazgo/${h.id}"><input type="hidden" name="accion" value="pendiente"><button class="btn secondary small">Deshacer</button></form>`}
+      </div>
+    </div>`;
+  const seccionH = (est) => porEstado(est).length ? `<h3 style="margin:.8rem 0 .4rem">${B2B_ESTADOS_H[est][0]}${est === 'HYPOTHESIZED_PAIN' ? ' (a validar con la empresa)' : ''}</h3>` + porEstado(est).map(hallazgoHtml).join('') : '';
+  const calOpc = (k, v) => ['si', 'no', 'nose'].map((o) => `<option value="${o}" ${cal && cal[k] === o ? 'selected' : (!cal && o === 'nose' ? 'selected' : '')}>${o === 'si' ? 'Sí' : o === 'no' ? 'No' : 'No sé'}</option>`).join('');
+  const preguntas = [['decide', '¿El interlocutor decide?'], ['reconoce', '¿Reconoce el problema?'], ['proyecto', '¿Hay proyecto activo?'], ['presupuesto', '¿Tiene presupuesto?'], ['plazo', '¿Existe un plazo?'], ['otros', '¿Deciden más personas?'], ['propuesta', '¿Pidió propuesta?']];
+  return layout({
+    title: c.nombre + ' · B2B', user, active: 'b2b', sistema: 'b2b', msg, err,
+    body: `
+  <p style="margin:.6rem 0 0"><a href="/b2b">← Cuentas investigadas</a></p>
+  <div class="toolbar" style="margin:.3rem 0 .4rem; flex-wrap:wrap">
+    <h1 style="margin:0">${esc(c.nombre)}</h1>
+    ${scoreChip(c.score_total)}
+    ${c.estado === 'error' ? '<span class="pc-chip-rojo">Investigación fallida</span>' : ''}
+    <div class="sp"></div>
+    ${c.deal_id ? `<a class="btn secondary small" href="/deals/${c.deal_id}">Ver lead →</a>` : ''}
+    <form method="post" action="/b2b/${c.id}/reinvestigar" onsubmit="var b = this.querySelector('button'); b.disabled = true; b.textContent = 'Investigando…';"><button class="btn secondary small">Reinvestigar</button></form>
+  </div>
+  <p class="caption" style="margin:0 0 .9rem">${[c.rubro, c.zona].filter(Boolean).map(esc).join(' · ')}${c.p_direccion ? ' · ' + esc(c.p_direccion) : ''}${c.sitio_web ? ` · <a href="${esc(/^https?:/.test(c.sitio_web) ? c.sitio_web : 'https://' + c.sitio_web)}" target="_blank" rel="noopener">${esc(String(c.sitio_web).replace(/^https?:[/][/](www[.])?/i, '').split('/')[0])} ↗</a>` : ''}${c.maps_url ? ` · <a href="${esc(c.maps_url)}" target="_blank" rel="noopener">Maps ↗</a>` : ''}${c.rating ? ` · ★ ${c.rating} (${c.resenas || 0})` : ''}${c.investigada_at ? ' · investigada ' + tiempoRel(c.investigada_at) : ''}</p>
+
+  ${c.estado === 'error' ? `<div class="flash bad">La última investigación falló: ${esc(c.error || 'error desconocido')}. Probá reinvestigar.</div>` : ''}
+
+  ${c.informe ? `<div class="card b2b-informe"><h2 style="margin:0 0 .4rem">Informe</h2><p style="margin:0; white-space:pre-wrap">${esc(c.informe)}</p></div>` : ''}
+
+  ${Object.keys(scores).length ? `<div class="b2b-dims">
+    ${Object.entries(B2B_DIMS).map(([k, nombre]) => { const d = scores[k] || {}; const v = d.puntos != null && Number.isFinite(+d.puntos) ? Math.max(0, Math.min(100, +d.puntos)) : null; return `
+    <div class="b2b-dim">
+      <div class="b2b-dim-top"><span>${nombre}</span><strong>${v == null ? '—' : v}</strong></div>
+      <div class="b2b-dim-bar"><i style="width:${v == null ? 0 : v}%"></i></div>
+      <p class="b2b-evid" style="margin:.3rem 0 0">${esc(String(d.motivo || 'sin datos').slice(0, 220))}</p>
+    </div>`; }).join('')}
+  </div>` : ''}
+
+  <div class="cfg-grid" style="margin-top:.9rem">
+  <section class="cfg-sec">
+    <h2><span class="cfg-ic">${ICONS.docs}</span>Perfil</h2>
+    <div class="card b2b-perfil">
+      <div><span class="b2b-k">Actividad</span>${dato(perfil.actividad)}</div>
+      <div><span class="b2b-k">Tamaño</span>${dato(perfil.tamano)}</div>
+      <div><span class="b2b-k">Equipo de tecnología</span>${dato(perfil.equipo_tecnologia)}</div>
+      <div><span class="b2b-k">Equipo de marketing</span>${dato(perfil.equipo_marketing)}</div>
+      ${Array.isArray(perfil.servicios) && perfil.servicios.length ? `<div><span class="b2b-k">Servicios / productos</span><span class="pc-chips">${perfil.servicios.slice(0, 10).map((x) => `<span class="pc-chip">${esc(String(x).slice(0, 60))}</span>`).join('')}</span></div>` : ''}
+      ${Array.isArray(perfil.mercados) && perfil.mercados.length ? `<div><span class="b2b-k">Mercados</span><span class="pc-chips">${perfil.mercados.slice(0, 8).map((x) => `<span class="pc-chip">${esc(String(x).slice(0, 60))}</span>`).join('')}</span></div>` : ''}
+      ${Array.isArray(perfil.tecnologias) && perfil.tecnologias.length ? `<div><span class="b2b-k">Tecnologías detectadas</span><span class="pc-chips">${perfil.tecnologias.slice(0, 8).map((t) => `<span class="pc-chip" title="${esc(String(t.evidencia || ''))}">${esc(String(t.nombre || '').slice(0, 40))}</span>`).join('')}</span></div>` : ''}
+      ${checks ? `<div><span class="b2b-k">Chequeos técnicos</span><span class="pc-chips">
+        <span class="pc-chip ${checks.https ? 'pc-verde' : 'pc-chip-rojo'}">${checks.https ? 'HTTPS ✓' : 'Sin HTTPS'}</span>
+        ${checks.respuesta_ms ? `<span class="pc-chip">${checks.respuesta_ms} ms</span>` : ''}
+        <span class="pc-chip">${checks.formularios_detectados || 0} formulario${checks.formularios_detectados === 1 ? '' : 's'}</span>
+        <span class="pc-chip">${checks.senales_ecommerce ? 'señales de ecommerce' : 'sin señales de ecommerce'}</span>
+        ${checks.error_al_cargar ? `<span class="pc-chip-rojo">no cargó: ${esc(String(checks.error_al_cargar).slice(0, 40))}</span>` : ''}
+      </span></div>` : ''}
+    </div>
+
+    <h2 id="personas"><span class="cfg-ic">${ICONS.equipo}</span>Comité de compra</h2>
+    <div class="card">
+      ${personas.length ? personas.map((per) => `
+      <div class="b2b-persona">
+        <div style="min-width:0; flex:1">
+          <strong>${per.nombre ? esc(per.nombre) : `<span class="muted">Pendiente de identificar</span>`}</strong>
+          <span class="b2b-fila-sub">${esc(per.cargo)}${per.canal ? ' · ' + esc(per.canal) : ''}${per.fuente_url ? ` · <a href="${esc(per.fuente_url)}" target="_blank" rel="noopener">fuente ↗</a>` : ''}</span>
+        </div>
+        <form method="post" action="/b2b/${c.id}/persona/${per.id}/rol" class="b2b-rol">
+          <select name="rol" onchange="this.form.submit()">
+            <option value="">Rol en la compra…</option>
+            ${Object.entries(B2B_ROLES).map(([k, v]) => `<option value="${k}" ${per.buying_role === k ? 'selected' : ''}>${v}</option>`).join('')}
+          </select>
+        </form>
+      </div>`).join('') : '<p class="muted small" style="margin:0 0 .5rem">La investigación no encontró personas con fuente verificable. Los cargos objetivo salen de cada hallazgo — sumá acá a quien identifiques hablando con la empresa.</p>'}
+      <details class="b2b-suma"><summary>+ Agregar persona o cargo</summary>
+        <form method="post" action="/b2b/${c.id}/personas" class="b2b-form" style="margin-top:.5rem">
+          <input name="nombre" placeholder="Nombre (vacío = cargo pendiente)">
+          <input name="cargo" placeholder="Cargo (ej: Director comercial)" required>
+          <select name="rol"><option value="">Rol en la compra…</option>${Object.entries(B2B_ROLES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
+          <input name="fuente" placeholder="Fuente / cómo lo supiste">
+          <button class="btn small">Agregar</button>
+        </form>
+      </details>
+    </div>
+
+    <h2><span class="cfg-ic">${ICONS.bell}</span>Eventos</h2>
+    <div class="card">
+      ${eventos.length ? eventos.map((ev) => `
+      <div class="b2b-evento">
+        <span class="b2b-tag ${ev.reciente ? 'b2b-conf' : 'b2b-cat'}">${ev.reciente ? 'Reciente' : 'Histórico'}</span>
+        ${ev.relevancia ? `<span class="b2b-tag b2b-cat">${esc(ev.relevancia)}</span>` : ''}
+        <div style="min-width:0">
+          <strong>${esc(ev.titulo)}</strong>
+          <span class="b2b-fila-sub">${[ev.fecha, ev.relacion].filter(Boolean).map((x) => esc(String(x).slice(0, 120))).join(' · ')}${ev.fuente_url ? ` · <a href="${esc(ev.fuente_url)}" target="_blank" rel="noopener">fuente ↗</a>` : ''}</span>
+        </div>
+      </div>`).join('') : '<p class="muted small" style="margin:0">Sin eventos detectados en noticias públicas.</p>'}
+    </div>
+  </section>
+
+  <section class="cfg-sec">
+    <h2 id="hallazgos"><span class="cfg-ic">${IC24('<path d="m21 21-4.3-4.3"/><circle cx="11" cy="11" r="7"/>')}</span>Problemas detectados</h2>
+    ${hallazgos.length ? seccionH('CONFIRMED_PAIN') + seccionH('OBSERVED_PROBLEM') + seccionH('HYPOTHESIZED_PAIN') : '<div class="card"><p class="muted" style="margin:0">Sin hallazgos: el material no respaldó ningún problema.</p></div>'}
+
+    ${c.proxima_accion ? `<div class="card b2b-accion"><h2 style="margin:0 0 .3rem">Próxima acción</h2><p style="margin:0">${esc(c.proxima_accion)}</p></div>` : ''}
+
+    ${faltante.length ? `<div class="card"><h2 style="margin:0 0 .3rem">Información faltante</h2><ul class="b2b-falta">${faltante.map((x) => `<li>${esc(String(x).slice(0, 200))}</li>`).join('')}</ul></div>` : ''}
+
+    <h2 id="calificacion"><span class="cfg-ic">${ICONS.metas}</span>Calificación comercial</h2>
+    <div class="card">
+      <p class="caption" style="margin:0 0 .5rem">Lo que se valida HABLANDO con la empresa. ${cal ? `Última actualización: ${esc(cal.at || '')}.` : 'Todavía sin calificar.'}</p>
+      <form method="post" action="/b2b/${c.id}/calificacion" class="b2b-cal">
+        ${preguntas.map(([k, texto]) => `<label class="b2b-cal-fila"><span>${texto}</span><select name="${k}">${calOpc(k)}</select></label>`).join('')}
+        <label class="b2b-cal-fila" style="grid-template-columns:1fr"><span>Notas</span></label>
+        <textarea name="nota" rows="2" placeholder="Qué dijo la empresa…">${cal && cal.nota ? esc(cal.nota) : ''}</textarea>
+        <button class="btn small" style="margin-top:.5rem">Guardar calificación</button>
+      </form>
+    </div>
+
+    <h2><span class="cfg-ic">${ICONS.pipeline}</span>Pasar al pipeline</h2>
+    <div class="card">
+      ${c.deal_id ? `<p class="small" style="margin:0">Esta cuenta ya vive en el pipeline: <a href="/deals/${c.deal_id}"><strong>${esc(c.deal_empresa || c.nombre)} →</strong></a></p>`
+      : `<p class="caption" style="margin:0 0 .5rem">Crea la lead con el informe, los dolores confirmados y la próxima acción pegados en la ficha.</p>
+      <form method="post" action="/b2b/${c.id}/lead" class="b2b-form">
+        ${misPaneles.length === 1 ? `<input type="hidden" name="panel" value="${misPaneles[0].slug}">` : `<select name="panel">${misPaneles.map((mp) => `<option value="${mp.slug}">${esc(mp.nombre)}</option>`).join('')}</select>`}
+        <button class="btn small">Crear lead</button>
+      </form>`}
+    </div>
+  </section>
+  </div>`,
   });
 }
 
@@ -4442,6 +4706,12 @@ function hubPage({ user }) {
         <h3>Comercial SitioWeb Digital</h3>
         <p>Ventas de sitios web: pipeline, actividad y metas propias.</p>
         ${chipsPanel('sitioweb')}
+      </a>` : ''}
+      ${user.role === 'admin' ? `
+      <a class="hub-card" href="/b2b">
+        <span class="hc-ic">${IC('<circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4M9 6.8v4.4M6.8 9h4.4"/>')}</span>
+        <h3>Inteligencia B2B <span class="soon-chip">Prueba</span></h3>
+        <p>Investiga empresas: dolores con evidencia, decisores, eventos y score explicable.</p>
       </a>` : ''}
       ${tieneSistema(user, 'clientes') ? `
       <a class="hub-card" href="/clientes">
@@ -5968,7 +6238,7 @@ function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads
 }
 
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage, agendaPage, propuestasPage, propuestaNuevaPage, propuestaVerPage, whatsappPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage, agendaPage, b2bListaPage, b2bFichaPage, propuestasPage, propuestaNuevaPage, propuestaVerPage, whatsappPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusCursoPage, campusQuizPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,

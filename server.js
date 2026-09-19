@@ -1649,8 +1649,10 @@ app.get('/clientes', requireAuth, requireSistema('clientes'), (req, res) => {
   const rubros = db.prepare('SELECT DISTINCT rubro FROM prospectos WHERE rubro IS NOT NULL ORDER BY rubro').all().map((r) => r.rubro);
   const scans = db.prepare('SELECT s.*, u.name FROM prospecto_scans s JOIN users u ON u.id = s.user_id ORDER BY s.id DESC LIMIT 5').all();
   const misPaneles = PANELES_COMERCIALES.filter((P) => puede(req.user, P.slug)).map((P) => ({ slug: P.slug, nombre: P.nombre }));
+  const intel = {};
+  if (req.user.role === 'admin') for (const r of db.prepare('SELECT prospecto_id, id, score_total, estado FROM b2b_cuentas WHERE prospecto_id IS NOT NULL').all()) intel[r.prospecto_id] = r;
   res.send(V.clientesPage({
-    user: req.user, prospectos, rubros, scans, misPaneles,
+    user: req.user, prospectos, rubros, scans, misPaneles, intel,
     fEstado, fRubro, fWeb, q,
     keyOk: !!process.env.GOOGLE_MAPS_API_KEY,
     usoMes: db.prepare("SELECT COALESCE(SUM(consultas), 0) AS c, COUNT(*) AS escaneos FROM prospecto_scans WHERE substr(datetime(created_at, '-3 hours'), 1, 7) = ?").get(hoyAR().slice(0, 7)),
@@ -1709,6 +1711,303 @@ app.post('/clientes/:id/estado', requireAuth, requireSistema('clientes'), (req, 
     if (req.body.accion === 'liberar' && req.user.role === 'admin' && p.estado !== 'nuevo') db.prepare("UPDATE prospectos SET estado = 'nuevo', tomado_por = NULL, tomado_at = NULL WHERE id = ?").run(p.id);
   }
   res.redirect('/clientes');
+});
+
+/* ---------------- Inteligencia B2B (prueba, solo admins) ---------------- */
+// Investiga una cuenta: Places (lo que ya hay del prospecto) + el sitio web de la empresa
+// (fetch simple, nada intrusivo) + chequeos técnicos observables + noticias públicas (RSS),
+// y Claude arma la ficha: perfil, dolores con evidencia, hipótesis, comité de compra y score explicable.
+// Guardrails: nada de scraping prohibido ni datos personales inventados; lo desconocido queda desconocido.
+
+const B2B_PESOS = { account_fit: 25, pain_evidence: 30, buying_intent: 15, trigger_events: 15, contact_readiness: 15 };
+const b2bModelo = () => (IA_MODELOS[getPanelConfig('_ia', 'modelo_b2b')] ? getPanelConfig('_ia', 'modelo_b2b') : 'claude-sonnet-5');
+
+const quitarHtml = (html) => String(html || '')
+  .replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')
+  .replace(/<[^>]+>/g, ' ').replace(/&nbsp;|&amp;|&quot;|&#\d+;|&[a-z]+;/gi, ' ')
+  .replace(/\s+/g, ' ').trim();
+
+async function traerPagina(url, ms = 9000) {
+  const ctrl = new AbortController();
+  const t0 = Date.now();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal, redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CampusC4D-B2B/1.0; +https://cloudfordeploy.com)' } });
+    const html = (await r.text()).slice(0, 500000);
+    return { ok: r.ok, status: r.status, ms: Date.now() - t0, urlFinal: r.url || url, esHttps: String(r.url || url).startsWith('https://'), html };
+  } catch (e) {
+    return { ok: false, status: 0, ms: Date.now() - t0, urlFinal: url, esHttps: url.startsWith('https://'), html: '', error: e.name === 'AbortError' ? 'timeout' : e.message };
+  } finally { clearTimeout(timer); }
+}
+
+// Links internos del sitio que suelen tener info útil (nosotros, equipo, productos, contacto...).
+function linksInternos(html, base) {
+  const CLAVES = /(nosotros|about|quienes|empresa|equipo|team|staff|contacto|contact|productos|servicios|services|catalogo|tienda|shop|trabaja|empleo|careers|novedades|noticias)/i;
+  const vistos = new Set(); const out = [];
+  let origen; try { origen = new URL(base).origin; } catch { return []; }
+  const re = /href=["']([^"'#]+?)["']/gi; let m;
+  while ((m = re.exec(html)) && out.length < 4) {
+    let u; try { u = new URL(m[1].split('?')[0], base); } catch { continue; }
+    if (u.origin !== origen || !CLAVES.test(u.pathname) || vistos.has(u.pathname)) continue;
+    vistos.add(u.pathname); out.push(u.href);
+  }
+  return out;
+}
+
+// Noticias públicas por RSS de Google News (gratis, sin API key).
+async function noticiasDe(nombre, zona) {
+  const q = encodeURIComponent(`"${nombre}"` + (zona ? ' ' + String(zona).split(',')[0] : ''));
+  const r = await traerPagina(`https://news.google.com/rss/search?q=${q}&hl=es-419&gl=AR&ceid=AR:es-419`, 8000);
+  if (!r.ok) return [];
+  const items = [];
+  const re = /<item>([\s\S]*?)<\/item>/g; let m;
+  while ((m = re.exec(r.html)) && items.length < 6) {
+    const campo = (tag) => { const x = m[1].match(new RegExp('<' + tag + '>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</' + tag + '>')); return x ? quitarHtml(x[1]).slice(0, 220) : ''; };
+    items.push({ titulo: campo('title'), fecha: campo('pubDate'), url: (m[1].match(/<link>([^<]+)<\/link>/) || [])[1] || '' });
+  }
+  return items;
+}
+
+// El prompt es estable a propósito: se cachea (prompt caching) y baja el costo de cada investigación.
+const B2B_BASE = `Sos el motor de inteligencia comercial B2B de Cloud For Deploy, una empresa argentina que vende: páginas web, tiendas online (ecommerce), sistemas y software a medida, CRM, automatización comercial y chatbots/automatización de WhatsApp.
+
+Recibís MATERIAL VERIFICABLE sobre una empresa (datos de Google Places, texto de su sitio web, chequeos técnicos observables y noticias públicas). Tu tarea: producir inteligencia comercial EXPLICABLE en JSON estricto.
+
+REGLAS DURAS (no negociables):
+- Solo afirmá lo que el material respalda. Si un dato no está en el material, su estado es "desconocido" — lo desconocido QUEDA desconocido.
+- Nunca inventes nombres de personas, emails, teléfonos ni cargos. Personas: SOLO si aparecen con nombre y cargo en el material, con su fuente. Si no hay nadie identificable, registrá el cargo objetivo con "nombre": null (persona pendiente de identificar).
+- Cada dato del perfil lleva estado: "verificado" (evidencia directa en el material, citala), "estimado" (inferencia razonable, aclaralo) o "desconocido".
+- Hallazgos (dolores/problemas) con TRES estados: "CONFIRMED_PAIN" (la empresa lo reconoce explícitamente en el material), "OBSERVED_PROBLEM" (observable y reproducible: sin HTTPS, formulario roto, catálogo sin buscador), "HYPOTHESIZED_PAIN" (inferido por señales indirectas — redactalo SIEMPRE como hipótesis: "podría existir...").
+- NUNCA afirmes que la empresa pierde ventas, dinero o clientes. No asumas procesos manuales solo porque no tiene web. Un rating aislado no es un problema confirmado.
+- Categorías de hallazgos: "comercial" (sin canal de venta online, pedidos manuales, catálogo sin buscador), "operativo" (procesos manuales declarados, búsquedas de digitalización), "tecnologico" (errores del sitio, sin HTTPS, rendimiento), "atencion" (señales en reseñas o pedidos de atención automatizada).
+- Cada hallazgo sugiere: el servicio nuestro relacionado y el cargo objetivo a validar (ej: "Director comercial").
+- Eventos: SOLO de las noticias provistas. "reciente": true solo si son de los últimos 6 meses respecto de la fecha de hoy que te paso. Diferenciá relevancia alta/media/baja según relación con nuestros servicios.
+- Scores 0-100 por dimensión con "motivo" que cite la evidencia. Si no hay señales para una dimensión: "puntos": null y motivo "sin datos". Dimensiones: account_fit (encaje con nuestro cliente ideal: pyme/empresa con presencia y necesidad digital alcanzable), pain_evidence (intensidad y confiabilidad de los hallazgos), buying_intent (evidencia de intención de compra: búsquedas de proveedores, anuncios de digitalización), trigger_events (eventos recientes de cambio), contact_readiness (canal profesional disponible + interlocutores identificados — NO es intención de compra).
+- "informe": un párrafo narrativo en español argentino: qué hace la empresa, qué se encontró y qué NO se encontró en los canales verificados, la oportunidad (como hipótesis si lo es), el cargo objetivo, el evento reciente si hay, y el próximo paso concreto.
+- "proxima_accion": un paso accionable para validar la oportunidad por un canal profesional permitido.
+- "info_faltante": qué datos faltan antes de calificar comercialmente.
+
+Respondé ÚNICAMENTE el JSON (sin markdown, sin texto extra) con este esquema exacto:
+{
+  "perfil": {
+    "actividad": { "valor": "...", "estado": "verificado|estimado|desconocido", "evidencia": "cita o fuente corta" },
+    "tamano": { "valor": "...", "estado": "...", "evidencia": "..." },
+    "equipo_tecnologia": { "valor": "si|no|desconocido", "estado": "...", "evidencia": "..." },
+    "equipo_marketing": { "valor": "si|no|desconocido", "estado": "...", "evidencia": "..." },
+    "servicios": ["..."],
+    "mercados": ["..."],
+    "tecnologias": [{ "nombre": "...", "estado": "...", "evidencia": "..." }]
+  },
+  "hallazgos": [{ "categoria": "comercial|operativo|tecnologico|atencion", "estado": "CONFIRMED_PAIN|OBSERVED_PROBLEM|HYPOTHESIZED_PAIN", "titulo": "...", "detalle": "...", "evidencia": "...", "fuente_url": "...", "servicio": "...", "cargo_objetivo": "..." }],
+  "personas": [{ "nombre": null, "cargo": "...", "buying_role": "economic_buyer|decision_maker|technical_buyer|champion|end_user", "confianza": "low|medium|high", "fuente_url": "...", "canal": "..." }],
+  "eventos": [{ "titulo": "...", "fecha": "...", "fuente_url": "...", "relevancia": "alta|media|baja", "relacion": "...", "reciente": true }],
+  "scores": { "account_fit": { "puntos": 0, "motivo": "..." }, "pain_evidence": { "puntos": 0, "motivo": "..." }, "buying_intent": { "puntos": null, "motivo": "sin datos" }, "trigger_events": { "puntos": null, "motivo": "sin datos" }, "contact_readiness": { "puntos": 0, "motivo": "..." } },
+  "informe": "...",
+  "proxima_accion": "...",
+  "info_faltante": ["..."]
+}`;
+
+// Score total: promedio ponderado SOLO sobre las dimensiones con datos (lo desconocido no suma ni resta).
+function b2bScoreTotal(scores) {
+  let suma = 0, peso = 0;
+  for (const [k, w] of Object.entries(B2B_PESOS)) {
+    const d = scores && scores[k];
+    if (d && d.puntos != null && Number.isFinite(+d.puntos)) { suma += Math.max(0, Math.min(100, +d.puntos)) * w; peso += w; }
+  }
+  return peso ? Math.round(suma / peso) : null;
+}
+
+async function investigarCuentaB2B(id) {
+  const c = db.prepare(`SELECT c.*, p.rating, p.resenas, p.direccion AS p_direccion, p.maps_url
+    FROM b2b_cuentas c LEFT JOIN prospectos p ON p.id = c.prospecto_id WHERE c.id = ?`).get(id);
+  if (!c) throw new Error('Cuenta inexistente.');
+  db.prepare("UPDATE b2b_cuentas SET estado = 'investigando', error = NULL WHERE id = ?").run(id);
+  try {
+    const material = {
+      fecha_de_hoy: hoyAR(),
+      empresa: { nombre: c.nombre, rubro: c.rubro, zona: c.zona, direccion: c.p_direccion || null, telefono: c.telefono || null, sitio_declarado: c.sitio_web || null, google_rating: c.rating || null, google_resenas: c.resenas || null },
+      sitio: null, paginas: [], checks: null, noticias: [],
+    };
+    let web = c.sitio_web ? String(c.sitio_web).trim() : null;
+    if (web && !/^https?:\/\//i.test(web)) web = 'https://' + web;
+    const esRedSocial = web && /(facebook\.com|instagram\.com|linktr\.ee)/i.test(web);
+    if (web && esRedSocial) material.empresa.nota_web = 'La "web" declarada es una red social; no se analiza su contenido.';
+    if (web && !esRedSocial) {
+      const home = await traerPagina(web);
+      material.checks = {
+        https: home.esHttps, respuesta_ms: home.ms, status_http: home.status, url_final: home.urlFinal,
+        formularios_detectados: (home.html.match(/<form/gi) || []).length,
+        senales_ecommerce: /(carrito|checkout|mercadopago|tiendanube|shopify|woocommerce|add[- ]?to[- ]?cart|agregar al carrito)/i.test(home.html),
+        error_al_cargar: home.error || null,
+      };
+      if (home.html) material.sitio = { url: home.urlFinal, texto: quitarHtml(home.html).slice(0, 9000) };
+      if (home.ok) {
+        for (const u of linksInternos(home.html, home.urlFinal).slice(0, 3)) {
+          const pg = await traerPagina(u, 7000);
+          if (pg.ok && pg.html) material.paginas.push({ url: u, texto: quitarHtml(pg.html).slice(0, 4500) });
+        }
+      }
+    }
+    try { material.noticias = await noticiasDe(c.nombre, c.zona); } catch (e) { material.noticias = []; }
+
+    const modelo = b2bModelo();
+    const r = await new Anthropic().messages.create({
+      model: modelo,
+      max_tokens: 4096,
+      system: [{ type: 'text', text: B2B_BASE, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: 'MATERIAL VERIFICABLE:\n' + JSON.stringify(material) }],
+    });
+    let texto = r.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim();
+    const desde = texto.indexOf('{'); const hasta = texto.lastIndexOf('}');
+    if (desde < 0 || hasta <= desde) throw new Error('La IA no devolvió una ficha válida.');
+    const ficha = JSON.parse(texto.slice(desde, hasta + 1));
+    const u = r.usage || {};
+
+    // Se reemplaza todo lo derivado (una reinvestigación arranca de cero).
+    db.prepare('DELETE FROM b2b_hallazgos WHERE cuenta_id = ?').run(id);
+    db.prepare('DELETE FROM b2b_personas WHERE cuenta_id = ?').run(id);
+    db.prepare('DELETE FROM b2b_eventos WHERE cuenta_id = ?').run(id);
+    const insH = db.prepare('INSERT INTO b2b_hallazgos (cuenta_id, categoria, estado, titulo, detalle, evidencia, fuente_url, servicio, cargo_objetivo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    for (const h of (Array.isArray(ficha.hallazgos) ? ficha.hallazgos : []).slice(0, 20)) {
+      if (!h || !h.titulo) continue;
+      insH.run(id, cleanEnum(h.categoria, ['comercial', 'operativo', 'tecnologico', 'atencion']) || 'comercial',
+        cleanEnum(h.estado, ['CONFIRMED_PAIN', 'OBSERVED_PROBLEM', 'HYPOTHESIZED_PAIN']) || 'HYPOTHESIZED_PAIN',
+        String(h.titulo).slice(0, 200), clean(String(h.detalle || '').slice(0, 1000)), clean(String(h.evidencia || '').slice(0, 600)),
+        clean(String(h.fuente_url || '').slice(0, 400)), clean(String(h.servicio || '').slice(0, 150)), clean(String(h.cargo_objetivo || '').slice(0, 120)));
+    }
+    const insP = db.prepare('INSERT INTO b2b_personas (cuenta_id, nombre, cargo, buying_role, confianza, fuente_url, canal, verificada_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+    for (const p of (Array.isArray(ficha.personas) ? ficha.personas : []).slice(0, 15)) {
+      if (!p || !p.cargo) continue;
+      // Personas con nombre pero sin fuente NO entran: sin evidencia no hay dato personal.
+      const nombre = clean(String(p.nombre || '').slice(0, 120));
+      const fuente = clean(String(p.fuente_url || '').slice(0, 400));
+      if (nombre && !fuente) continue;
+      insP.run(id, nombre, String(p.cargo).slice(0, 150), cleanEnum(p.buying_role, ['economic_buyer', 'decision_maker', 'technical_buyer', 'champion', 'end_user']),
+        cleanEnum(p.confianza, ['low', 'medium', 'high']), fuente, clean(String(p.canal || '').slice(0, 200)), nombre ? hoyAR() : null);
+    }
+    const insE = db.prepare('INSERT INTO b2b_eventos (cuenta_id, titulo, fecha, fuente_url, relevancia, relacion, reciente) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    for (const ev of (Array.isArray(ficha.eventos) ? ficha.eventos : []).slice(0, 10)) {
+      if (!ev || !ev.titulo) continue;
+      insE.run(id, String(ev.titulo).slice(0, 250), clean(String(ev.fecha || '').slice(0, 60)), clean(String(ev.fuente_url || '').slice(0, 400)),
+        cleanEnum(ev.relevancia, ['alta', 'media', 'baja']), clean(String(ev.relacion || '').slice(0, 300)), ev.reciente ? 1 : 0);
+    }
+    db.prepare(`UPDATE b2b_cuentas SET estado = 'lista', perfil = ?, informe = ?, scores = ?, score_total = ?, proxima_accion = ?, info_faltante = ?, checks = ?,
+      tokens_in = tokens_in + ?, tokens_out = tokens_out + ?, modelo = ?, investigada_at = datetime('now'), error = NULL WHERE id = ?`)
+      .run(JSON.stringify(ficha.perfil || {}), String(ficha.informe || '').slice(0, 4000), JSON.stringify(ficha.scores || {}), b2bScoreTotal(ficha.scores),
+        clean(String(ficha.proxima_accion || '').slice(0, 600)), JSON.stringify(Array.isArray(ficha.info_faltante) ? ficha.info_faltante.slice(0, 12) : []),
+        JSON.stringify(material.checks || null), (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0), u.output_tokens || 0, r.model || modelo, id);
+  } catch (e) {
+    console.error('b2b investigar:', e.message);
+    db.prepare("UPDATE b2b_cuentas SET estado = 'error', error = ? WHERE id = ?").run(String(e.message || 'error').slice(0, 300), id);
+    throw e;
+  }
+}
+
+app.get('/b2b', requireAuth, requireAdmin, (req, res) => {
+  const cuentas = db.prepare(`SELECT c.*, u.name AS creador,
+      (SELECT COUNT(*) FROM b2b_hallazgos h WHERE h.cuenta_id = c.id) AS hallazgos,
+      (SELECT COUNT(*) FROM b2b_hallazgos h WHERE h.cuenta_id = c.id AND h.validacion = 'confirmada') AS confirmados
+    FROM b2b_cuentas c LEFT JOIN users u ON u.id = c.created_by
+    ORDER BY c.score_total IS NULL, c.score_total DESC, c.id DESC LIMIT 300`).all();
+  res.send(V.b2bListaPage({ user: req.user, cuentas, keyOk: !!process.env.ANTHROPIC_API_KEY, modelo: b2bModelo(), msg: clean(req.query.msg), err: clean(req.query.err) }));
+});
+
+// Lanza una investigación: desde un prospecto del Panel de Leads o cargando la empresa a mano.
+app.post('/b2b/investigar', requireAuth, requireAdmin, async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) return res.redirect('/b2b?err=' + encodeURIComponent('Falta ANTHROPIC_API_KEY en el servidor.'));
+  let cuentaId = null;
+  const pid = parseInt(req.body.prospecto_id, 10);
+  if (pid) {
+    const p = db.prepare('SELECT * FROM prospectos WHERE id = ?').get(pid);
+    if (!p) return res.redirect('/clientes?err=' + encodeURIComponent('Ese prospecto no existe.'));
+    const ya = db.prepare('SELECT id, estado FROM b2b_cuentas WHERE prospecto_id = ?').get(pid);
+    if (ya && ya.estado !== 'error') return res.redirect('/b2b/' + ya.id);
+    cuentaId = ya ? ya.id : db.prepare('INSERT INTO b2b_cuentas (prospecto_id, nombre, sitio_web, rubro, zona, telefono, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(pid, p.nombre, p.sitio_web, p.rubro, p.zona, p.telefono, req.user.id).lastInsertRowid;
+  } else {
+    const nombre = (clean(req.body.nombre) || '').slice(0, 150);
+    if (!nombre) return res.redirect('/b2b?err=' + encodeURIComponent('Poné el nombre de la empresa.'));
+    cuentaId = db.prepare('INSERT INTO b2b_cuentas (nombre, sitio_web, rubro, zona, created_by) VALUES (?, ?, ?, ?, ?)')
+      .run(nombre, clean((req.body.web || '').slice(0, 300)), clean((req.body.rubro || '').slice(0, 80)), clean((req.body.zona || '').slice(0, 120)), req.user.id).lastInsertRowid;
+  }
+  try {
+    await investigarCuentaB2B(cuentaId);
+    res.redirect('/b2b/' + cuentaId);
+  } catch (e) {
+    res.redirect('/b2b/' + cuentaId + '?err=' + encodeURIComponent('La investigación falló: ' + String(e.message).slice(0, 160)));
+  }
+});
+
+app.post('/b2b/:id/reinvestigar', requireAuth, requireAdmin, async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) return res.redirect('/b2b?err=' + encodeURIComponent('Falta ANTHROPIC_API_KEY en el servidor.'));
+  try { await investigarCuentaB2B(parseInt(req.params.id, 10)); } catch (e) { /* el estado queda en error y se ve en la ficha */ }
+  res.redirect('/b2b/' + req.params.id);
+});
+
+app.get('/b2b/:id', requireAuth, requireAdmin, (req, res) => {
+  const c = db.prepare(`SELECT c.*, p.direccion AS p_direccion, p.maps_url, p.rating, p.resenas, d.empresa AS deal_empresa
+    FROM b2b_cuentas c LEFT JOIN prospectos p ON p.id = c.prospecto_id LEFT JOIN deals d ON d.id = c.deal_id WHERE c.id = ?`).get(req.params.id);
+  if (!c) return res.redirect('/b2b');
+  const hallazgos = db.prepare('SELECT h.*, u.name AS validador FROM b2b_hallazgos h LEFT JOIN users u ON u.id = h.validada_por WHERE h.cuenta_id = ? ORDER BY h.id').all(c.id);
+  const personas = db.prepare('SELECT * FROM b2b_personas WHERE cuenta_id = ? ORDER BY nombre IS NULL, id').all(c.id);
+  const eventos = db.prepare('SELECT * FROM b2b_eventos WHERE cuenta_id = ? ORDER BY reciente DESC, id').all(c.id);
+  const misPaneles = PANELES_COMERCIALES.filter((P) => puede(req.user, P.slug)).map((P) => ({ slug: P.slug, nombre: P.nombre }));
+  res.send(V.b2bFichaPage({ user: req.user, c, hallazgos, personas, eventos, misPaneles, msg: clean(req.query.msg), err: clean(req.query.err) }));
+});
+
+// El vendedor valida las hipótesis: confirmar / rechazar / volver a pendiente.
+app.post('/b2b/:id/hallazgo/:hid', requireAuth, requireAdmin, (req, res) => {
+  const accion = { confirmar: 'confirmada', rechazar: 'rechazada', pendiente: 'pendiente' }[req.body.accion];
+  if (accion) db.prepare("UPDATE b2b_hallazgos SET validacion = ?, validada_por = ?, validada_at = datetime('now') WHERE id = ? AND cuenta_id = ?")
+    .run(accion, req.user.id, req.params.hid, req.params.id);
+  res.redirect('/b2b/' + req.params.id + '#hallazgos');
+});
+
+// Comité de compra: cambiar el rol de una persona o sumar una a mano (con su fuente).
+app.post('/b2b/:id/persona/:pid/rol', requireAuth, requireAdmin, (req, res) => {
+  db.prepare('UPDATE b2b_personas SET buying_role = ? WHERE id = ? AND cuenta_id = ?')
+    .run(cleanEnum(req.body.rol, ['economic_buyer', 'decision_maker', 'technical_buyer', 'champion', 'end_user']), req.params.pid, req.params.id);
+  res.redirect('/b2b/' + req.params.id + '#personas');
+});
+app.post('/b2b/:id/personas', requireAuth, requireAdmin, (req, res) => {
+  const cargo = (clean(req.body.cargo) || '').slice(0, 150);
+  if (cargo) db.prepare('INSERT INTO b2b_personas (cuenta_id, nombre, cargo, buying_role, confianza, fuente_url, canal, verificada_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(req.params.id, clean((req.body.nombre || '').slice(0, 120)), cargo,
+      cleanEnum(req.body.rol, ['economic_buyer', 'decision_maker', 'technical_buyer', 'champion', 'end_user']), 'high',
+      clean((req.body.fuente || '').slice(0, 400)), clean((req.body.canal || '').slice(0, 200)), hoyAR());
+  res.redirect('/b2b/' + req.params.id + '#personas');
+});
+
+// Checklist de calificación comercial (lo que se valida hablando con la empresa).
+app.post('/b2b/:id/calificacion', requireAuth, requireAdmin, (req, res) => {
+  const v = (k) => cleanEnum(req.body[k], ['si', 'no', 'nose']) || 'nose';
+  const cal = {
+    decide: v('decide'), reconoce: v('reconoce'), proyecto: v('proyecto'), presupuesto: v('presupuesto'),
+    plazo: v('plazo'), otros: v('otros'), propuesta: v('propuesta'),
+    nota: clean((req.body.nota || '').slice(0, 1000)), por: req.user.id, at: hoyAR(),
+  };
+  db.prepare('UPDATE b2b_cuentas SET calificacion = ? WHERE id = ?').run(JSON.stringify(cal), req.params.id);
+  res.redirect('/b2b/' + req.params.id + '?msg=' + encodeURIComponent('Calificación guardada.') + '#calificacion');
+});
+
+// La oportunidad validada nace como lead en el pipeline, con todo el contexto pegado.
+app.post('/b2b/:id/lead', requireAuth, requireAdmin, (req, res) => {
+  const c = db.prepare('SELECT * FROM b2b_cuentas WHERE id = ?').get(req.params.id);
+  if (!c) return res.redirect('/b2b');
+  if (c.deal_id) return res.redirect('/deals/' + c.deal_id);
+  const panel = PANEL_SLUGS.includes(req.body.panel) ? req.body.panel : null;
+  if (!panel || !puede(req.user, panel)) return res.status(403).send('Sin acceso a ese panel comercial.');
+  const etapa = etapasDePanel(panel)[0] || 'Lead';
+  const r = db.prepare(`INSERT INTO deals (empresa, user_id, panel, etapa, telefono, origen, proximo_paso, etapa_movida_at)
+    VALUES (?, ?, ?, ?, ?, 'Inteligencia B2B', ?, datetime('now'))`).run(c.nombre, req.user.id, panel, etapa, c.telefono, c.proxima_accion ? String(c.proxima_accion).slice(0, 200) : null);
+  logDealEvent(r.lastInsertRowid, req.user.id, 'creado', `Deal creado en etapa ${etapa}`);
+  const confirmados = db.prepare("SELECT titulo FROM b2b_hallazgos WHERE cuenta_id = ? AND validacion = 'confirmada'").all(c.id).map((h) => h.titulo);
+  logDealEvent(r.lastInsertRowid, req.user.id, 'edicion', ('Nota: Inteligencia B2B — ' + (c.informe || '').slice(0, 700)
+    + (confirmados.length ? ' · Dolores confirmados: ' + confirmados.join('; ').slice(0, 300) : '')
+    + (c.proxima_accion ? ' · Próxima acción: ' + c.proxima_accion.slice(0, 200) : '')).slice(0, 1400));
+  db.prepare('UPDATE b2b_cuentas SET deal_id = ? WHERE id = ?').run(r.lastInsertRowid, c.id);
+  if (c.prospecto_id) db.prepare("UPDATE prospectos SET estado = 'tomado', tomado_por = ?, tomado_at = datetime('now'), deal_id = ? WHERE id = ? AND estado = 'nuevo'").run(req.user.id, r.lastInsertRowid, c.prospecto_id);
+  res.redirect('/deals/' + r.lastInsertRowid);
 });
 
 /* ---------------- WhatsApp (Cloud API oficial de Meta) ---------------- */

@@ -326,6 +326,71 @@ CREATE TABLE IF NOT EXISTS prospecto_scans (
 if (!db.prepare('PRAGMA table_info(prospecto_scans)').all().some((c) => c.name === 'consultas')) {
   db.exec('ALTER TABLE prospecto_scans ADD COLUMN consultas INTEGER NOT NULL DEFAULT 1');
 }
+// 3.4.0: Inteligencia B2B (prueba, solo admins) — cuentas investigadas, hallazgos, personas y eventos.
+db.exec(`CREATE TABLE IF NOT EXISTS b2b_cuentas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  prospecto_id INTEGER REFERENCES prospectos(id),
+  nombre TEXT NOT NULL,
+  sitio_web TEXT,
+  rubro TEXT,
+  zona TEXT,
+  telefono TEXT,
+  estado TEXT NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'investigando', 'lista', 'error')),
+  perfil TEXT,
+  informe TEXT,
+  score_total INTEGER,
+  scores TEXT,
+  info_faltante TEXT,
+  proxima_accion TEXT,
+  checks TEXT,
+  calificacion TEXT,
+  deal_id INTEGER REFERENCES deals(id),
+  error TEXT,
+  tokens_in INTEGER NOT NULL DEFAULT 0,
+  tokens_out INTEGER NOT NULL DEFAULT 0,
+  modelo TEXT,
+  created_by INTEGER REFERENCES users(id),
+  investigada_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS b2b_hallazgos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cuenta_id INTEGER NOT NULL REFERENCES b2b_cuentas(id),
+  categoria TEXT NOT NULL,
+  estado TEXT NOT NULL,
+  titulo TEXT NOT NULL,
+  detalle TEXT,
+  evidencia TEXT,
+  fuente_url TEXT,
+  servicio TEXT,
+  cargo_objetivo TEXT,
+  validacion TEXT NOT NULL DEFAULT 'pendiente' CHECK (validacion IN ('pendiente', 'confirmada', 'rechazada')),
+  validada_por INTEGER REFERENCES users(id),
+  validada_at TEXT
+);
+CREATE TABLE IF NOT EXISTS b2b_personas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cuenta_id INTEGER NOT NULL REFERENCES b2b_cuentas(id),
+  nombre TEXT,
+  cargo TEXT NOT NULL,
+  buying_role TEXT,
+  confianza TEXT,
+  fuente_url TEXT,
+  canal TEXT,
+  verificada_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS b2b_eventos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cuenta_id INTEGER NOT NULL REFERENCES b2b_cuentas(id),
+  titulo TEXT NOT NULL,
+  fecha TEXT,
+  fuente_url TEXT,
+  relevancia TEXT,
+  relacion TEXT,
+  reciente INTEGER NOT NULL DEFAULT 0
+);`);
+
 // 2.54.0: WhatsApp Cloud API — bandeja de conversaciones (por ahora solo admins).
 db.exec(`CREATE TABLE IF NOT EXISTS wa_conversaciones (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
