@@ -1900,7 +1900,11 @@ tbody tr { transition:background .12s; }
 .tablewrap tbody tr:hover { background:var(--surface3); }
 html.dark .tablewrap tbody tr:hover { background:rgba(255,255,255,.035); }
 
-.brand-mini { display:none; }
+@media (min-width: 861px) { .brand-mini { display:none; } }
+@media (max-width: 860px) {
+  .brand-mini { display:inline-flex !important; }
+  .brand-row .sys summary { overflow:visible; }
+}
 
 /* barra superior con leve vidrio (solo desktop: backdrop-filter rompe el fixed de la barra móvil) */
 @media (min-width: 861px) {

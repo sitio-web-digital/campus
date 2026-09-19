@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.1.6',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'fix', texto: 'El botón "▦ Menú" (cambiar de panel) volvió a verse en celular — una regla del restyle lo pisaba y quedaba invisible/apretado.' },
+    ],
+  },
+  {
     version: '3.1.5',
     fecha: '2026-09-18',
     cambios: [
