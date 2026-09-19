@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.4.2',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'fix', texto: 'Inteligencia B2B: la herramienta de entrega ahora define el esquema completo de la ficha, así la IA llena las secciones en el lugar correcto (probado de punta a punta contra la API real). Reinvestigá cualquier cuenta que haya quedado fallida o vacía.' },
+    ],
+  },
+  {
     version: '3.4.1',
     fecha: '2026-09-18',
     cambios: [

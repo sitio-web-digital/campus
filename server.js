@@ -1856,14 +1856,25 @@ async function investigarCuentaB2B(id) {
       model: modelo,
       max_tokens: 8192,
       system: [{ type: 'text', text: B2B_BASE, cache_control: { type: 'ephemeral' } }],
-      tools: [{ name: 'entregar_ficha', description: 'Entrega la ficha de inteligencia B2B completa con el esquema indicado en el sistema.', input_schema: { type: 'object' } }],
+      tools: [{ name: 'entregar_ficha', description: 'Entrega la ficha de inteligencia B2B completa con el esquema indicado en el sistema.', input_schema: {
+        type: 'object',
+        properties: {
+          perfil: { type: 'object' }, hallazgos: { type: 'array', items: { type: 'object' } },
+          personas: { type: 'array', items: { type: 'object' } }, eventos: { type: 'array', items: { type: 'object' } },
+          scores: { type: 'object' }, informe: { type: 'string' }, proxima_accion: { type: 'string' },
+          info_faltante: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['perfil', 'hallazgos', 'personas', 'eventos', 'scores', 'informe', 'proxima_accion', 'info_faltante'],
+      } }],
       tool_choice: { type: 'tool', name: 'entregar_ficha' },
       messages: [{ role: 'user', content: 'MATERIAL VERIFICABLE:\n' + JSON.stringify(material) }],
     });
     if (r.stop_reason === 'max_tokens') throw new Error('La ficha salió demasiado larga y se cortó — probá reinvestigar.');
     const bloque = r.content.find((b) => b.type === 'tool_use' && b.name === 'entregar_ficha');
     if (!bloque || !bloque.input || typeof bloque.input !== 'object') throw new Error('La IA no devolvió una ficha válida.');
-    const ficha = bloque.input;
+    let ficha = bloque.input;
+    // Por si el modelo envuelve el objeto en una clave contenedora ("parameters", "ficha"...).
+    if (!ficha.informe && !ficha.perfil) { const llaves = Object.keys(ficha); if (llaves.length === 1 && typeof ficha[llaves[0]] === 'object' && ficha[llaves[0]]) ficha = ficha[llaves[0]]; }
     const u = r.usage || {};
 
     // Se reemplaza todo lo derivado (una reinvestigación arranca de cero).
