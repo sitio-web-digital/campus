@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.3.0',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'nuevo', texto: '🎨 Nueva identidad visual inspirada en las mejores herramientas dev: tipografía Inter (servida desde nuestro servidor), grises cálidos, azul como acento y botones sobrios casi negros. La barra superior ahora es clara en modo claro, con vidrio sutil en escritorio.' },
+      { tipo: 'nuevo', texto: 'Modo oscuro renovado a juego: grafito cálido con acento azul, bordes finos y sombras suaves.' },
+      { tipo: 'mejora', texto: 'Los esqueletos de carga ahora tienen su propia versión de celular, fiel a cada pantalla: el Pipeline carga con su tira horizontal de columnas, la Agenda con sus ~3 días visibles, Estadísticas con KPIs en 2×2, Leads con su escáner y tarjetas apiladas, y WhatsApp con la lista de conversaciones sola.' },
+    ],
+  },
+  {
     version: '3.2.3',
     fecha: '2026-09-18',
     cambios: [
