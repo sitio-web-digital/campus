@@ -1787,7 +1787,7 @@ REGLAS DURAS (no negociables):
 - "proxima_accion": un paso accionable para validar la oportunidad por un canal profesional permitido.
 - "info_faltante": qué datos faltan antes de calificar comercialmente.
 
-Respondé ÚNICAMENTE el JSON (sin markdown, sin texto extra) con este esquema exacto:
+Entregá el resultado usando la herramienta entregar_ficha, pasándole el objeto con este esquema exacto:
 {
   "perfil": {
     "actividad": { "valor": "...", "estado": "verificado|estimado|desconocido", "evidencia": "cita o fuente corta" },
@@ -1851,16 +1851,19 @@ async function investigarCuentaB2B(id) {
     try { material.noticias = await noticiasDe(c.nombre, c.zona); } catch (e) { material.noticias = []; }
 
     const modelo = b2bModelo();
+    // La ficha llega por tool use: la API garantiza JSON válido (nada de comillas sin escapar).
     const r = await new Anthropic().messages.create({
       model: modelo,
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: [{ type: 'text', text: B2B_BASE, cache_control: { type: 'ephemeral' } }],
+      tools: [{ name: 'entregar_ficha', description: 'Entrega la ficha de inteligencia B2B completa con el esquema indicado en el sistema.', input_schema: { type: 'object' } }],
+      tool_choice: { type: 'tool', name: 'entregar_ficha' },
       messages: [{ role: 'user', content: 'MATERIAL VERIFICABLE:\n' + JSON.stringify(material) }],
     });
-    let texto = r.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim();
-    const desde = texto.indexOf('{'); const hasta = texto.lastIndexOf('}');
-    if (desde < 0 || hasta <= desde) throw new Error('La IA no devolvió una ficha válida.');
-    const ficha = JSON.parse(texto.slice(desde, hasta + 1));
+    if (r.stop_reason === 'max_tokens') throw new Error('La ficha salió demasiado larga y se cortó — probá reinvestigar.');
+    const bloque = r.content.find((b) => b.type === 'tool_use' && b.name === 'entregar_ficha');
+    if (!bloque || !bloque.input || typeof bloque.input !== 'object') throw new Error('La IA no devolvió una ficha válida.');
+    const ficha = bloque.input;
     const u = r.usage || {};
 
     // Se reemplaza todo lo derivado (una reinvestigación arranca de cero).

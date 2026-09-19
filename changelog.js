@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.4.1',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'fix', texto: 'Inteligencia B2B: algunas investigaciones fallaban con "Expected \',\' or \'}\'..." porque la IA devolvía el JSON de la ficha con comillas sin escapar. Ahora la ficha se entrega por tool use — la API garantiza JSON válido — y además se amplió el largo máximo permitido.' },
+    ],
+  },
+  {
     version: '3.4.0',
     fecha: '2026-09-18',
     cambios: [
