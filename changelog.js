@@ -2,6 +2,16 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.1.2',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'mejora', texto: 'Celular: la barra de arriba queda en UNA sola fila con todo a la vista (cambio de sección, campana, tema y tu usuario) — el nombre del panel se recorta con "…" en vez de empujar los controles. Y la barra del panel vuelve a estar bien abajo (un efecto del restyle la había subido): en WhatsApp el chat y el botón de la bandeja quedan siempre accesibles.' },
+      { tipo: 'nuevo', texto: 'Pantallas de carga tipo esqueleto: al navegar entre secciones aparece un placeholder animado con brillo (título, mosaicos y bloque) que se desvanece cuando la página está lista.' },
+      { tipo: 'mejora', texto: 'Iconografía nueva en toda la barra y el inicio: set profesional Lucide (los mismos íconos que usan las mejores apps), embebido sin dependencias.' },
+      { tipo: 'mejora', texto: 'Configuración del panel rediseñada: secciones en dos columnas con cabecera e ícono, filas prolijas con acciones de ícono (renombrar ✎, subir/bajar, borrar 🗑) y formularios compactos. Mismo funcionamiento, otra cara.' },
+    ],
+  },
+  {
     version: '3.1.1',
     fecha: '2026-09-18',
     cambios: [

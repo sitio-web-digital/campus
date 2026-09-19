@@ -27,16 +27,21 @@ const ETAPA_COLOR = {
 
 // Íconos de navegación (C4D): SVG inline, trazo en currentColor.
 const IC = (paths) => `<svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+// Iconos Lucide (lucide.dev, licencia ISC) embebidos: 24x24, trazo 2 — el set principal del campus.
+const IC24 = (paths) => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 const ICONS = {
-  pipeline: IC('<path d="M3 4h14M5 10h10M8 16h4"/>'),
-  actividad: IC('<path d="M3 10.5l3.5 3.5L17 5"/>'),
-  dashboard: IC('<path d="M4 16V9M10 16V4M16 16v-5"/>'),
-  equipo: IC('<circle cx="8" cy="7.5" r="2.6"/><path d="M3.5 16c.6-2.4 2.4-3.6 4.5-3.6s3.9 1.2 4.5 3.6"/><path d="M14 6.2a2.4 2.4 0 010 4.6M15 12.6c1.4.5 2.3 1.7 2.6 3.4"/>'),
-  perfil: IC('<path d="M4 6h12M4 14h12"/><circle cx="8" cy="6" r="1.9"/><circle cx="13" cy="14" r="1.9"/>'),
-  docs: IC('<path d="M10 4.5C8.6 3.4 6.7 3 4 3v12.5c2.7 0 4.6.4 6 1.5 1.4-1.1 3.3-1.5 6-1.5V3c-2.7 0-4.6.4-6 1.5z"/><path d="M10 4.5V17"/>'),
-  bell: IC('<path d="M10 3a4.5 4.5 0 00-4.5 4.5c0 3.2-1 4.3-1.8 5.1h12.6c-.8-.8-1.8-1.9-1.8-5.1A4.5 4.5 0 0010 3z"/><path d="M8.3 15.5a1.8 1.8 0 003.4 0"/>'),
-  metas: IC('<circle cx="10" cy="10" r="6.5"/><circle cx="10" cy="10" r="2.8"/>'),
-  cobranza: IC('<rect x="3" y="5.5" width="14" height="9.5" rx="1.8"/><circle cx="10" cy="10.2" r="2.2"/><path d="M5.5 5.5V4.2h9v1.3"/>'),
+  pipeline: IC24('<path d="M5 5v11"/><path d="M12 5v6"/><path d="M19 5v14"/>'),
+  actividad: IC24('<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>'),
+  dashboard: IC24('<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>'),
+  equipo: IC24('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+  perfil: IC24('<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>'),
+  docs: IC24('<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>'),
+  bell: IC24('<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>'),
+  metas: IC24('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>'),
+  cobranza: IC24('<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>'),
+  agenda: IC24('<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>'),
+  whatsapp: IC24('<path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0z"/><path d="M14 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0z"/>'),
+  mapa: IC24('<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>'),
 };
 const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F3459'/%3E%3Ctext x='16' y='21' font-size='12' font-family='Helvetica,Arial' font-weight='bold' fill='white' text-anchor='middle'%3EC4D%3C/text%3E%3C/svg%3E";
 
@@ -303,7 +308,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="/admin/preferencias" class="${active === 'preferencias' ? 'on' : ''}">${ICONS.docs}<span>Preferencias</span></a>`;
   } else if (sistema === 'clientes') {
     links = `
-        <a href="/clientes" class="${active === 'clientes' ? 'on' : ''}">${IC('<path d="M10 17.5s6-5.2 6-9.5a6 6 0 10-12 0c0 4.3 6 9.5 6 9.5z"/><circle cx="10" cy="8" r="2.2"/>')}<span>Prospectos</span></a>`;
+        <a href="/clientes" class="${active === 'clientes' ? 'on' : ''}">${ICONS.mapa}<span>Prospectos</span></a>`;
   } else if (sistema === 'developers') {
     links = `
         <a href="/developers" class="${active === 'developers' ? 'on' : ''}">${IC('<path d="M7 6.5L3.5 10 7 13.5M13 6.5l3.5 3.5-3.5 3.5M11.2 4.5l-2.4 11"/>')}<span>Proyectos</span></a>`;
@@ -333,9 +338,9 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
     links = `
         <a href="/pipeline" class="${active === 'pipeline' ? 'on' : ''}${dd.pipeline ? ' deuda' : ''}">${ICONS.pipeline}<span>Pipeline</span></a>
         <a href="/actividad" class="${active === 'actividad' ? 'on' : ''}${dd.actividad ? ' deuda' : ''}">${ICONS.actividad}<span>Actividad</span></a>
-        <a href="/agenda" class="${active === 'agenda' ? 'on' : ''}">${IC('<rect x="3" y="4.5" width="14" height="12" rx="2"/><path d="M3 8.5h14M7 3v3M13 3v3"/>')}<span>Agenda</span></a>
+        <a href="/agenda" class="${active === 'agenda' ? 'on' : ''}">${ICONS.agenda}<span>Agenda</span></a>
         <a href="/objetivos" class="${active === 'metas' ? 'on' : ''}">${ICONS.metas}<span>Metas</span></a>
-        ${user && user.role === 'admin' ? `<a href="/whatsapp" class="${active === 'whatsapp' ? 'on' : ''}">${IC('<path d="M10 2.5a7.5 7.5 0 00-6.5 11.2L2.6 17.4l3.8-.9A7.5 7.5 0 1010 2.5z"/><path d="M7.2 7.4c.2-.5.5-.5.8-.5h.6c.2 0 .4 0 .5.4l.7 1.6c.1.2 0 .4-.1.5l-.5.6c-.1.2-.1.3 0 .5.5.9 1.3 1.6 2.3 2.1.2.1.4.1.5-.1l.5-.6c.2-.2.3-.2.5-.1l1.6.8c.3.1.4.3.4.5v.6c0 .4-.3.8-.7.9-.7.2-1.8.2-3.3-.6a9 9 0 01-3.4-3.3c-.8-1.4-.8-2.4-.4-2.9z"/>')}<span>WhatsApp</span></a>` : ''}
+        ${user && user.role === 'admin' ? `<a href="/whatsapp" class="${active === 'whatsapp' ? 'on' : ''}">${ICONS.whatsapp}<span>WhatsApp</span></a>` : ''}
         ${user && user.role === 'admin' ? `<div class="nav-mas${enMas ? ' tiene-on' : ''}">
         <button type="button" class="nav-mas-btn">${IC('<circle cx="4.2" cy="10" r="1.7"/><circle cx="10" cy="10" r="1.7"/><circle cx="15.8" cy="10" r="1.7"/>')}<span>Más</span></button>
         <div class="nav-extra">
@@ -360,6 +365,27 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
     var btn = m.querySelector('.nav-mas-btn');
     btn.addEventListener('click', function (e) { e.stopPropagation(); m.classList.toggle('abierto'); });
     document.addEventListener('click', function (ev) { if (!m.contains(ev.target)) m.classList.remove('abierto'); });
+  })();
+  (function () {
+    if (document.body.classList.contains('wa-full')) return;
+    var esq = document.createElement('div');
+    esq.id = 'esqueleto';
+    esq.innerHTML = '<div class="esq-centro">' +
+      '<div class="esq esq-titulo"></div>' +
+      '<div class="esq-fila"><div class="esq esq-tile"></div><div class="esq esq-tile"></div><div class="esq esq-tile"></div></div>' +
+      '<div class="esq esq-bloque"></div>' +
+      '<div class="esq esq-linea"></div>' +
+      '</div>';
+    document.body.appendChild(esq);
+    var irse = function () {
+      setTimeout(function () {
+        esq.classList.add('fuera');
+        setTimeout(function () { if (esq.parentNode) esq.parentNode.removeChild(esq); }, 320);
+      }, 380);
+    };
+    if (document.readyState === 'complete') irse();
+    else window.addEventListener('load', irse);
+    setTimeout(irse, 2500);
   })();
   (function () {
     var barra = document.createElement('div');
@@ -1435,7 +1461,10 @@ html.dark .wa-autor { color:#6FCF97; }
 /* móvil: una columna, lista ↔ chat, composer cómodo */
 @media (max-width: 860px) {
   body.wa-full .wrap { padding-left:0; padding-right:0; padding-bottom:0; }
-  .wa-cont { grid-template-columns:1fr; border-radius:0; border-left:0; border-right:0; height:calc(100vh - 6.6rem); height:calc(100dvh - 6.6rem); }
+  /* la bandeja vive ENTRE la barra de arriba y la del panel (abajo): el composer y el
+     botón WhatsApp de la barra inferior quedan siempre a la vista */
+  .wa-cont { grid-template-columns:1fr; border-radius:0; border-left:0; border-right:0;
+    height:calc(100vh - 3.4rem - 4.5rem); height:calc(100dvh - 3.4rem - 4.5rem - env(safe-area-inset-bottom)); }
   .wa-cont.con-chat .wa-lista { display:none; }
   .wa-cont:not(.con-chat) .wa-chat { display:none; }
   .wa-cont.con-chat .wa-volver { display:inline-block; }
@@ -1610,8 +1639,15 @@ html.dark .login-bg .btn:hover { background:var(--login-ink); }
   body { font-size:15px; }
   .wrap { padding:.6rem .8rem calc(4.6rem + env(safe-area-inset-bottom)); }
   h1 { font-size:1.15rem; margin:.7rem 0 .8rem; }
-  .nav-inner { flex-wrap:wrap; justify-content:space-between; padding:.4rem .8rem; gap:.5rem; }
-  .brand-txt { max-width:calc(100vw - 8rem); }
+  /* barra superior: UNA sola fila con todo a la vista (secciones, campana, tema y usuario);
+     el nombre del panel se recorta con ... en vez de empujar los controles */
+  .nav-inner { flex-wrap:nowrap; justify-content:flex-start; padding:.4rem .7rem; gap:.35rem; }
+  .brand-row { flex:1 1 auto; min-width:0; gap:.4rem; }
+  .brand-row .sys { flex:1 1 auto; min-width:0; }
+  .brand-row .sys summary { min-width:0; overflow:hidden; }
+  .brand-txt { max-width:100%; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; display:block; }
+  .brand-txt .sub { overflow:hidden; text-overflow:ellipsis; }
+  .bell, .theme-btn, .umenu { flex-shrink:0; }
 
   .nav-links {
     position:fixed; bottom:0; left:0; right:0; z-index:20;
@@ -1839,8 +1875,10 @@ tbody tr { transition:background .12s; }
 .tablewrap tbody tr:hover { background:var(--surface3); }
 html.dark .tablewrap tbody tr:hover { background:rgba(255,255,255,.035); }
 
-/* barra superior con leve vidrio */
-nav.nav { background:linear-gradient(180deg, rgba(27,36,48,.97), rgba(24,32,43,.97)); backdrop-filter:saturate(1.25) blur(7px); }
+/* barra superior con leve vidrio (solo desktop: backdrop-filter rompe el fixed de la barra móvil) */
+@media (min-width: 861px) {
+  nav.nav { background:linear-gradient(180deg, rgba(27,36,48,.97), rgba(24,32,43,.97)); backdrop-filter:saturate(1.25) blur(7px); }
+}
 
 /* modales: blur atrás y pop al abrir */
 .modal-back { backdrop-filter:blur(3px); }
@@ -1863,6 +1901,26 @@ body.wa-full .wrap > * { animation:none; }
 .hub-grid > *:nth-child(5) { animation-delay:.19s; } .hub-grid > *:nth-child(6) { animation-delay:.23s; }
 .hub-grid > *:nth-child(n+7) { animation-delay:.26s; }
 
+/* esqueleto de carga por página */
+#esqueleto { position:fixed; inset:0; z-index:150; background:var(--bg); padding:4.6rem 1.25rem 1rem;
+  display:flex; flex-direction:column; gap:1rem; align-items:stretch; opacity:1; transition:opacity .28s ease; pointer-events:none; }
+#esqueleto.fuera { opacity:0; }
+#esqueleto .esq-centro { width:100%; max-width:76rem; margin:0 auto; display:flex; flex-direction:column; gap:1rem; }
+.esq { position:relative; overflow:hidden; background:var(--surface2); border-radius:12px; }
+.esq::after { content:""; position:absolute; inset:0; transform:translateX(-100%);
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+  animation:esq-brillo 1.1s ease-in-out infinite; }
+html.dark .esq { background:rgba(255,255,255,.06); }
+html.dark .esq::after { background:linear-gradient(90deg, transparent, rgba(255,255,255,.09), transparent); }
+@keyframes esq-brillo { to { transform:translateX(100%); } }
+.esq-titulo { height:1.9rem; width:14rem; max-width:60%; }
+.esq-fila { display:grid; grid-template-columns:repeat(3, 1fr); gap:1rem; }
+.esq-tile { height:5.2rem; }
+.esq-bloque { height:16rem; border-radius:15px; }
+.esq-linea { height:.95rem; width:70%; }
+@media (max-width: 860px) { #esqueleto { padding:4rem .8rem 1rem; } .esq-fila { grid-template-columns:1fr 1fr; } .esq-fila .esq-tile:nth-child(3) { display:none; } }
+@media (prefers-reduced-motion: reduce) { .esq::after { animation:none; } #esqueleto { display:none; } }
+
 /* barra de carga al navegar */
 #barraCarga { position:fixed; top:0; left:0; right:0; height:3px; z-index:300; pointer-events:none; opacity:0; transition:opacity .18s; overflow:hidden; }
 #barraCarga.activa { opacity:1; }
@@ -1880,6 +1938,23 @@ body.wa-full .wrap > * { animation:none; }
 html.dark * { scrollbar-color:rgba(255,255,255,.18) transparent; }
 html.dark *::-webkit-scrollbar-thumb { background:rgba(255,255,255,.15); }
 html.dark *::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.3); }
+
+/* configuracion profesional */
+.cfg-grid { display:grid; gap:1.1rem; align-items:start; margin-top:.4rem; }
+@media (min-width: 1100px) { .cfg-grid { grid-template-columns:1fr 1fr; } }
+.cfg-sec { min-width:0; }
+.cfg-sec h2 { display:flex; align-items:center; gap:.5rem; margin:.2rem 0 .5rem; font-size:1rem; }
+.cfg-ic { display:inline-grid; place-items:center; width:1.9rem; height:1.9rem; border-radius:9px; background:var(--accent-soft); color:var(--accent); flex-shrink:0; }
+.cfg-ic .ic { width:1.05rem; height:1.05rem; }
+html.dark .cfg-ic { background:rgba(53,179,154,.14); color:#5FD3B8; }
+.cfg-sec .card { margin-bottom:0; }
+.cfg-sec .cfg-row { display:flex; align-items:center; gap:.4rem; padding:.45rem .2rem; border-bottom:1px solid var(--line); margin:0; }
+.cfg-sec .cfg-row:hover { background:var(--surface3); border-radius:8px; }
+.cfg-sec .cfg-row .cfg-inline { flex:1; min-width:0; }
+.cfg-sec .cfg-row .cfg-inline input { flex:1; min-width:0; margin:0; }
+.btn-ic { padding:.42rem; width:2.05rem; height:2.05rem; display:inline-grid; place-items:center; flex-shrink:0; }
+.btn-ic .ic { width:1rem; height:1rem; }
+.btn-ic:disabled { opacity:.3; }
 
 /* comunicacion compacta */
 .comu-grid { display:grid; gap:1rem; align-items:start; }
@@ -3269,7 +3344,7 @@ function campanasSection(campanas, base) {
       <form method="post" action="${base}/${c.id}" class="cfg-inline">
         <input type="hidden" name="accion" value="renombrar">
         <input name="nombre" value="${esc(c.nombre)}">
-        <button class="btn secondary small">Renombrar</button>
+        <button class="btn secondary small btn-ic" title="Renombrar" aria-label="Renombrar">${IC24('<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>')}</button>
       </form>
       <span class="muted small">${c.leads} lead${c.leads === 1 ? '' : 's'}</span>
       ${c.activa ? '' : '<span class="chip chip--estado-cancelado">Inactiva</span>'}
@@ -3985,7 +4060,7 @@ function hubPage({ user }) {
       </a>` : ''}
       ${tieneSistema(user, 'clientes') ? `
       <a class="hub-card" href="/clientes">
-        <span class="hc-ic">${IC('<path d="M10 17.5s6-5.2 6-9.5a6 6 0 10-12 0c0 4.3 6 9.5 6 9.5z"/><circle cx="10" cy="8" r="2.2"/>')}</span>
+        <span class="hc-ic">${ICONS.mapa}</span>
         <h3>Panel de Clientes</h3>
         <p>Generador de prospectos: escanea Google Maps por rubro y zona, y las tomás como leads.</p>
       </a>` : ''}
@@ -4496,20 +4571,22 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
     body: `
   ${cartelEtapa}
   <h1>Configuración del panel</h1>
-  <p class="small muted">Acá moldeás el panel de ${esc(info.nombre)}: las etapas del pipeline y los campos de la carga diaria (que también definen las métricas de los objetivos). <strong>Ganado y Perdido son fijas</strong>: sostienen la lógica de aprobación y comisiones.</p>
+  <p class="small muted">Acá moldeás el panel de ${esc(info.nombre)}: etapas del pipeline, campos de la carga diaria (que también definen las métricas de los objetivos), reglas y campañas. <strong>Ganado y Perdido son fijas</strong>: sostienen la lógica de aprobación y comisiones.</p>
 
-  <h2>Etapas del pipeline</h2>
+  <div class="cfg-grid">
+  <section class="cfg-sec">
+  <h2><span class="cfg-ic">${ICONS.pipeline}</span>Etapas del pipeline</h2>
   <div class="card">
     ${etapas.map((e, i) => `
     <div class="cfg-row">
       <form method="post" action="${info.base}/config/etapas/${e.id}" class="cfg-inline">
         <input type="hidden" name="accion" value="renombrar">
         <input name="nombre" value="${esc(e.nombre)}">
-        <button class="btn secondary small">Renombrar</button>
+        <button class="btn secondary small btn-ic" title="Renombrar" aria-label="Renombrar">${IC24('<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>')}</button>
       </form>
-      <form method="post" action="${info.base}/config/etapas/${e.id}" style="display:inline"><input type="hidden" name="accion" value="subir"><button class="btn secondary small" ${i === 0 ? 'disabled' : ''}>↑</button></form>
-      <form method="post" action="${info.base}/config/etapas/${e.id}" style="display:inline"><input type="hidden" name="accion" value="bajar"><button class="btn secondary small" ${i === etapas.length - 1 ? 'disabled' : ''}>↓</button></form>
-      <form method="post" action="${info.base}/config/etapas/${e.id}" style="display:inline" onsubmit="return confirm('¿Borrar la etapa ${esc(e.nombre)}?')"><input type="hidden" name="accion" value="borrar"><button class="btn danger small">Borrar</button></form>
+      <form method="post" action="${info.base}/config/etapas/${e.id}" style="display:inline"><input type="hidden" name="accion" value="subir"><button class="btn secondary small btn-ic" title="Subir" ${i === 0 ? 'disabled' : ''}>${IC24('<path d="m18 15-6-6-6 6"/>')}</button></form>
+      <form method="post" action="${info.base}/config/etapas/${e.id}" style="display:inline"><input type="hidden" name="accion" value="bajar"><button class="btn secondary small btn-ic" title="Bajar" ${i === etapas.length - 1 ? 'disabled' : ''}>${IC24('<path d="m6 9 6 6 6-6"/>')}</button></form>
+      <form method="post" action="${info.base}/config/etapas/${e.id}" style="display:inline" onsubmit="return confirm('¿Borrar la etapa ${esc(e.nombre)}?')"><input type="hidden" name="accion" value="borrar"><button class="btn danger small btn-ic" title="Borrar" aria-label="Borrar">${IC24('<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>')}</button></form>
     </div>`).join('')}
     <div class="cfg-row"><span class="chip" style="background:#3E9B57">Ganado</span><span class="chip" style="background:#C05450">Perdido</span><span class="muted small">— fijas (lógica de aprobación)</span></div>
     <form method="post" action="${info.base}/config/etapas" class="cfg-inline" style="margin-top:.6rem">
@@ -4518,7 +4595,9 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
     </form>
   </div>
 
-  <h2>Campos de la carga diaria</h2>
+  </section>
+  <section class="cfg-sec">
+  <h2><span class="cfg-ic">${ICONS.actividad}</span>Campos de la carga diaria</h2>
   <div class="card">
     <p class="small muted">Cada campo aparece en la actividad diaria del vendedor y como métrica disponible en los objetivos. Un campo <strong>con fórmula</strong> no se carga a mano: se calcula a partir de otros campos y aparece marcado con <span class="calc-mark">Σ</span> en la actividad, el dashboard, el ranking y los objetivos.</p>
     ${err === 'campo-en-formula' ? `<div class="flash bad">No se puede borrar «${esc(fx.nombre)}»: lo usa la fórmula de «${esc(fx.por)}». Corregí esa fórmula primero.</div>` : ''}
@@ -4527,9 +4606,9 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
       <form method="post" action="${info.base}/config/campos/${c.id}" class="cfg-inline">
         <input type="hidden" name="accion" value="renombrar">
         <input name="label" value="${esc(c.label)}">
-        <button class="btn secondary small">Renombrar</button>
+        <button class="btn secondary small btn-ic" title="Renombrar" aria-label="Renombrar">${IC24('<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>')}</button>
       </form>
-      <form method="post" action="${info.base}/config/campos/${c.id}" style="display:inline" onsubmit="return confirm('¿Borrar el campo ${esc(c.label)}? ${c.formula ? 'Deja de calcularse.' : 'Los datos históricos dejan de mostrarse.'}')"><input type="hidden" name="accion" value="borrar"><button class="btn danger small">Borrar</button></form>
+      <form method="post" action="${info.base}/config/campos/${c.id}" style="display:inline" onsubmit="return confirm('¿Borrar el campo ${esc(c.label)}? ${c.formula ? 'Deja de calcularse.' : 'Los datos históricos dejan de mostrarse.'}')"><input type="hidden" name="accion" value="borrar"><button class="btn danger small btn-ic" title="Borrar" aria-label="Borrar">${IC24('<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>')}</button></form>
     </div>
     ${c.formula ? `
     <form method="post" action="${info.base}/config/campos/${c.id}" class="fx-edit">
@@ -4555,6 +4634,7 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
       </div>
     </form>
   </div>
+  </section>
   <script>
   (function () {
     var VARS = ${JSON.stringify(campos.map((c) => c.label)).replace(/</g, '\\u003c')};
@@ -4667,7 +4747,8 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
   })();
   </script>
 
-  <h2>Carga de actividad</h2>
+  <section class="cfg-sec">
+  <h2><span class="cfg-ic">${ICONS.agenda}</span>Carga de actividad</h2>
   <div class="card">
     <p class="small muted">Cuántos días para atrás puede cargar o corregir su actividad un vendedor (el administrador no tiene límite). Con 0, solo puede cargar el día de hoy.</p>
     <form method="post" action="${info.base}/config/actividad" class="perm-row">
@@ -4676,7 +4757,9 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
     </form>
   </div>
 
-  <h2>Toma de leads inactivas</h2>
+  </section>
+  <section class="cfg-sec">
+  <h2><span class="cfg-ic">${IC24('<path d="M12 22a10 10 0 1 1 10-10"/><path d="M12 6v6l4 2"/><path d="m16 20 2 2 4-4"/>')}</span>Toma de leads inactivas</h2>
   <div class="card">
     <p class="small muted">Si está activa, toda lead que pase la cantidad de horas configurada <strong>sin actividad</strong> (sin cambio de etapa, sin notas y sin ediciones) queda liberada: su tarjeta titila en rojo en el pipeline y cualquier vendedor puede tomarla (el dueño anterior recibe una notificación y el contador arranca de cero para el nuevo). Los vendedores también pueden traspasarse leads entre sí desde la ficha, esté esto activo o no.</p>
     <form method="post" action="${info.base}/config/robo" class="perm-row">
@@ -4687,8 +4770,12 @@ function panelConfigPage({ user, etapas, campos, err, errEtapa, errN = 0, info, 
     ${robo && robo.activo ? `<p class="caption">Activo: las leads con más de <strong>${robo.horas} horas</strong> sin actividad están liberadas. Cualquier trabajo real sobre la lead (nota, edición o cambio de etapa) reinicia su contador.</p>` : '<p class="caption">Desactivado: nadie puede tomar leads ajenas (el traspaso voluntario sigue disponible).</p>'}
   </div>
 
-  <h2>Campañas de ${esc(info.nombre)}</h2>
-  ${campanasSection(campanas, info.base + '/campanas')}`
+  </section>
+  <section class="cfg-sec">
+  <h2><span class="cfg-ic">${IC24('<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>')}</span>Campañas de ${esc(info.nombre)}</h2>
+  ${campanasSection(campanas, info.base + '/campanas')}
+  </section>
+  </div>`
   });
 }
 
@@ -4928,7 +5015,7 @@ function campusQuizPage({ user, item, preguntas, esAdmin, mediaOk, mejor, nota }
     ${preguntas.length ? preguntas.map((q, i) => `
     <div class="cfg-row" style="display:block">
       <div class="small" style="display:flex;gap:.6rem;align-items:baseline"><strong style="flex:1">${i + 1}. ${esc(q.pregunta)}</strong>
-        <form method="post" action="/campus/quiz/preguntas/${q.id}/borrar" onsubmit="return confirm('¿Borrar esta pregunta?')" style="display:inline"><button class="btn danger small">Borrar</button></form>
+        <form method="post" action="/campus/quiz/preguntas/${q.id}/borrar" onsubmit="return confirm('¿Borrar esta pregunta?')" style="display:inline"><button class="btn danger small btn-ic" title="Borrar" aria-label="Borrar">${IC24('<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>')}</button></form>
       </div>
       <div class="small muted" style="margin-top:.15rem">${q.opciones.map((op, j) => `${j === q.correcta ? '<strong style="color:#2F7D4F">✓ ' + esc(op) + '</strong>' : esc(op)}`).join(' · ')}</div>
     </div>`).join('') : '<p class="muted small" style="margin:0">Sin preguntas todavía — agregá la primera abajo.</p>'}
