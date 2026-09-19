@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.1.3',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'mejora', texto: 'WhatsApp a pantalla completa: la bandeja ahora aprovecha todo el ancho del monitor (lista más generosa + chat amplio), sin el título ni el cartel "solo admins · prueba" ni los textos explicativos — más limpia e intuitiva. MiniJuan ya no flota sobre el chat.' },
+    ],
+  },
+  {
     version: '3.1.2',
     fecha: '2026-09-18',
     cambios: [

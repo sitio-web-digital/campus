@@ -1388,7 +1388,11 @@ body.login-bg .wrap { max-width:none; padding:0; }
 .cl-lista .chip { flex-shrink:0; }
 
 /* ---------- WhatsApp: bandeja ---------- */
-.wa-cont { display:grid; grid-template-columns:21rem minmax(0, 1fr); border:1px solid var(--line); border-radius:16px; overflow:hidden; background:var(--surface); box-shadow:var(--sh-lg); height:calc(100vh - 7.6rem); height:calc(100dvh - 7.6rem); min-height:24rem; }
+.wa-cont { display:grid; grid-template-columns:23rem minmax(0, 1fr); border:1px solid var(--line); border-radius:16px; overflow:hidden; background:var(--surface); box-shadow:var(--sh-lg); height:calc(100vh - 5.6rem); height:calc(100dvh - 5.6rem); min-height:24rem; }
+/* la bandeja usa TODO el ancho de la pantalla */
+body.wa-full .wrap { max-width:none; padding:0.9rem 1.1rem 0.9rem; }
+body.wa-full .mj { display:none; } /* MiniJuan no flota sobre el chat */
+body.wa-full .wrap > * { animation:none; }
 .wa-lista { border-right:1px solid var(--line); overflow-y:auto; background:var(--surface); min-height:0; }
 .wa-lista-head { display:flex; align-items:center; gap:.5rem; padding:.8rem .9rem; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--surface); z-index:2; }
 .wa-lista-head strong { font-size:1rem; }
@@ -5507,8 +5511,7 @@ function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads
   const chat = !conv ? `
     <div class="wa-vacio">
       <div class="wa-vacio-ico">💬</div>
-      <p><strong>${convs.length ? 'Elegí una conversación' : 'Todavía no entró ningún mensaje'}</strong></p>
-      <p class="muted small">${convs.length ? 'Tocá una conversación de la lista para abrir el chat.' : 'Cuando alguien le escriba al WhatsApp de la empresa, aparece acá y te llega una notificación.'}</p>
+      <p class="muted">${convs.length ? 'Elegí una conversación' : 'Cuando escriban al WhatsApp de la empresa, aparece acá'}</p>
     </div>` : `
     <header class="wa-head">
       <a class="wa-volver" href="/whatsapp" aria-label="Volver">←</a>
@@ -5542,13 +5545,12 @@ function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads
       <textarea name="texto" rows="1" required placeholder="Escribí un mensaje"></textarea>
       <button class="wa-enviar" aria-label="Enviar" title="Enviar (Enter)">➤</button>
     </form>` : `
-    <div class="wa-cerrada">⏳ <strong>Ventana de 24 hs vencida.</strong> Meta solo permite responder libre dentro de las 24 hs del último mensaje del cliente — las plantillas para reabrir llegan en la próxima etapa.</div>`}`;
+    <div class="wa-cerrada">⏳ Ventana de 24 hs vencida — se reabre cuando el cliente vuelva a escribir.</div>`}`;
 
   const body = `
   ${configurado ? '' : `<div class="flash bad">Falta configurar la conexión con Meta: definí <code>WHATSAPP_TOKEN</code> y <code>WHATSAPP_PHONE_ID</code> en el .env del servidor.</div>`}
   <div class="wa-cont ${conv ? 'con-chat' : ''}">
     <aside class="wa-lista">
-      <div class="wa-lista-head"><strong>WhatsApp</strong><span class="wa-mini-chip">solo admins · prueba</span></div>
       ${lista || '<p class="muted small" style="padding:1rem">Sin conversaciones todavía.</p>'}
     </aside>
     <section class="wa-chat">${chat}</section>
