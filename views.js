@@ -594,6 +594,16 @@ ${user ? `
 }
 
 const CSS = `
+/* Tipografías del campus: Space Grotesk (títulos y navegación) + Manrope (cuerpo) — servidas localmente */
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 500; font-display: swap; src: url(/fonts/space-grotesk-500.woff2) format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 600; font-display: swap; src: url(/fonts/space-grotesk-600.woff2) format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 700; font-display: swap; src: url(/fonts/space-grotesk-700.woff2) format('woff2'); }
+@font-face { font-family: 'Manrope'; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/manrope-400.woff2) format('woff2'); }
+@font-face { font-family: 'Manrope'; font-style: normal; font-weight: 500; font-display: swap; src: url(/fonts/manrope-500.woff2) format('woff2'); }
+@font-face { font-family: 'Manrope'; font-style: normal; font-weight: 600; font-display: swap; src: url(/fonts/manrope-600.woff2) format('woff2'); }
+@font-face { font-family: 'Manrope'; font-style: normal; font-weight: 700; font-display: swap; src: url(/fonts/manrope-700.woff2) format('woff2'); }
+@font-face { font-family: 'Manrope'; font-style: normal; font-weight: 800; font-display: swap; src: url(/fonts/manrope-800.woff2) format('woff2'); }
+
 /* Montserrat: la tipografía del campus (servida localmente desde /fonts) */
 @font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/montserrat-400.woff2) format('woff2'); }
 @font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 500; font-display: swap; src: url(/fonts/montserrat-500.woff2) format('woff2'); }
@@ -738,8 +748,8 @@ const CSS = `
 html { -webkit-text-size-adjust:100%; }
 body {
   margin:0; background:var(--bg); color:var(--ink); overflow-x:hidden;
-  font:var(--fs)/1.55 "Montserrat","IBM Plex Sans","Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
-  letter-spacing:-.008em;
+  font:var(--fs)/1.6 "Manrope","IBM Plex Sans","Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+  letter-spacing:-.004em;
   -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
 }
 .wrap { max-width:76rem; margin:0 auto; padding:1.1rem 1.25rem 5.5rem; }
@@ -1543,24 +1553,25 @@ html.dark .wa-autor { color:#6FCF97; }
    queda claro en navy corporativo.
    ========================================================================== */
 html.dark {
-  --bg:#12171D; --surface:#181F27; --surface2:#212A33; --surface3:#151B22;
-  --ink:#D6DEE6; --muted:#98A4B0; --faint:#76828E;
-  --chrome:#0F151B; --chrome-line:#0A0F14;
-  --accent:#17786F; --accent-ink:#1E8E82; --accent-soft:#16302D;
-  --role:#57B8AB; --role-soft:#16302D;
-  --line:#242D37; --line2:#33404C;
-  --ok:#5AA97A; --ok-soft:#182A20;
-  --bad:#D6706B; --bad-soft:#2E1C1B;
-  --warn:#C6A45A; --warn-soft:#2A2416;
-  --sh:none;
-  --sh-md:0 2px 10px rgba(0,0,0,.35);
-  --sh-lg:0 16px 40px rgba(0,0,0,.5);
+  /* grafito azul profundo, acento esmeralda frío: paleta de herramienta profesional */
+  --bg:#0B0E13; --surface:#11151D; --surface2:#181E29; --surface3:#0E1219;
+  --ink:#E7ECF3; --muted:#9AA6B6; --faint:#6C7787;
+  --chrome:#080B10; --chrome-line:#05070A;
+  --accent:#1FA588; --accent-ink:#4ECDB0; --accent-soft:rgba(31,165,136,.12);
+  --role:#4ECDB0; --role-soft:rgba(31,165,136,.12);
+  --line:#1D242F; --line2:#2B3543;
+  --ok:#4FBE86; --ok-soft:rgba(79,190,134,.12);
+  --bad:#E2726C; --bad-soft:rgba(226,114,108,.1);
+  --warn:#D9B35E; --warn-soft:rgba(217,179,94,.1);
+  --sh:0 1px 2px rgba(0,0,0,.4);
+  --sh-md:0 4px 14px rgba(0,0,0,.45);
+  --sh-lg:0 18px 48px rgba(0,0,0,.6);
   color-scheme:dark;
 }
 html.dark body { background:var(--bg); color:var(--ink); }
 /* el texto fino brilla menos en oscuro: se afina medio grado */
-html.dark h1, html.dark h2, html.dark h3 { color:#E3EAF1; font-weight:600; }
-html.dark strong { color:#E3EAF1; font-weight:600; }
+html.dark h1, html.dark h2, html.dark h3 { color:#F2F6FA; }
+html.dark strong { color:#F2F6FA; font-weight:700; }
 
 html.dark .card, html.dark .tile, html.dark .tablewrap, html.dark .kcard, html.dark .hub-card { background:var(--surface); border-color:var(--line); }
 html.dark .tile .v { color:#E8EFF5; }
@@ -1871,10 +1882,12 @@ html.dark .hm-4 { background:#57B8AB; }
 .noti .noti-head strong { font-size:.82rem; }
 .noti .noti-head .f { margin:0; flex-shrink:0; margin-left:auto; }
 
-/* ================= RESTYLE 3.1 — capa visual (Montserrat, profundidad y micro-interacciones) ================= */
-h1 { font-size:1.5rem; font-weight:800; letter-spacing:-.028em; }
-h2 { font-weight:700; letter-spacing:-.018em; }
-h3 { font-weight:700; letter-spacing:-.014em; }
+/* ================= RESTYLE — capa visual (profundidad y micro-interacciones) ================= */
+h1, h2, h3, h4, .brand-txt, .brand-mini, .btn, .nav-links a span, .nav-mas-btn span, .nav-user, .chip, .soon-chip, .nuevo-chip {
+  font-family:"Space Grotesk","Manrope",sans-serif; }
+h1 { font-size:1.52rem; font-weight:700; letter-spacing:-.025em; }
+h2 { font-weight:700; letter-spacing:-.015em; }
+h3 { font-weight:600; letter-spacing:-.012em; }
 
 /* botones con vida */
 .btn { border-radius:11px; font-weight:600; transition:transform .14s ease, box-shadow .14s ease, background .14s, filter .14s, border-color .14s; }
@@ -1911,10 +1924,19 @@ html.dark .tablewrap tbody tr:hover { background:rgba(255,255,255,.035); }
   nav.nav { background:linear-gradient(180deg, rgba(27,36,48,.97), rgba(24,32,43,.97)); backdrop-filter:saturate(1.25) blur(7px); }
 }
 
-/* modales: blur atrás y pop al abrir */
-.modal-back { backdrop-filter:blur(3px); }
-.modal { animation:modal-pop .18s ease; }
-@keyframes modal-pop { from { opacity:0; transform:translateY(10px) scale(.98); } }
+/* modales: blur atrás, fade del fondo y pop con resorte al abrir */
+.modal-back { backdrop-filter:blur(4px); animation:fondo-entra .2s ease; }
+@keyframes fondo-entra { from { opacity:0; } }
+.modal { animation:modal-pop .28s cubic-bezier(.2, 1.1, .35, 1.05); transform-origin:center 30%; }
+@keyframes modal-pop { 0% { opacity:0; transform:translateY(16px) scale(.96); } 100% { opacity:1; transform:none; } }
+
+/* despliegues (menú de paneles, usuario, notificaciones, "Más") con entrada definida */
+@keyframes menu-despliega { from { opacity:0; transform:translateY(-8px) scale(.97); } to { opacity:1; transform:none; } }
+details[open] > .sys-menu { animation:menu-despliega .22s cubic-bezier(.2, .9, .3, 1.05); transform-origin:top left; }
+details[open] > .umenu-pop { animation:menu-despliega .2s cubic-bezier(.2, .9, .3, 1.05); transform-origin:top right; }
+.noti-pop { animation:menu-despliega .2s cubic-bezier(.2, .9, .3, 1.05); transform-origin:top right; }
+@keyframes menu-sube { from { opacity:0; transform:translateY(10px) scale(.97); } to { opacity:1; transform:none; } }
+.nav-mas.abierto .nav-extra { animation:menu-sube .22s cubic-bezier(.2, .9, .3, 1.05); transform-origin:bottom center; }
 
 /* entrada suave del contenido (una sola vez por navegación) */
 @keyframes pagina-entra { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:none; } }
@@ -2023,7 +2045,7 @@ html.dark .cfg-ic { background:rgba(53,179,154,.14); color:#5FD3B8; }
 
 /* accesibilidad: sin animaciones si el sistema lo pide */
 @media (prefers-reduced-motion: reduce) {
-  .wrap > *, .hub-grid > *, .modal, #barraCarga::before { animation:none !important; }
+  .wrap > *, .hub-grid > *, .modal, .modal-back, #barraCarga::before, details[open] > .sys-menu, details[open] > .umenu-pop, .noti-pop, .nav-mas.abierto .nav-extra { animation:none !important; }
   .btn, .hub-card, .hub-card .hc-ic { transition:none !important; }
 }
 

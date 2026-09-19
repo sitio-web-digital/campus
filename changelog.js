@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.2.0',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'nuevo', texto: '🎨 Identidad visual renovada: tipografías Space Grotesk (títulos, botones y navegación — la letra de las herramientas administrativas modernas) + Manrope (textos), ambas servidas desde nuestro propio servidor.' },
+      { tipo: 'nuevo', texto: 'Modo oscuro con paleta nueva: grafito azul profundo con acento esmeralda frío — más contraste, más profundidad y un aire único de herramienta profesional.' },
+      { tipo: 'mejora', texto: 'Animaciones definidas al desplegar: el menú de paneles, el menú de usuario, las notificaciones y el "Más" del celular entran con un deslizamiento con resorte, y las ventanas modales aparecen con fondo difuminado y un pop suave.' },
+    ],
+  },
+  {
     version: '3.1.6',
     fecha: '2026-09-18',
     cambios: [
