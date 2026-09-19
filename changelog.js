@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.2.1',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'mejora', texto: 'Los esqueletos de carga ahora calcan la maqueta real de cada sección: el Pipeline carga con su tablero de columnas, filtros y tarjetas; la Agenda con su columna de horas, días y bloques de reuniones; Estadísticas con KPIs, embudo y tabla; el Inicio con sus tarjetas de ícono y texto; las fichas con sus pares de campos; Clientes, Config, Comunicación y las tablas, cada una con su forma exacta.' },
+    ],
+  },
+  {
     version: '3.2.0',
     fecha: '2026-09-18',
     cambios: [

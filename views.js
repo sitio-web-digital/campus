@@ -370,28 +370,77 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
     if (document.body.classList.contains('wa-full')) return;
     var esq = document.createElement('div');
     esq.id = 'esqueleto';
-    var B = function (n, cls) { var h = ''; for (var i = 0; i < n; i++) h += '<div class="esq ' + cls + '"></div>'; return h; };
     var ruta = location.pathname;
-    var titulo = '<div class="esq esq-titulo"></div>';
-    var toolbar = '<div class="esq esq-toolbar"></div>';
+    // piezas: L = bloque brillante, H = fila, V = columna, G = grilla, R = repetir
+    var L = function (st) { return '<div class="esq" style="' + st + '"></div>'; };
+    var H = function (st, inner) { return '<div class="esq-h" style="' + (st || '') + '">' + inner + '</div>'; };
+    var V = function (st, inner) { return '<div class="esq-v" style="' + (st || '') + '">' + inner + '</div>'; };
+    var G = function (cols, gap, inner) { return '<div class="esq-grid" style="grid-template-columns:' + cols + ';gap:' + gap + '">' + inner + '</div>'; };
+    var R = function (n, f) { var h = ''; for (var i = 0; i < n; i++) h += f(i); return h; };
+    var titulo = L('height:1.9rem;width:13rem;max-width:55%');
     var cuerpo;
     if (ruta.indexOf('/pipeline') >= 0) {
-      var col = '<div class="esq-col"><div class="esq esq-colhead"></div>' + B(3, 'esq-card') + '</div>';
-      cuerpo = titulo + toolbar + '<div class="esq-kanban">' + col + col + col + col + col + '</div>';
+      // toolbar real: segs Mios/Todos + Tablero/Cerrados + buscador + boton verde a la derecha; tablero de columnas
+      var alturas = ['5.6rem', '4.4rem', '6.4rem', '5rem'];
+      cuerpo = H('flex-wrap:wrap', L('height:2.2rem;width:8.5rem;border-radius:8px') + L('height:2.2rem;width:9.5rem;border-radius:8px') + L('height:2.2rem;flex:1;min-width:10rem;max-width:19rem;border-radius:8px') + L('height:2.2rem;width:5rem;border-radius:8px') + '<span style="flex:1"></span>' + L('height:2.3rem;width:8rem;border-radius:10px')) +
+        '<div style="overflow:hidden">' + G('repeat(7, minmax(11.5rem, 1fr))', '.7rem', R(7, function (i) {
+          return V('gap:.55rem', H('', L('height:.95rem;flex:1;max-width:70%') + L('height:1.1rem;width:1.6rem;border-radius:999px')) + R(2 + (i % 3), function (j) {
+            return '<div class="esq" style="height:' + alturas[(i + j) % 4] + ';border-radius:12px"></div>';
+          }));
+        })) + '</div>';
     } else if (ruta.indexOf('/agenda') === 0) {
-      cuerpo = titulo + toolbar + '<div class="esq-cal">' + B(7, 'esq-caldia') + '</div>';
-    } else if (ruta.indexOf('/dashboard') === 0 || ruta.indexOf('/objetivos') === 0) {
-      cuerpo = titulo + '<div class="esq-fila">' + B(3, 'esq-tile') + '</div><div class="esq esq-grafico"></div>' + B(3, 'esq-fila-t');
+      // toolbar Dia/Semana/Mes + ‹ Hoy ›; grilla: horas a la izquierda + 7 dias con bloques de reunion
+      cuerpo = H('', titulo + '<span style="flex:1"></span>' + L('height:2.2rem;width:11rem;border-radius:8px') + L('height:2.2rem;width:8rem;border-radius:8px')) +
+        G('2.4rem repeat(7, 1fr)', '.45rem',
+          V('gap:2rem;padding-top:2.4rem', R(7, function () { return L('height:.6rem;width:1.9rem'); })) +
+          R(7, function (i) {
+            var b1 = '<div class="esq" style="position:absolute;left:0;right:0;top:' + ((14 + i * 11) % 58) + '%;height:3.4rem;border-radius:10px"></div>';
+            var b2 = (i % 2) ? '<div class="esq" style="position:absolute;left:0;right:0;top:' + ((58 + i * 9) % 78) + '%;height:2.4rem;border-radius:10px;opacity:.65"></div>' : '';
+            return V('gap:.45rem', L('height:1.4rem;border-radius:8px') + '<div style="position:relative;min-height:17.5rem;border-radius:10px;background:var(--surface2);opacity:.35"></div>'.replace('></div>', '>' + b1 + b2 + '</div>'));
+          }));
+    } else if (ruta.indexOf('/dashboard') === 0) {
+      // Estadisticas: toolbar + 4 KPIs (numero grande + leyenda) + embudo decreciente + tabla
+      cuerpo = H('', titulo + '<span style="flex:1"></span>' + L('height:2.1rem;width:12rem;border-radius:8px')) +
+        G('repeat(4, 1fr)', '1rem', R(4, function () { return V('gap:.5rem;border:1px solid var(--line);border-radius:14px;padding:1rem', L('height:1.7rem;width:4.5rem') + L('height:.8rem;width:70%')); })) +
+        V('gap:.55rem;border:1px solid var(--line);border-radius:15px;padding:1.1rem', R(5, function (i) { return H('', L('height:.8rem;width:6rem') + L('height:1.35rem;flex:0 0 ' + (88 - i * 17) + '%;border-radius:999px') ); })) +
+        V('gap:.5rem', R(4, function () { return L('height:2.4rem;border-radius:10px'); }));
+    } else if (ruta.indexOf('/objetivos') === 0) {
+      // Metas: filas de progreso label + barra + valor
+      cuerpo = titulo + G('repeat(2, 1fr)', '1rem', R(2, function () { return V('gap:.5rem;border:1px solid var(--line);border-radius:14px;padding:1rem', L('height:1.5rem;width:5rem') + L('height:.8rem;width:65%')); })) +
+        V('gap:.85rem;border:1px solid var(--line);border-radius:15px;padding:1.2rem', R(5, function (i) { return H('', L('height:.85rem;width:8rem') + L('height:.95rem;flex:1;border-radius:999px;opacity:.' + (9 - i)) + L('height:.85rem;width:3rem')); }));
     } else if (ruta === '/hub' || ruta === '/') {
-      cuerpo = '<div class="esq esq-titulo" style="margin:1.5rem auto .5rem"></div><div class="esq-cards">' + B(6, 'esq-hubcard') + '</div>';
+      // inicio: saludo centrado + tarjetas con icono cuadrado + titulo + 2 lineas
+      cuerpo = V('align-items:center;gap:.6rem;margin:1.4rem 0 1rem', L('height:1.9rem;width:17rem;max-width:70%') + L('height:.9rem;width:9rem')) +
+        G('repeat(3, minmax(0, 1fr))', '1rem', R(6, function () {
+          return V('gap:.6rem;border:1px solid var(--line);border-radius:16px;padding:1.1rem', L('height:2.6rem;width:2.6rem;border-radius:10px') + L('height:1.05rem;width:60%') + L('height:.75rem;width:92%') + L('height:.75rem;width:74%'));
+        }));
     } else if (ruta.indexOf('/clientes') === 0) {
-      cuerpo = titulo + toolbar + '<div class="esq-cards">' + B(6, 'esq-hubcard') + '</div>';
-    } else if (ruta.indexOf('/config') >= 0 || ruta.indexOf('/admin/comunicacion') === 0 || ruta.indexOf('/deals/') === 0) {
-      cuerpo = titulo + '<div class="esq-fila dos">' + B(2, 'esq-panel') + '</div>' + B(2, 'esq-fila-t');
+      cuerpo = H('', titulo + '<span style="flex:1"></span>' + L('height:2.2rem;width:16rem;border-radius:8px')) +
+        H('flex-wrap:wrap', L('height:2rem;width:13rem;border-radius:8px') + L('height:2rem;width:9rem;border-radius:8px') + L('height:2rem;flex:1;max-width:14rem;border-radius:8px')) +
+        G('repeat(3, minmax(0, 1fr))', '1rem', R(6, function () {
+          return V('gap:.55rem;border:1px solid var(--line);border-radius:14px;padding:1rem', H('', L('height:1.05rem;flex:1;max-width:65%') + L('height:1.2rem;width:3.4rem;border-radius:999px')) + L('height:.75rem;width:85%') + L('height:.75rem;width:60%') + H('margin-top:.4rem', L('height:1.9rem;width:6rem;border-radius:9px') + L('height:1.9rem;width:6rem;border-radius:9px')));
+        }));
+    } else if (ruta.indexOf('/deals/') === 0) {
+      // ficha de lead: pares label+input en dos columnas + historial
+      cuerpo = H('', titulo + '<span style="flex:1"></span>' + L('height:2.2rem;width:7rem;border-radius:9px')) +
+        '<div style="border:1px solid var(--line);border-radius:15px;padding:1.2rem">' +
+        G('repeat(2, 1fr)', '.9rem 1.2rem', R(8, function () { return V('gap:.35rem', L('height:.7rem;width:5.5rem') + L('height:2.15rem;border-radius:9px')); })) + '</div>' +
+        L('height:1.2rem;width:8rem;margin-top:.4rem') + V('gap:.5rem', R(3, function () { return L('height:3rem;border-radius:10px'); }));
+    } else if (ruta.indexOf('/config') >= 0 || ruta.indexOf('/admin/comunicacion') === 0) {
+      // dos columnas de tarjetas con filas input + botones de icono
+      var tarjeta = function (filas) {
+        return V('gap:.6rem', H('', L('height:1.9rem;width:1.9rem;border-radius:9px') + L('height:1.1rem;width:11rem')) +
+          '<div style="border:1px solid var(--line);border-radius:15px;padding:1rem">' + V('gap:.55rem', R(filas, function () { return H('', L('height:2.05rem;flex:1;border-radius:9px') + L('height:2.05rem;width:2.05rem;border-radius:9px') + L('height:2.05rem;width:2.05rem;border-radius:9px')); })) + '</div>');
+      };
+      cuerpo = titulo + L('height:.8rem;width:70%;max-width:34rem') + G('repeat(2, minmax(0, 1fr))', '1.1rem', tarjeta(6) + tarjeta(4));
     } else if (ruta.indexOf('/actividad') === 0 || ruta.indexOf('/contactos') === 0 || ruta.indexOf('/admin') === 0 || ruta.indexOf('/notificaciones') === 0) {
-      cuerpo = titulo + toolbar + '<div class="esq-tabla">' + B(7, 'esq-fila-t') + '</div>';
+      // tablas con avatar + nombre + dato
+      cuerpo = H('', titulo + '<span style="flex:1"></span>' + L('height:2.1rem;width:10rem;border-radius:8px')) +
+        '<div style="border:1px solid var(--line);border-radius:14px;padding:.9rem">' +
+        H('margin-bottom:.7rem', L('height:.7rem;width:8rem') + '<span style="flex:1"></span>' + L('height:.7rem;width:5rem') + L('height:.7rem;width:4rem')) +
+        V('gap:.65rem', R(7, function () { return H('', L('height:1.7rem;width:1.7rem;border-radius:50%') + L('height:.9rem;flex:1;max-width:14rem') + '<span style="flex:1"></span>' + L('height:.9rem;width:4.5rem') + L('height:.9rem;width:3.5rem')); })) + '</div>';
     } else {
-      cuerpo = titulo + '<div class="esq-fila">' + B(3, 'esq-tile') + '</div><div class="esq esq-bloque"></div><div class="esq esq-linea"></div>';
+      cuerpo = titulo + G('repeat(3, 1fr)', '1rem', R(3, function () { return L('height:5rem;border-radius:14px'); })) + L('height:15rem;border-radius:15px') + L('height:.95rem;width:70%');
     }
     esq.innerHTML = '<div class="esq-centro">' + cuerpo + '</div>';
     document.body.appendChild(esq);
@@ -1967,6 +2016,13 @@ html.dark .esq { background:rgba(255,255,255,.06); }
 html.dark .esq::after { background:linear-gradient(90deg, transparent, rgba(255,255,255,.09), transparent); }
 @keyframes esq-brillo { to { transform:translateX(100%); } }
 .esq-titulo { height:1.9rem; width:14rem; max-width:60%; }
+#esqueleto .esq-h { display:flex; gap:.6rem; align-items:center; width:100%; min-width:0; }
+#esqueleto .esq-v { display:flex; flex-direction:column; min-width:0; }
+#esqueleto .esq-grid { display:grid; width:100%; min-width:0; }
+@media (max-width: 860px) {
+  #esqueleto .esq-grid { grid-template-columns:1fr 1fr !important; }
+  #esqueleto .esq-grid > *:nth-child(n+5) { display:none; }
+}
 .esq-toolbar { height:2.3rem; width:26rem; max-width:92%; }
 .esq-kanban { display:grid; grid-template-columns:repeat(5, 1fr); gap:.8rem; }
 .esq-col { display:flex; flex-direction:column; gap:.6rem; min-width:0; }
