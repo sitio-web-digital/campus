@@ -370,12 +370,30 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
     if (document.body.classList.contains('wa-full')) return;
     var esq = document.createElement('div');
     esq.id = 'esqueleto';
-    esq.innerHTML = '<div class="esq-centro">' +
-      '<div class="esq esq-titulo"></div>' +
-      '<div class="esq-fila"><div class="esq esq-tile"></div><div class="esq esq-tile"></div><div class="esq esq-tile"></div></div>' +
-      '<div class="esq esq-bloque"></div>' +
-      '<div class="esq esq-linea"></div>' +
-      '</div>';
+    var B = function (n, cls) { var h = ''; for (var i = 0; i < n; i++) h += '<div class="esq ' + cls + '"></div>'; return h; };
+    var ruta = location.pathname;
+    var titulo = '<div class="esq esq-titulo"></div>';
+    var toolbar = '<div class="esq esq-toolbar"></div>';
+    var cuerpo;
+    if (ruta.indexOf('/pipeline') >= 0) {
+      var col = '<div class="esq-col"><div class="esq esq-colhead"></div>' + B(3, 'esq-card') + '</div>';
+      cuerpo = titulo + toolbar + '<div class="esq-kanban">' + col + col + col + col + col + '</div>';
+    } else if (ruta.indexOf('/agenda') === 0) {
+      cuerpo = titulo + toolbar + '<div class="esq-cal">' + B(7, 'esq-caldia') + '</div>';
+    } else if (ruta.indexOf('/dashboard') === 0 || ruta.indexOf('/objetivos') === 0) {
+      cuerpo = titulo + '<div class="esq-fila">' + B(3, 'esq-tile') + '</div><div class="esq esq-grafico"></div>' + B(3, 'esq-fila-t');
+    } else if (ruta === '/hub' || ruta === '/') {
+      cuerpo = '<div class="esq esq-titulo" style="margin:1.5rem auto .5rem"></div><div class="esq-cards">' + B(6, 'esq-hubcard') + '</div>';
+    } else if (ruta.indexOf('/clientes') === 0) {
+      cuerpo = titulo + toolbar + '<div class="esq-cards">' + B(6, 'esq-hubcard') + '</div>';
+    } else if (ruta.indexOf('/config') >= 0 || ruta.indexOf('/admin/comunicacion') === 0 || ruta.indexOf('/deals/') === 0) {
+      cuerpo = titulo + '<div class="esq-fila dos">' + B(2, 'esq-panel') + '</div>' + B(2, 'esq-fila-t');
+    } else if (ruta.indexOf('/actividad') === 0 || ruta.indexOf('/contactos') === 0 || ruta.indexOf('/admin') === 0 || ruta.indexOf('/notificaciones') === 0) {
+      cuerpo = titulo + toolbar + '<div class="esq-tabla">' + B(7, 'esq-fila-t') + '</div>';
+    } else {
+      cuerpo = titulo + '<div class="esq-fila">' + B(3, 'esq-tile') + '</div><div class="esq esq-bloque"></div><div class="esq esq-linea"></div>';
+    }
+    esq.innerHTML = '<div class="esq-centro">' + cuerpo + '</div>';
     document.body.appendChild(esq);
     var irse = function () {
       setTimeout(function () {
@@ -1923,6 +1941,29 @@ html.dark .esq { background:rgba(255,255,255,.06); }
 html.dark .esq::after { background:linear-gradient(90deg, transparent, rgba(255,255,255,.09), transparent); }
 @keyframes esq-brillo { to { transform:translateX(100%); } }
 .esq-titulo { height:1.9rem; width:14rem; max-width:60%; }
+.esq-toolbar { height:2.3rem; width:26rem; max-width:92%; }
+.esq-kanban { display:grid; grid-template-columns:repeat(5, 1fr); gap:.8rem; }
+.esq-col { display:flex; flex-direction:column; gap:.6rem; min-width:0; }
+.esq-colhead { height:1.5rem; }
+.esq-card { height:4.8rem; }
+.esq-cal { display:grid; grid-template-columns:repeat(7, 1fr); gap:.55rem; flex:1; min-height:18rem; }
+.esq-caldia { border-radius:12px; }
+.esq-tabla { display:flex; flex-direction:column; gap:.5rem; }
+.esq-fila-t { height:2.5rem; }
+.esq-cards { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:1rem; width:100%; max-width:76rem; margin:0 auto; }
+.esq-hubcard { height:9.5rem; border-radius:16px; }
+.esq-grafico { height:13rem; border-radius:15px; }
+.esq-fila.dos { grid-template-columns:1fr 1fr; }
+.esq-panel { height:15rem; border-radius:15px; }
+@media (max-width: 860px) {
+  .esq-kanban { grid-template-columns:repeat(2, 1fr); }
+  .esq-kanban .esq-col:nth-child(n+3) { display:none; }
+  .esq-cal { grid-template-columns:repeat(3, 1fr); }
+  .esq-cal .esq-caldia:nth-child(n+4) { display:none; }
+  .esq-cards { grid-template-columns:1fr; }
+  .esq-cards .esq-hubcard:nth-child(n+4) { display:none; }
+  .esq-fila.dos { grid-template-columns:1fr; }
+}
 .esq-fila { display:grid; grid-template-columns:repeat(3, 1fr); gap:1rem; }
 .esq-tile { height:5.2rem; }
 .esq-bloque { height:16rem; border-radius:15px; }

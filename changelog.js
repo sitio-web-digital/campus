@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.1.5',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'mejora', texto: 'Los esqueletos de carga ahora imitan la forma real de cada sección: columnas de tablero en Pipeline, calendario en Agenda, tabla en Actividad/Contactos/Administración, mosaicos + gráfico en Estadísticas y Metas, grilla de tarjetas en el Inicio y Clientes, y paneles de formulario en Config y las fichas.' },
+    ],
+  },
+  {
     version: '3.1.4',
     fecha: '2026-09-18',
     cambios: [
