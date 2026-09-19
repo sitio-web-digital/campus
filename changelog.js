@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.3.1',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'fix', texto: 'Leads: en escritorio la fila de acciones desbordaba la tarjeta (el selector de panel + Tomar se salían del borde). Ahora WhatsApp, Llamar y descartar van en una fila, y Tomar con su selector en la suya, a lo ancho.' },
+      { tipo: 'mejora', texto: 'El esqueleto del Pipeline ahora está proporcionado: 8 columnas finas con fondo gris y tarjetitas blancas adentro, igual que el tablero real — y en celular, la tira horizontal de columnas.' },
+    ],
+  },
+  {
     version: '3.3.0',
     fecha: '2026-09-18',
     cambios: [

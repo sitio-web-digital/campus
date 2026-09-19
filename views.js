@@ -406,21 +406,21 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
           '</div>';
       }
     } else if (ruta.indexOf('/pipeline') >= 0) {
-      // toolbar real + tablero; en celular el tablero es una tira horizontal de columnas de 228px
-      var alturas = ['5.6rem', '4.4rem', '6.4rem', '5rem'];
+      // tablero como el real: columnas grises finas (8 en escritorio) con tarjetitas blancas adentro
       var colPipe = function (i) {
-        return V('gap:.55rem;min-width:0', H('', L('height:.95rem;flex:1;max-width:70%') + L('height:1.1rem;width:1.6rem;border-radius:999px')) + R(2 + (i % 3), function (j) {
-          return '<div class="esq" style="height:' + alturas[(i + j) % 4] + ';border-radius:12px"></div>';
-        }));
+        var tarjetas = [2, 3, 1, 2, 3, 2, 1, 2][i % 8];
+        return '<div style="background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:.35rem;min-width:0;min-height:10rem;display:flex;flex-direction:column;gap:.35rem;align-self:start">' +
+          H('padding:.2rem .25rem .25rem', L('height:.6rem;flex:1;max-width:5.5rem;border-radius:4px') + '<span style="flex:1"></span>' + L('height:.6rem;width:.8rem;border-radius:4px')) +
+          R(tarjetas, function (j) { return '<div class="esq" style="height:' + (3.2 + ((i + j) % 3) * 0.8) + 'rem;border-radius:8px;background:var(--surface);border:1px solid var(--line)"></div>'; }) +
+          '</div>';
       };
-      if (movil) {
-        cuerpo = H('flex-wrap:wrap;gap:.45rem', L('height:2.2rem;width:7.2rem;border-radius:8px') + L('height:2.2rem;width:8rem;border-radius:8px')) +
-          H('gap:.45rem', L('height:2.2rem;flex:1;border-radius:8px') + L('height:2.3rem;width:6.4rem;border-radius:10px')) +
-          '<div style="overflow:hidden">' + G('repeat(3, 228px)', '.7rem', R(3, colPipe)) + '</div>';
-      } else {
-        cuerpo = H('flex-wrap:wrap', L('height:2.2rem;width:8.5rem;border-radius:8px') + L('height:2.2rem;width:9.5rem;border-radius:8px') + L('height:2.2rem;flex:1;min-width:10rem;max-width:19rem;border-radius:8px') + L('height:2.2rem;width:5rem;border-radius:8px') + '<span style="flex:1"></span>' + L('height:2.3rem;width:8rem;border-radius:10px')) +
-          '<div style="overflow:hidden">' + G('repeat(7, minmax(11.5rem, 1fr))', '.7rem', R(7, colPipe)) + '</div>';
-      }
+      var barraPipe = movil
+        ? H('flex-wrap:wrap;gap:.45rem', L('height:2.2rem;width:7.2rem;border-radius:8px') + L('height:2.2rem;width:8rem;border-radius:8px')) +
+          H('gap:.45rem', L('height:2.2rem;flex:1;border-radius:8px') + L('height:2.3rem;width:6.4rem;border-radius:10px'))
+        : H('flex-wrap:wrap', L('height:2.2rem;width:8.5rem;border-radius:8px') + L('height:2.2rem;width:9.5rem;border-radius:8px') + L('height:2.2rem;flex:1;min-width:10rem;max-width:19rem;border-radius:8px') + L('height:2.2rem;width:5rem;border-radius:8px') + '<span style="flex:1"></span>' + L('height:2.3rem;width:8rem;border-radius:10px'));
+      cuerpo = barraPipe + '<div style="overflow:hidden">' + (movil
+        ? G('repeat(3, 228px)', '.6rem', R(3, colPipe))
+        : G('repeat(8, minmax(0, 1fr))', '.5rem', R(8, colPipe))) + '</div>';
     } else if (ruta.indexOf('/agenda') === 0) {
       // calendario: horas a la izquierda + dias; en celular entran ~3 dias (scroll horizontal)
       var diaCal = function (i) {
@@ -2354,6 +2354,12 @@ html.dark .pc-chip.pc-rating { color:#efc078; }
 .mj-panel { border-radius:12px; }
 .card, .tile { box-shadow:var(--sh); }
 html.dark .col { background:#262525; border-color:var(--line); }
+
+/* leads: acciones sin desborde — WhatsApp/Llamar/descartar en una fila, Tomar en la suya */
+.pc-acciones > form:not(.pc-tomar) { order:4; }
+.pc-tomar { order:5; flex:1 1 100%; justify-content:flex-end; min-width:0; }
+.pc-tomar select { flex:1 1 auto; min-width:0; max-width:none; }
+.pc-tomar .btn { flex-shrink:0; }
 
 `;
 
