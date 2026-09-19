@@ -45,7 +45,7 @@ const ICONS = {
 };
 const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F3459'/%3E%3Ctext x='16' y='21' font-size='12' font-family='Helvetica,Arial' font-weight='bold' fill='white' text-anchor='middle'%3EC4D%3C/text%3E%3C/svg%3E";
 
-const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', developers: 'Panel de Developers', clientes: 'Panel de Clientes', propuestas: 'Generador de Propuestas', whatsapp: 'WhatsApp', hub: 'Campus C4D' };
+const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', developers: 'Panel de Developers', clientes: 'Panel de Leads', propuestas: 'Generador de Propuestas', whatsapp: 'WhatsApp', hub: 'Campus C4D' };
 const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permisos || []).includes(s));
 
 // Simplificación 3.1: sistemas que EXISTEN pero se esconden de la vista de todos
@@ -114,7 +114,7 @@ function sysSwitch(sistema, user) {
       ${sistemaVisible('gondolas') && tieneSistema(user, 'gondolas') ? `<a href="/gondolas/pipeline"><span>Comercial Góndolas</span>${infoPanel('gondolas')}</a>` : ''}
       ${sistemaVisible('estanterias') && tieneSistema(user, 'estanterias') ? `<a href="/estanterias/pipeline"><span>Comercial Estanterías Reforzadas</span>${infoPanel('estanterias')}</a>` : ''}
       ${sistemaVisible('sitioweb') && tieneSistema(user, 'sitioweb') ? `<a href="/sitioweb/pipeline"><span>Comercial SitioWeb Digital</span>${infoPanel('sitioweb')}</a>` : ''}
-      ${tieneSistema(user, 'clientes') ? `<a href="/clientes"><span>Panel de Clientes</span></a>` : ''}
+      ${tieneSistema(user, 'clientes') ? `<a href="/clientes"><span>Panel de Leads</span></a>` : ''}
       ${sistemaVisible('propuestas') && tieneSistema(user, 'propuestas') ? `<a href="/propuestas"><span>Generador de Propuestas</span></a>` : ''}
       ${sistemaVisible('whatsapp') && user && user.role === 'admin' ? `<a href="/whatsapp"><span>WhatsApp</span><span class="soon-chip">Prueba</span></a>` : ''}
       ${sistemaVisible('cobranza') && tieneSistema(user, 'cobranza') ? `<a href="/cobranza"><span>Panel de Cobranza</span>${infoCobranza()}</a>` : ''}
@@ -208,7 +208,21 @@ function miniJuanWidget(user, sistema) {
     hola.hidden = true; burb.classList.remove('mj-salta');
     saludar(); ta.focus();
   }
-  function cerrar() { panel.hidden = true; mini.hidden = false; }
+  function cerrar() { panel.hidden = true; mini.hidden = false; panel.style.top = ''; panel.style.bottom = ''; }
+  // En celular el teclado tapaba el chat: lo acomodamos al viewport visible (iOS no achica el layout).
+  if (window.visualViewport) {
+    var acomodar = function () {
+      if (panel.hidden || !window.matchMedia('(max-width: 640px)').matches) { panel.style.top = ''; panel.style.bottom = ''; return; }
+      var vv = window.visualViewport;
+      var tapado = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      if (tapado > 60) { panel.style.top = '.5rem'; panel.style.bottom = (tapado + 6) + 'px'; }
+      else { panel.style.top = ''; panel.style.bottom = ''; }
+      chat.scrollTop = chat.scrollHeight;
+    };
+    window.visualViewport.addEventListener('resize', acomodar);
+    window.visualViewport.addEventListener('scroll', acomodar);
+    ta.addEventListener('focus', function () { setTimeout(acomodar, 300); });
+  }
   burb.addEventListener('click', abrir);
   document.getElementById('mjCerrar').addEventListener('click', cerrar);
   document.getElementById('mjNueva').addEventListener('click', function () {
@@ -307,8 +321,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="/admin/comunicacion" class="${active === 'comunicacion' ? 'on' : ''}">${ICONS.bell}<span>Comunicación</span></a>
         <a href="/admin/preferencias" class="${active === 'preferencias' ? 'on' : ''}">${ICONS.docs}<span>Preferencias</span></a>`;
   } else if (sistema === 'clientes') {
-    links = `
-        <a href="/clientes" class="${active === 'clientes' ? 'on' : ''}">${ICONS.mapa}<span>Prospectos</span></a>`;
+    links = ''; /* una sola pantalla: no hace falta menú propio */
   } else if (sistema === 'developers') {
     links = `
         <a href="/developers" class="${active === 'developers' ? 'on' : ''}">${IC('<path d="M7 6.5L3.5 10 7 13.5M13 6.5l3.5 3.5-3.5 3.5M11.2 4.5l-2.4 11"/>')}<span>Proyectos</span></a>`;
@@ -353,8 +366,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
   <nav class="nav">
     <div class="nav-inner">
       <span class="brand-row">${sysSwitch(sistema, user)}${bell}${themeBtn}</span>
-      <div class="nav-links">${links}
-      </div>
+      <div class="nav-links">${links}</div>
       ${perfilLink}
     </div>
   </nav>
@@ -482,7 +494,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <script>try{if((localStorage.getItem('c4d-theme-v2')||'dark')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <title>${esc(title)} · Campus C4D</title>
 <link rel="icon" href="${FAVICON}">
@@ -832,6 +844,7 @@ a:hover { color:var(--accent-ink); text-decoration:underline; }
 .brand-txt .sub { font-size:.55rem; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:rgba(255,255,255,.5); }
 
 .nav-links { display:flex; gap:.12rem; flex-wrap:wrap; row-gap:.1rem; max-width:100%; justify-content:flex-end; }
+.nav-links:empty { display:none; }
 /* En escritorio el grupo "Más" no existe como tal: sus opciones se ven directo en la fila. */
 .nav-mas, .nav-mas .nav-extra { display:contents; }
 .nav-mas-btn { display:none; }
@@ -2084,6 +2097,50 @@ html.dark * { scrollbar-color:rgba(255,255,255,.18) transparent; }
 html.dark *::-webkit-scrollbar-thumb { background:rgba(255,255,255,.15); }
 html.dark *::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.3); }
 
+/* leads: el escáner se distingue de las tarjetas */
+.pc-scan { background:linear-gradient(180deg, var(--accent-soft), transparent 130%), var(--surface); border:1px solid rgba(31,165,136,.3); border-left:4px solid var(--accent); }
+.pc-scan-t { display:flex; align-items:center; gap:.5rem; margin-bottom:.65rem; flex-wrap:wrap; }
+.pc-scan-t .ic { width:1.1rem; height:1.1rem; color:var(--accent-ink); flex-shrink:0; }
+.pc-scan-t strong { font-family:"Space Grotesk","Manrope",sans-serif; font-size:.92rem; }
+.pc-scan-t span { font-size:.72rem; color:var(--muted); }
+.pc-sep { display:flex; align-items:center; gap:.55rem; margin:1.1rem 0 .8rem; }
+.pc-sep strong { font-family:"Space Grotesk","Manrope",sans-serif; font-size:.7rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+.pc-sep span { font-size:.66rem; font-weight:700; color:var(--accent-ink); background:var(--accent-soft); border-radius:999px; padding:.06rem .5rem; }
+.pc-sep i { flex:1; height:1px; background:var(--line); }
+
+/* MiniJuan: panel integrado a la estética del campus */
+.mj-panel { border-radius:18px; box-shadow:var(--sh-lg); }
+.mj-head { background:var(--surface2); color:var(--ink); border-bottom:1px solid var(--line); }
+.mj-head strong { font-family:"Space Grotesk","Manrope",sans-serif; color:var(--ink); }
+.mj-head small { color:var(--muted); opacity:1; }
+.mj-head svg { border-color:var(--line2); }
+.mj-x { background:transparent; border:1px solid var(--line); color:var(--muted); }
+.mj-x:hover { background:var(--surface3); color:var(--ink); }
+.mj-chat { background:var(--surface3); }
+.mj-bot { box-shadow:var(--sh); }
+.mj-yo { background:var(--accent); color:#fff; }
+html.dark .mj-yo { background:#15806B; color:#EAFBF5; }
+.mj-enviar { background:var(--accent); }
+.mj-enviar:hover { background:var(--accent); filter:brightness(1.12); }
+.mj-burbuja { border-color:rgba(255,255,255,.35); box-shadow:0 8px 24px rgba(0,0,0,.35); }
+.mj-hola { font-family:"Manrope",sans-serif; }
+.mj-ctx { border-bottom:1px solid var(--line); }
+
+/* menú de sistemas: prolijo y responsive */
+.sys-menu { padding:.75rem; gap:1rem; border-radius:16px; }
+.sys-col > a { padding:.55rem .65rem; border-radius:9px; font-weight:600; }
+.sys-menu a.sys-ext { background:var(--surface2); border:1px solid var(--line); border-radius:12px; color:var(--ink); padding:.6rem .65rem; transition:transform .14s ease, border-color .14s ease, box-shadow .14s ease; }
+.sys-menu a.sys-ext:hover { text-decoration:none; transform:translateY(-1px); border-color:rgba(31,165,136,.5); box-shadow:var(--sh-md); }
+.sys-ext .se-ic { background:var(--accent-soft); color:var(--accent-ink); border-radius:9px; width:2.05rem; height:2.05rem; }
+.sys-ext .se-txt { color:var(--ink); }
+.sys-ext .se-txt small { color:var(--faint); font-weight:500; font-size:.66rem; }
+.sys-grid { gap:.5rem; }
+@media (max-width: 860px) {
+  .sys-grid { grid-template-columns:1fr 1fr !important; gap:.45rem; }
+  .sys-menu { padding:.65rem; }
+}
+@media (max-width: 400px) { .sys-grid { grid-template-columns:1fr !important; } }
+
 /* clientes: generador compacto */
 .pc-scan { border-left:4px solid var(--accent); }
 .pc-scan-form { display:grid; grid-template-columns:1fr 1fr 5.2rem auto; gap:.5rem; align-items:center; }
@@ -2947,7 +3004,7 @@ function adminPreferenciasPage({ user, prefs = {}, google = null, ia = null }) {
   <div class="card">
     <h3 style="margin-top:0">Integraciones — uso del mes</h3>
     <p class="small muted">Consumo de las APIs conectadas (los costos de MiniJuan están en su propia sección, abajo).</p>
-    <div class="prog-row"><span class="pl">Google Maps · Panel de Clientes</span><div class="prog"><i style="width:${Math.min(100, Math.max(2, Math.round((google.c / 5000) * 100)))}%"></i></div><span class="pv"><strong>${google.c}</strong> de ~5.000 búsquedas gratis · ${google.escaneos} escaneo${google.escaneos === 1 ? '' : 's'}</span></div>
+    <div class="prog-row"><span class="pl">Google Maps · Panel de Leads</span><div class="prog"><i style="width:${Math.min(100, Math.max(2, Math.round((google.c / 5000) * 100)))}%"></i></div><span class="pv"><strong>${google.c}</strong> de ~5.000 búsquedas gratis · ${google.escaneos} escaneo${google.escaneos === 1 ? '' : 's'}</span></div>
   </div>` : ''}
   ${ia ? `
   <div class="card">
@@ -3848,13 +3905,14 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
     return '/clientes' + (t ? '?' + t : '');
   };
   return layout({
-    title: 'Clientes', user, active: 'clientes', sistema: 'clientes', msg, err,
+    title: 'Leads', user, active: 'clientes', sistema: 'clientes', msg, err,
     body: `
-  <h1>Clientes</h1>
-  <p class="caption" style="margin:-.3rem 0 .9rem">Prospectos de Google Maps por rubro y zona — tomá uno y nace como lead tuya.</p>
+  <h1>Leads</h1>
+  <p class="caption" style="margin:-.3rem 0 .9rem">Negocios de Google Maps por rubro y zona — tomá uno y nace como lead tuya.</p>
 
   ${esAdmin ? `
   <div class="card pc-scan">
+    <div class="pc-scan-t">${ICONS.mapa}<strong>Escanear Google Maps</strong><span>trae negocios nuevos por rubro y zona</span></div>
     ${keyOk ? '' : '<div class="flash bad">Falta GOOGLE_MAPS_API_KEY en el .env del server.</div>'}
     <form method="post" action="/clientes/scan" class="pc-scan-form" onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').textContent = 'Escaneando…';">
       <input name="rubro" placeholder="Rubro (gimnasios, ferreterías…)" required>
@@ -3884,6 +3942,8 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
       <input name="q" value="${esc(q)}" placeholder="Buscar…">
     </form>
   </div>
+
+  <div class="pc-sep"><strong>Resultados</strong><span>${prospectos.length}</span><i></i></div>
 
   ${prospectos.length ? `<div class="pc-grid">
     ${prospectos.map((pr) => { const w = webInfo(pr.sitio_web); const tel = pr.telefono ? String(pr.telefono).replace(/[^0-9]/g, '') : ''; return `
@@ -4243,7 +4303,7 @@ function hubPage({ user }) {
       ${tieneSistema(user, 'clientes') ? `
       <a class="hub-card" href="/clientes">
         <span class="hc-ic">${ICONS.mapa}</span>
-        <h3>Panel de Clientes</h3>
+        <h3>Panel de Leads</h3>
         <p>Generador de prospectos: escanea Google Maps por rubro y zona, y las tomás como leads.</p>
       </a>` : ''}
       ${sistemaVisible('propuestas') && tieneSistema(user, 'propuestas') ? `

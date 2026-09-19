@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.2.3',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'mejora', texto: 'El menú de paneles renovó sus "Sitios del grupo": ahora son tarjetas prolijas con ícono esmeralda, nombre y dominio, con hover y en dos columnas cómodas también en celular.' },
+      { tipo: 'mejora', texto: 'El Panel de Clientes pasa a llamarse Leads. Adentro, el escáner de Google Maps se distingue con su propia cabecera y fondo, y un separador "Resultados" marca dónde arrancan las tarjetas. En celular ya no aparece el botón suelto "Prospectos" que no hacía nada.' },
+      { tipo: 'mejora', texto: 'MiniJuan se integró a la estética del campus: panel con cabecera limpia, burbujas esmeralda y botones acordes. Y en celular el teclado ya no tapa el chat — el panel se acomoda solo al escribir.' },
+    ],
+  },
+  {
     version: '3.2.2',
     fecha: '2026-09-18',
     cambios: [
