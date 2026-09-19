@@ -1832,12 +1832,15 @@ async function enviarWA(conv, texto, userId) {
 
 // --- Bandeja (solo admins por ahora) ---
 app.get('/whatsapp', requireAuth, requireAdmin, (req, res) => {
+  const filtroWA = clean(req.query.f);
+  const condWA = filtroWA === 'mias' ? 'WHERE c.vendedor_id = ?' : filtroWA === 'sin' ? 'WHERE c.vendedor_id IS NULL' : '';
   const convs = db.prepare(`SELECT c.*, d.empresa AS lead, u.name AS vendedor,
       (SELECT m.texto FROM wa_mensajes m WHERE m.conversacion_id = c.id ORDER BY m.id DESC LIMIT 1) AS ultimo_texto,
       (SELECT m.dir FROM wa_mensajes m WHERE m.conversacion_id = c.id ORDER BY m.id DESC LIMIT 1) AS ultimo_dir
     FROM wa_conversaciones c
     LEFT JOIN deals d ON d.id = c.deal_id LEFT JOIN users u ON u.id = c.vendedor_id
-    ORDER BY COALESCE(c.ultimo_mensaje_at, c.created_at) DESC LIMIT 200`).all();
+    ${condWA}
+    ORDER BY COALESCE(c.ultimo_mensaje_at, c.created_at) DESC LIMIT 200`).all(...(filtroWA === 'mias' ? [req.user.id] : []));
   const sel = parseInt(req.query.c, 10) || null;
   let conv = null, mensajes = [];
   if (sel) {
@@ -1852,7 +1855,7 @@ app.get('/whatsapp', requireAuth, requireAdmin, (req, res) => {
   const vendedores = db.prepare("SELECT id, name FROM users WHERE active = 1 AND role IN ('vendedor', 'admin') ORDER BY role = 'admin', name").all();
   const leads = db.prepare("SELECT id, empresa FROM deals WHERE panel = 'cfd' AND etapa NOT IN ('Ganado', 'Perdido') ORDER BY empresa LIMIT 400").all();
   res.send(V.whatsappPage({
-    user: req.user, convs, conv, mensajes, vendedores, leads,
+    user: req.user, convs, conv, mensajes, vendedores, leads, filtro: filtroWA,
     ventana: conv ? ventanaAbiertaWA(conv) : false,
     configurado: !!(WA_TOKEN && WA_PHONE_ID),
     msg: clean(req.query.msg), err: clean(req.query.err),

@@ -2,6 +2,15 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.2.2',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'mejora', texto: 'Generador de clientes rediseñado y simple: tarjetas compactas con la valoración ★, la dirección en una línea y chips (rubro·zona, presencia web con "Sin web · oportunidad" en verde, link a Maps), botones directos de WhatsApp y Llamar, y el formulario de escaneo en una sola fila. En celular todo entra cómodo: filtros apilados, tarjetas a una columna y la fila de Tomar con su propio espacio.' },
+      { tipo: 'nuevo', texto: 'WhatsApp: filtros arriba de la lista — Todas · Mías · Sin asignar — para que cada vendedor vea lo suyo de un toque.' },
+      { tipo: 'mejora', texto: 'WhatsApp también tiene su esqueleto de carga con forma de chat (lista con avatares + burbujas + composer). Y la actualización automática de mensajes recarga en silencio, sin flash.' },
+    ],
+  },
+  {
     version: '3.2.1',
     fecha: '2026-09-18',
     cambios: [

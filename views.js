@@ -367,7 +367,8 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
     document.addEventListener('click', function (ev) { if (!m.contains(ev.target)) m.classList.remove('abierto'); });
   })();
   (function () {
-    if (document.body.classList.contains('wa-full')) return;
+    var esWa = document.body.classList.contains('wa-full');
+    try { if (esWa && sessionStorage.getItem('waRec') === '1') { sessionStorage.removeItem('waRec'); return; } } catch (e) {}
     var esq = document.createElement('div');
     esq.id = 'esqueleto';
     var ruta = location.pathname;
@@ -379,7 +380,13 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
     var R = function (n, f) { var h = ''; for (var i = 0; i < n; i++) h += f(i); return h; };
     var titulo = L('height:1.9rem;width:13rem;max-width:55%');
     var cuerpo;
-    if (ruta.indexOf('/pipeline') >= 0) {
+    if (esWa) {
+      var burbu = R(6, function (i) { return '<div class="esq" style="height:2.4rem;width:' + (34 + (i % 3) * 14) + '%;border-radius:12px;' + (i % 2 ? 'align-self:flex-end' : '') + '"></div>'; });
+      cuerpo = '<div class="esq-grid esq-wa" style="grid-template-columns:23rem 1fr;gap:0;border:1px solid var(--line);border-radius:16px;overflow:hidden;flex:1;background:var(--surface)">' +
+        V('gap:0;border-right:1px solid var(--line)', H('padding:.55rem .6rem;border-bottom:1px solid var(--line)', L('height:1.6rem;flex:1;border-radius:8px')) + R(6, function () { return H('padding:.65rem .8rem;border-bottom:1px solid var(--line)', L('height:2.5rem;width:2.5rem;border-radius:50%;flex-shrink:0') + V('flex:1;gap:.35rem', L('height:.9rem;width:60%') + L('height:.7rem;width:85%'))); })) +
+        V('gap:0;min-width:0', H('padding:.6rem .85rem;border-bottom:1px solid var(--line)', L('height:2.5rem;width:2.5rem;border-radius:50%;flex-shrink:0') + L('height:1rem;width:10rem') + '<span style="flex:1"></span>' + L('height:1.9rem;width:8rem;border-radius:9px')) + V('flex:1;padding:1rem;gap:.6rem', burbu) + H('padding:.6rem .7rem;border-top:1px solid var(--line)', L('height:2.6rem;flex:1;border-radius:20px') + L('height:2.6rem;width:2.6rem;border-radius:50%;flex-shrink:0'))) +
+        '</div>';
+    } else if (ruta.indexOf('/pipeline') >= 0) {
       // toolbar real: segs Mios/Todos + Tablero/Cerrados + buscador + boton verde a la derecha; tablero de columnas
       var alturas = ['5.6rem', '4.4rem', '6.4rem', '5rem'];
       cuerpo = H('flex-wrap:wrap', L('height:2.2rem;width:8.5rem;border-radius:8px') + L('height:2.2rem;width:9.5rem;border-radius:8px') + L('height:2.2rem;flex:1;min-width:10rem;max-width:19rem;border-radius:8px') + L('height:2.2rem;width:5rem;border-radius:8px') + '<span style="flex:1"></span>' + L('height:2.3rem;width:8rem;border-radius:10px')) +
@@ -442,7 +449,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
     } else {
       cuerpo = titulo + G('repeat(3, 1fr)', '1rem', R(3, function () { return L('height:5rem;border-radius:14px'); })) + L('height:15rem;border-radius:15px') + L('height:.95rem;width:70%');
     }
-    esq.innerHTML = '<div class="esq-centro">' + cuerpo + '</div>';
+    esq.innerHTML = '<div class="esq-centro"' + (esWa ? ' style="max-width:none;height:100%"' : '') + '>' + cuerpo + '</div>';
     document.body.appendChild(esq);
     var irse = function () {
       setTimeout(function () {
@@ -1471,6 +1478,10 @@ body.wa-full .wrap { max-width:none; padding:0.9rem 1.1rem 0.9rem; }
 body.wa-full .mj { display:none; } /* MiniJuan no flota sobre el chat */
 body.wa-full .wrap > * { animation:none; }
 .wa-lista { border-right:1px solid var(--line); overflow-y:auto; background:var(--surface); min-height:0; }
+.wa-filtros { display:flex; gap:.3rem; padding:.55rem .6rem; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--surface); z-index:2; }
+.wa-filtros a { flex:1; text-align:center; font-size:.72rem; font-weight:700; color:var(--muted); text-decoration:none; padding:.32rem .5rem; border-radius:8px; border:1px solid transparent; }
+.wa-filtros a:hover { background:var(--surface2); text-decoration:none; }
+.wa-filtros a.on { background:var(--accent-soft); color:var(--accent-ink); border-color:rgba(31,165,136,.35); }
 .wa-lista-head { display:flex; align-items:center; gap:.5rem; padding:.8rem .9rem; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--surface); z-index:2; }
 .wa-lista-head strong { font-size:1rem; }
 .wa-item { display:flex; gap:.65rem; align-items:center; padding:.65rem .8rem; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); }
@@ -2022,6 +2033,8 @@ html.dark .esq::after { background:linear-gradient(90deg, transparent, rgba(255,
 @media (max-width: 860px) {
   #esqueleto .esq-grid { grid-template-columns:1fr 1fr !important; }
   #esqueleto .esq-grid > *:nth-child(n+5) { display:none; }
+  #esqueleto .esq-wa { grid-template-columns:1fr !important; }
+  #esqueleto .esq-wa > *:nth-child(2) { display:none; }
 }
 .esq-toolbar { height:2.3rem; width:26rem; max-width:92%; }
 .esq-kanban { display:grid; grid-template-columns:repeat(5, 1fr); gap:.8rem; }
@@ -2070,6 +2083,49 @@ html.dark .esq::after { background:linear-gradient(90deg, transparent, rgba(255,
 html.dark * { scrollbar-color:rgba(255,255,255,.18) transparent; }
 html.dark *::-webkit-scrollbar-thumb { background:rgba(255,255,255,.15); }
 html.dark *::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.3); }
+
+/* clientes: generador compacto */
+.pc-scan { border-left:4px solid var(--accent); }
+.pc-scan-form { display:grid; grid-template-columns:1fr 1fr 5.2rem auto; gap:.5rem; align-items:center; }
+.pc-scan-form input, .pc-scan-form select { margin:0; }
+.pc-filtros { display:flex; gap:.55rem; align-items:center; flex-wrap:wrap; margin:1rem 0 .9rem; }
+.pc-filtros .seg { flex-shrink:0; }
+.pc-busca { display:flex; gap:.45rem; flex:1; min-width:0; align-items:center; }
+.pc-busca select, .pc-busca input { margin:0; }
+.pc-busca select { width:auto; }
+.pc-busca input[name="q"] { flex:1; min-width:7rem; }
+.pc-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(21rem, 1fr)); gap:.9rem; }
+.pc-card { display:flex; flex-direction:column; gap:.4rem; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:.85rem .95rem; box-shadow:var(--sh); min-width:0; }
+.pc-top { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
+.pc-top strong { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.95rem; }
+.pc-dir { font-size:.76rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pc-chips { display:flex; gap:.35rem; flex-wrap:wrap; }
+.pc-chip { display:inline-flex; align-items:center; gap:.25rem; font-size:.68rem; font-weight:600; color:var(--muted); background:var(--surface2); border:1px solid var(--line); border-radius:999px; padding:.14rem .55rem; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-decoration:none; }
+a.pc-chip:hover { text-decoration:none; border-color:var(--accent); color:var(--accent-ink); }
+.pc-chip.pc-verde { color:#1F7A4D; border-color:rgba(47,125,79,.4); background:var(--ok-soft); }
+.pc-chip.pc-rating { color:#8A5A0B; border-color:rgba(168,121,31,.35); background:var(--warn-soft); }
+html.dark .pc-chip.pc-verde { color:#6FCF97; }
+html.dark .pc-chip.pc-rating { color:#D9B35E; }
+.pc-quien { font-size:.75rem; color:var(--bad); }
+.pc-acciones { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; margin-top:.15rem; }
+.pc-tomar { display:flex; gap:.35rem; align-items:center; }
+.pc-tomar select { margin:0; max-width:11rem; padding:.35rem .45rem; font-size:.78rem; }
+.pc-tomado { border-color:rgba(192,84,80,.55); }
+.pc-descartado { opacity:.55; }
+@media (max-width: 720px) {
+  .pc-scan-form { grid-template-columns:1fr 1fr; }
+  .pc-scan-form button { grid-column:2; }
+  .pc-grid { grid-template-columns:1fr; }
+  .pc-busca { flex-wrap:wrap; }
+  .pc-busca select { flex:1; }
+  .pc-busca input[name="q"] { flex-basis:100%; }
+  .pc-acciones { row-gap:.45rem; }
+  .pc-acciones > a.btn { flex:1 1 40%; text-align:center; }
+  .pc-tomar { order:9; flex:1 1 calc(100% - 3rem); }
+  .pc-tomar select { flex:1; max-width:none; }
+  .pc-tomar .btn { flex:0 0 auto; }
+  .pc-acciones form[action*="/estado"] { order:10; }
+}
 
 /* configuracion profesional */
 .cfg-grid { display:grid; gap:1.1rem; align-items:start; margin-top:.4rem; }
@@ -3794,25 +3850,19 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
   return layout({
     title: 'Clientes', user, active: 'clientes', sistema: 'clientes', msg, err,
     body: `
-  <h1>Generador de clientes</h1>
-  <p class="small muted">Prospectos traídos de Google Maps por rubro y zona. Tomá uno y nace como lead tuya en el panel comercial que elijas — el prospecto queda marcado en rojo para que nadie lo llame dos veces.</p>
+  <h1>Clientes</h1>
+  <p class="caption" style="margin:-.3rem 0 .9rem">Prospectos de Google Maps por rubro y zona — tomá uno y nace como lead tuya.</p>
 
   ${esAdmin ? `
-  <div class="card" style="border-left:4px solid var(--accent)">
-    <h3 style="margin-top:0">Escanear Google Maps</h3>
-    ${keyOk ? '' : '<div class="flash bad">Falta la clave de Google: creá una API key en console.cloud.google.com con "Places API (New)" habilitada y agregala al archivo .env del server como GOOGLE_MAPS_API_KEY=… Después reiniciá el contenedor.</div>'}
-    <form method="post" action="/clientes/scan" class="cfg-inline" onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').textContent = 'Escaneando…';">
-      <input name="rubro" placeholder="Rubro (ej: gimnasios, ferreterías)" required style="flex:1; min-width:11rem">
-      <input name="zona" placeholder="Zona (ej: Yerba Buena, Tucumán)" required style="flex:1; min-width:11rem">
-      <select name="cantidad" style="width:auto"><option value="20">hasta 20</option><option value="40">hasta 40</option><option value="60" selected>hasta 60</option></select>
+  <div class="card pc-scan">
+    ${keyOk ? '' : '<div class="flash bad">Falta GOOGLE_MAPS_API_KEY en el .env del server.</div>'}
+    <form method="post" action="/clientes/scan" class="pc-scan-form" onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').textContent = 'Escaneando…';">
+      <input name="rubro" placeholder="Rubro (gimnasios, ferreterías…)" required>
+      <input name="zona" placeholder="Zona (Yerba Buena, Tucumán)" required>
+      <select name="cantidad"><option value="20">20</option><option value="40">40</option><option value="60" selected>60</option></select>
       <button class="btn" ${keyOk ? '' : 'disabled'}>Escanear</button>
     </form>
-    ${(() => { const pct = Math.min(100, Math.round((usoMes.c / 5000) * 100)); return `
-    <div class="mj-saldo" style="margin:.6rem 0 0">
-      <div class="uso-bar"><span class="${pct >= 85 ? 'lleno' : ''}" style="width:${pct}%"></span></div>
-
-    </div>`; })()}
-    ${scans.length ? `<p class="caption" style="margin:.5rem 0 0">Últimos escaneos: ${scans.map((sc) => `${esc(sc.rubro)} en ${esc(sc.zona)} (${sc.nuevos} nuevos)`).join(' · ')}</p>` : ''}
+    ${scans.length ? `<p class="caption" style="margin:.5rem 0 0">Últimos: ${scans.slice(0, 3).map((sc) => `${esc(sc.rubro)} · ${esc(sc.zona)} (${sc.nuevos} nuevos)`).join(' — ')}</p>` : ''}
   </div>` : ''}
 
   <div class="pc-filtros">
@@ -3824,15 +3874,14 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
     </div>
     <form method="get" action="/clientes" class="pc-busca">
       ${fEstado ? `<input type="hidden" name="estado" value="${esc(fEstado)}">` : ''}
-      <select name="rubro" onchange="this.form.submit()"><option value="">Rubro: todos</option>${rubros.map((r) => `<option value="${esc(r)}" ${r === fRubro ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
+      <select name="rubro" onchange="this.form.submit()"><option value="">Rubro</option>${rubros.map((r) => `<option value="${esc(r)}" ${r === fRubro ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
       <select name="web" onchange="this.form.submit()">
-        <option value="">Web: todos</option>
-        <option value="sin" ${fWeb === 'sin' ? 'selected' : ''}>Sin web (oportunidad)</option>
-        <option value="redes" ${fWeb === 'redes' ? 'selected' : ''}>Solo redes sociales</option>
-        <option value="con" ${fWeb === 'con' ? 'selected' : ''}>Con web propia</option>
+        <option value="">Web</option>
+        <option value="sin" ${fWeb === 'sin' ? 'selected' : ''}>Sin web</option>
+        <option value="redes" ${fWeb === 'redes' ? 'selected' : ''}>Solo redes</option>
+        <option value="con" ${fWeb === 'con' ? 'selected' : ''}>Con web</option>
       </select>
-      <input name="q" value="${esc(q)}" placeholder="Buscar nombre o dirección">
-      <button class="btn secondary small">Buscar</button>
+      <input name="q" value="${esc(q)}" placeholder="Buscar…">
     </form>
   </div>
 
@@ -3840,32 +3889,33 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, fEstado, fR
     ${prospectos.map((pr) => { const w = webInfo(pr.sitio_web); const tel = pr.telefono ? String(pr.telefono).replace(/[^0-9]/g, '') : ''; return `
     <div class="pc-card ${pr.estado === 'tomado' ? 'pc-tomado' : pr.estado === 'descartado' ? 'pc-descartado' : ''}">
       <div class="pc-top">
-        <strong>${esc(pr.nombre)}</strong>
-        ${pr.estado === 'tomado' ? `<span class="pc-chip-rojo">Tomada</span>` : pr.estado === 'descartado' ? '<span class="pc-chip-gris">Descartada</span>' : ''}
-        ${pr.estado_negocio === 'CLOSED_TEMPORARILY' ? '<span class="pc-chip-gris">Cerrado temporalmente</span>' : ''}
+        <strong title="${esc(pr.nombre)}">${esc(pr.nombre)}</strong>
+        ${pr.rating ? `<span class="pc-chip pc-rating">★ ${pr.rating} <small>(${pr.resenas || 0})</small></span>` : ''}
+        ${pr.estado === 'tomado' ? '<span class="pc-chip-rojo">Tomada</span>' : pr.estado === 'descartado' ? '<span class="pc-chip-gris">Descartada</span>' : ''}
+        ${pr.estado_negocio === 'CLOSED_TEMPORARILY' ? '<span class="pc-chip-gris">Cerrado temp.</span>' : ''}
       </div>
-      <dl class="pc-datos">
-        <div><dt>Dirección</dt><dd>${esc(pr.direccion || 'Sin dato')}</dd></div>
-        <div><dt>Teléfono</dt><dd>${pr.telefono ? `${esc(pr.telefono)} · <a href="https://wa.me/${tel}" target="_blank" rel="noopener">WhatsApp</a> · <a href="tel:${tel}">llamar</a>` : '<span class="muted">Sin dato</span>'}</dd></div>
-        <div><dt>Presencia web</dt><dd>${w ? `${esc(w.etiqueta)} · <a href="${esc(w.url)}" target="_blank" rel="noopener">abrir</a>` : '<span class="pr-sinweb">Sin sitio web — oportunidad</span>'}</dd></div>
-        <div><dt>Valoración en Google</dt><dd>${pr.rating ? `${pr.rating} de 5 · ${pr.resenas || 0} reseña${(pr.resenas || 0) === 1 ? '' : 's'}` : '<span class="muted">Sin reseñas</span>'}</dd></div>
-        <div><dt>Rubro y zona</dt><dd>${esc(pr.rubro || '—')} · ${esc(pr.zona || '—')}</dd></div>
-        <div><dt>Fuente</dt><dd>${pr.maps_url ? `<a href="${esc(pr.maps_url)}" target="_blank" rel="noopener">Ver en Google Maps</a> · ` : ''}cargado ${fecha(String(pr.created_at).slice(0, 10))}</dd></div>
-        ${pr.estado === 'tomado' ? `<div><dt>Tomada por</dt><dd><strong>${esc(pr.tomado_nombre || '—')}</strong> · ${tiempoRel(pr.tomado_at)}${pr.deal_id ? ` · <a href="/deals/${pr.deal_id}">ver la lead</a>` : ''}</dd></div>` : ''}
-      </dl>
+      <div class="pc-dir">${esc(pr.direccion || 'Sin dirección')}</div>
+      <div class="pc-chips">
+        <span class="pc-chip">${esc(pr.rubro || '—')} · ${esc(pr.zona || '—')}</span>
+        ${w ? `<a class="pc-chip pc-link" href="${esc(w.url)}" target="_blank" rel="noopener">${w.esWeb ? '🌐 ' + esc(w.etiqueta.replace('Web propia: ', '')) : esc(w.etiqueta)}</a>` : '<span class="pc-chip pc-verde">Sin web · oportunidad</span>'}
+        ${pr.maps_url ? `<a class="pc-chip pc-link" href="${esc(pr.maps_url)}" target="_blank" rel="noopener">Maps ↗</a>` : ''}
+      </div>
+      ${pr.estado === 'tomado' ? `<div class="pc-quien">Tomada por <strong>${esc(pr.tomado_nombre || '—')}</strong> · ${tiempoRel(pr.tomado_at)}${pr.deal_id ? ` · <a href="/deals/${pr.deal_id}">ver lead</a>` : ''}</div>` : ''}
       <div class="pc-acciones">
+        ${pr.telefono ? `<a class="btn secondary small" href="https://wa.me/${tel}" target="_blank" rel="noopener">WhatsApp</a><a class="btn secondary small" href="tel:${tel}">Llamar</a>` : '<span class="caption" style="margin:0">Sin teléfono</span>'}
+        <span style="flex:1"></span>
         ${pr.estado === 'nuevo' ? `
         <form method="post" action="/clientes/${pr.id}/tomar" class="pc-tomar">
-          <select name="panel">${misPaneles.map((mp) => `<option value="${mp.slug}">${esc(mp.nombre)}</option>`).join('')}</select>
+          ${misPaneles.length === 1 ? `<input type="hidden" name="panel" value="${misPaneles[0].slug}">` : `<select name="panel">${misPaneles.map((mp) => `<option value="${mp.slug}">${esc(mp.nombre)}</option>`).join('')}</select>`}
           <button class="btn small">Tomar</button>
         </form>
-        <form method="post" action="/clientes/${pr.id}/estado"><input type="hidden" name="accion" value="descartar"><button class="btn secondary small">Descartar</button></form>`
+        <form method="post" action="/clientes/${pr.id}/estado"><input type="hidden" name="accion" value="descartar"><button class="btn secondary small btn-ic" title="Descartar">${IC24('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>')}</button></form>`
         : pr.estado === 'tomado' && esAdmin ? `<form method="post" action="/clientes/${pr.id}/estado"><input type="hidden" name="accion" value="liberar"><button class="btn secondary small">Liberar</button></form>`
         : pr.estado === 'descartado' && esAdmin ? `<form method="post" action="/clientes/${pr.id}/estado"><input type="hidden" name="accion" value="liberar"><button class="btn secondary small">Recuperar</button></form>` : ''}
       </div>
     </div>`; }).join('')}
   </div>`
-  : '<div class="card"><p class="muted" style="margin:0">Todavía no hay prospectos con esos filtros. ' + (esAdmin ? 'Lanzá un escaneo arriba: rubro + zona y listo.' : 'Pedile al administrador que lance un escaneo.') + '</p></div>'}`
+  : '<div class="card"><p class="muted" style="margin:0">Nada con esos filtros. ' + (esAdmin ? 'Lanzá un escaneo arriba: rubro + zona.' : 'Pedile a un admin que escanee.') + '</p></div>'}`
   });
 }
 
@@ -5591,7 +5641,8 @@ function propuestaVerPage({ user, p }) {
 
 /* ---------------- WhatsApp: bandeja (solo admins por ahora) ---------------- */
 
-function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads = [], ventana, configurado, msg, err }) {
+function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads = [], filtro = '', ventana, configurado, msg, err }) {
+  const conF = (extra) => '/whatsapp' + (extra || '') + (filtro ? (extra ? '&' : '?') + 'f=' + filtro : '');
   const hora = (t) => (t || '').replace(' ', 'T').slice(11, 16);
   const diaCorto = (t) => {
     if (!t) return '';
@@ -5610,7 +5661,7 @@ function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads
   const tilde = (m) => m.dir !== 'out' ? '' : m.estado === 'leido' ? '✓✓' : m.estado === 'entregado' ? '✓✓' : m.estado === 'enviado' ? '✓' : m.estado === 'error' ? '⚠' : '🕓';
 
   const lista = convs.map((c) => `
-    <a class="wa-item ${conv && conv.id === c.id ? 'on' : ''}" href="/whatsapp?c=${c.id}">
+    <a class="wa-item ${conv && conv.id === c.id ? 'on' : ''}" href="${conF('?c=' + c.id)}">
       ${avatarWA(c)}
       <span class="wa-item-cuerpo">
         <span class="wa-item-top"><strong>${esc(c.nombre || '+' + c.telefono)}</strong><time>${cuando(c.ultimo_mensaje_at || c.created_at)}</time></span>
@@ -5642,7 +5693,7 @@ function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads
       <p class="muted">${convs.length ? 'Elegí una conversación' : 'Cuando escriban al WhatsApp de la empresa, aparece acá'}</p>
     </div>` : `
     <header class="wa-head">
-      <a class="wa-volver" href="/whatsapp" aria-label="Volver">←</a>
+      <a class="wa-volver" href="${conF()}" aria-label="Volver">←</a>
       ${avatarWA(conv)}
       <div class="wa-head-quien">
         <strong>${esc(conv.nombre || '+' + conv.telefono)}</strong>
@@ -5679,7 +5730,12 @@ function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads
   ${configurado ? '' : `<div class="flash bad">Falta configurar la conexión con Meta: definí <code>WHATSAPP_TOKEN</code> y <code>WHATSAPP_PHONE_ID</code> en el .env del servidor.</div>`}
   <div class="wa-cont ${conv ? 'con-chat' : ''}">
     <aside class="wa-lista">
-      ${lista || '<p class="muted small" style="padding:1rem">Sin conversaciones todavía.</p>'}
+      <div class="wa-filtros">
+        <a href="/whatsapp" class="${!filtro ? 'on' : ''}">Todas</a>
+        <a href="/whatsapp?f=mias" class="${filtro === 'mias' ? 'on' : ''}">Mías</a>
+        <a href="/whatsapp?f=sin" class="${filtro === 'sin' ? 'on' : ''}">Sin asignar</a>
+      </div>
+      ${lista || '<p class="muted small" style="padding:1rem">Sin conversaciones acá.</p>'}
     </aside>
     <section class="wa-chat">${chat}</section>
   </div>
@@ -5701,7 +5757,7 @@ function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads
     setInterval(function () {
       fetch('/whatsapp/nuevos?c=' + convId + '&desde=' + ultimo)
         .then(function (r) { return r.json(); })
-        .then(function (d) { if (d.nuevos > 0 || (convId === 0 && d.sinLeer > 0)) location.reload(); })
+        .then(function (d) { if (d.nuevos > 0 || (convId === 0 && d.sinLeer > 0)) { try { sessionStorage.setItem('waRec', '1'); } catch (e) {} location.reload(); } })
         .catch(function () {});
     }, 6000);
   </script>`;
