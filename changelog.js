@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.1.4',
+    fecha: '2026-09-18',
+    cambios: [
+      { tipo: 'mejora', texto: 'En celular, el selector de paneles de arriba a la izquierda ya no es el texto largo apretado: ahora es un botón compacto "▦ Menú" que deja claro que ahí se cambia de sección.' },
+    ],
+  },
+  {
     version: '3.1.3',
     fecha: '2026-09-18',
     cambios: [

@@ -105,7 +105,7 @@ function sysSwitch(sistema, user) {
   };
   return `
   <details class="sys">
-    <summary><span class="brand-txt">${SISTEMA_NOMBRE[sistema] || 'Panel Comercial'}<span class="sub">Cloud For Deploy ▾</span></span></summary>
+    <summary><span class="brand-txt">${SISTEMA_NOMBRE[sistema] || 'Panel Comercial'}<span class="sub">Cloud For Deploy ▾</span></span><span class="brand-mini">${IC24('<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>')}<span>Menú</span></span></summary>
     <div class="sys-menu">
       <div class="sys-col sys-col-int">
       <div class="sys-h">Paneles y herramientas</div>
@@ -1649,8 +1649,11 @@ html.dark .login-bg .btn:hover { background:var(--login-ink); }
   .brand-row { flex:1 1 auto; min-width:0; gap:.4rem; }
   .brand-row .sys { flex:1 1 auto; min-width:0; }
   .brand-row .sys summary { min-width:0; overflow:hidden; }
-  .brand-txt { max-width:100%; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; display:block; }
-  .brand-txt .sub { overflow:hidden; text-overflow:ellipsis; }
+  .brand-txt { display:none; }
+  .brand-mini { display:inline-flex; align-items:center; gap:.4rem; color:#fff; font-weight:700; font-size:.8rem;
+    background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:.4rem .65rem; }
+  .brand-mini .ic { width:1rem; height:1rem; }
+  .brand-row .sys { flex:0 0 auto; }
   .bell, .theme-btn, .umenu { flex-shrink:0; }
 
   .nav-links {
@@ -1878,6 +1881,8 @@ table thead th { font-size:.67rem; text-transform:uppercase; letter-spacing:.09e
 tbody tr { transition:background .12s; }
 .tablewrap tbody tr:hover { background:var(--surface3); }
 html.dark .tablewrap tbody tr:hover { background:rgba(255,255,255,.035); }
+
+.brand-mini { display:none; }
 
 /* barra superior con leve vidrio (solo desktop: backdrop-filter rompe el fixed de la barra móvil) */
 @media (min-width: 861px) {
