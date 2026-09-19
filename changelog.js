@@ -2,26 +2,10 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
-    version: '3.4.2',
-    fecha: '2026-09-18',
+    version: '3.4.3',
+    fecha: '2026-09-19',
     cambios: [
-      { tipo: 'fix', texto: 'Inteligencia B2B: la herramienta de entrega ahora define el esquema completo de la ficha, así la IA llena las secciones en el lugar correcto (probado de punta a punta contra la API real). Reinvestigá cualquier cuenta que haya quedado fallida o vacía.' },
-    ],
-  },
-  {
-    version: '3.4.1',
-    fecha: '2026-09-18',
-    cambios: [
-      { tipo: 'fix', texto: 'Inteligencia B2B: algunas investigaciones fallaban con "Expected \',\' or \'}\'..." porque la IA devolvía el JSON de la ficha con comillas sin escapar. Ahora la ficha se entrega por tool use — la API garantiza JSON válido — y además se amplió el largo máximo permitido.' },
-    ],
-  },
-  {
-    version: '3.4.0',
-    fecha: '2026-09-18',
-    cambios: [
-      { tipo: 'nuevo', texto: '🕵️ Inteligencia B2B (prueba, solo admins): un panel nuevo que investiga empresas de verdad — visita su sitio web, hace chequeos técnicos no intrusivos (HTTPS, formularios, señales de ecommerce), busca noticias públicas y arma con IA una ficha completa: perfil con datos marcados verificado/estimado/desconocido, problemas detectados en tres niveles (confirmado, observado, hipótesis), comité de compra, eventos recientes y un score explicable en 5 dimensiones donde cada punto muestra su evidencia.' },
-      { tipo: 'nuevo', texto: 'Cada hipótesis se puede Confirmar o Rechazar, hay checklist de calificación comercial (¿decide? ¿reconoce el problema? ¿tiene presupuesto?...) y un botón que crea la lead en el pipeline con el informe y los dolores confirmados pegados en la ficha. En el Panel de Leads, cada tarjeta tiene su botón "Investigar".' },
-      { tipo: 'mejora', texto: 'Guardrails de privacidad: solo fuentes públicas permitidas, personas únicamente con fuente verificable (si no, queda el cargo "pendiente de identificar"), nada de emails inventados, y lo desconocido no puntúa en el score.' },
+      { tipo: 'mejora', texto: 'Mejoras internas de rendimiento y correcciones menores en varias secciones.' },
     ],
   },
   {

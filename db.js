@@ -326,6 +326,12 @@ CREATE TABLE IF NOT EXISTS prospecto_scans (
 if (!db.prepare('PRAGMA table_info(prospecto_scans)').all().some((c) => c.name === 'consultas')) {
   db.exec('ALTER TABLE prospecto_scans ADD COLUMN consultas INTEGER NOT NULL DEFAULT 1');
 }
+// 3.4.3: macro admin — el único que ve las herramientas en incubación (Inteligencia B2B).
+if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'macro')) {
+  db.exec('ALTER TABLE users ADD COLUMN macro INTEGER NOT NULL DEFAULT 0');
+}
+db.prepare("UPDATE users SET macro = 1 WHERE email = 'admin@cloudfordeploy.com'").run();
+
 // 3.4.0: Inteligencia B2B (prueba, solo admins) — cuentas investigadas, hallazgos, personas y eventos.
 db.exec(`CREATE TABLE IF NOT EXISTS b2b_cuentas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

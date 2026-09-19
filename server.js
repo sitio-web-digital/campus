@@ -71,7 +71,7 @@ if (seeded) {
 
 function currentUser(req) {
   if (!req.session.uid) return null;
-  const u = db.prepare('SELECT id, name, email, role, active, permisos, last_seen_at, last_version_vista, avatar, ia_bienvenida, ia_limite, ia_charla_desde FROM users WHERE id = ? AND active = 1').get(req.session.uid) || null;
+  const u = db.prepare('SELECT id, name, email, role, active, macro, permisos, last_seen_at, last_version_vista, avatar, ia_bienvenida, ia_limite, ia_charla_desde FROM users WHERE id = ? AND active = 1').get(req.session.uid) || null;
   if (u) { try { u.permisos = JSON.parse(u.permisos || '[]'); } catch { u.permisos = []; } }
   return u;
 }
@@ -252,6 +252,13 @@ function diffDeal(antes, despues) {
 
 function requireAdmin(req, res, next) {
   if (req.user.role !== 'admin') return res.status(403).send('Solo el administrador puede ver esta página.');
+  next();
+}
+
+// Macro admin: el dueño del sistema. Las herramientas en incubación viven detrás de este flag,
+// y para el resto (incluidos los demás admins) la ruta directamente no existe.
+function requireMacro(req, res, next) {
+  if (!req.user.macro) return res.status(404).send('No encontrado.');
   next();
 }
 
@@ -1650,7 +1657,7 @@ app.get('/clientes', requireAuth, requireSistema('clientes'), (req, res) => {
   const scans = db.prepare('SELECT s.*, u.name FROM prospecto_scans s JOIN users u ON u.id = s.user_id ORDER BY s.id DESC LIMIT 5').all();
   const misPaneles = PANELES_COMERCIALES.filter((P) => puede(req.user, P.slug)).map((P) => ({ slug: P.slug, nombre: P.nombre }));
   const intel = {};
-  if (req.user.role === 'admin') for (const r of db.prepare('SELECT prospecto_id, id, score_total, estado FROM b2b_cuentas WHERE prospecto_id IS NOT NULL').all()) intel[r.prospecto_id] = r;
+  if (req.user.macro) for (const r of db.prepare('SELECT prospecto_id, id, score_total, estado FROM b2b_cuentas WHERE prospecto_id IS NOT NULL').all()) intel[r.prospecto_id] = r;
   res.send(V.clientesPage({
     user: req.user, prospectos, rubros, scans, misPaneles, intel,
     fEstado, fRubro, fWeb, q,
@@ -1917,7 +1924,7 @@ async function investigarCuentaB2B(id) {
   }
 }
 
-app.get('/b2b', requireAuth, requireAdmin, (req, res) => {
+app.get('/b2b', requireAuth, requireMacro, (req, res) => {
   const cuentas = db.prepare(`SELECT c.*, u.name AS creador,
       (SELECT COUNT(*) FROM b2b_hallazgos h WHERE h.cuenta_id = c.id) AS hallazgos,
       (SELECT COUNT(*) FROM b2b_hallazgos h WHERE h.cuenta_id = c.id AND h.validacion = 'confirmada') AS confirmados
@@ -1927,7 +1934,7 @@ app.get('/b2b', requireAuth, requireAdmin, (req, res) => {
 });
 
 // Lanza una investigación: desde un prospecto del Panel de Leads o cargando la empresa a mano.
-app.post('/b2b/investigar', requireAuth, requireAdmin, async (req, res) => {
+app.post('/b2b/investigar', requireAuth, requireMacro, async (req, res) => {
   if (!process.env.ANTHROPIC_API_KEY) return res.redirect('/b2b?err=' + encodeURIComponent('Falta ANTHROPIC_API_KEY en el servidor.'));
   let cuentaId = null;
   const pid = parseInt(req.body.prospecto_id, 10);
@@ -1952,13 +1959,13 @@ app.post('/b2b/investigar', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-app.post('/b2b/:id/reinvestigar', requireAuth, requireAdmin, async (req, res) => {
+app.post('/b2b/:id/reinvestigar', requireAuth, requireMacro, async (req, res) => {
   if (!process.env.ANTHROPIC_API_KEY) return res.redirect('/b2b?err=' + encodeURIComponent('Falta ANTHROPIC_API_KEY en el servidor.'));
   try { await investigarCuentaB2B(parseInt(req.params.id, 10)); } catch (e) { /* el estado queda en error y se ve en la ficha */ }
   res.redirect('/b2b/' + req.params.id);
 });
 
-app.get('/b2b/:id', requireAuth, requireAdmin, (req, res) => {
+app.get('/b2b/:id', requireAuth, requireMacro, (req, res) => {
   const c = db.prepare(`SELECT c.*, p.direccion AS p_direccion, p.maps_url, p.rating, p.resenas, d.empresa AS deal_empresa
     FROM b2b_cuentas c LEFT JOIN prospectos p ON p.id = c.prospecto_id LEFT JOIN deals d ON d.id = c.deal_id WHERE c.id = ?`).get(req.params.id);
   if (!c) return res.redirect('/b2b');
@@ -1970,7 +1977,7 @@ app.get('/b2b/:id', requireAuth, requireAdmin, (req, res) => {
 });
 
 // El vendedor valida las hipótesis: confirmar / rechazar / volver a pendiente.
-app.post('/b2b/:id/hallazgo/:hid', requireAuth, requireAdmin, (req, res) => {
+app.post('/b2b/:id/hallazgo/:hid', requireAuth, requireMacro, (req, res) => {
   const accion = { confirmar: 'confirmada', rechazar: 'rechazada', pendiente: 'pendiente' }[req.body.accion];
   if (accion) db.prepare("UPDATE b2b_hallazgos SET validacion = ?, validada_por = ?, validada_at = datetime('now') WHERE id = ? AND cuenta_id = ?")
     .run(accion, req.user.id, req.params.hid, req.params.id);
@@ -1978,12 +1985,12 @@ app.post('/b2b/:id/hallazgo/:hid', requireAuth, requireAdmin, (req, res) => {
 });
 
 // Comité de compra: cambiar el rol de una persona o sumar una a mano (con su fuente).
-app.post('/b2b/:id/persona/:pid/rol', requireAuth, requireAdmin, (req, res) => {
+app.post('/b2b/:id/persona/:pid/rol', requireAuth, requireMacro, (req, res) => {
   db.prepare('UPDATE b2b_personas SET buying_role = ? WHERE id = ? AND cuenta_id = ?')
     .run(cleanEnum(req.body.rol, ['economic_buyer', 'decision_maker', 'technical_buyer', 'champion', 'end_user']), req.params.pid, req.params.id);
   res.redirect('/b2b/' + req.params.id + '#personas');
 });
-app.post('/b2b/:id/personas', requireAuth, requireAdmin, (req, res) => {
+app.post('/b2b/:id/personas', requireAuth, requireMacro, (req, res) => {
   const cargo = (clean(req.body.cargo) || '').slice(0, 150);
   if (cargo) db.prepare('INSERT INTO b2b_personas (cuenta_id, nombre, cargo, buying_role, confianza, fuente_url, canal, verificada_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
     .run(req.params.id, clean((req.body.nombre || '').slice(0, 120)), cargo,
@@ -1993,7 +2000,7 @@ app.post('/b2b/:id/personas', requireAuth, requireAdmin, (req, res) => {
 });
 
 // Checklist de calificación comercial (lo que se valida hablando con la empresa).
-app.post('/b2b/:id/calificacion', requireAuth, requireAdmin, (req, res) => {
+app.post('/b2b/:id/calificacion', requireAuth, requireMacro, (req, res) => {
   const v = (k) => cleanEnum(req.body[k], ['si', 'no', 'nose']) || 'nose';
   const cal = {
     decide: v('decide'), reconoce: v('reconoce'), proyecto: v('proyecto'), presupuesto: v('presupuesto'),
@@ -2005,7 +2012,7 @@ app.post('/b2b/:id/calificacion', requireAuth, requireAdmin, (req, res) => {
 });
 
 // La oportunidad validada nace como lead en el pipeline, con todo el contexto pegado.
-app.post('/b2b/:id/lead', requireAuth, requireAdmin, (req, res) => {
+app.post('/b2b/:id/lead', requireAuth, requireMacro, (req, res) => {
   const c = db.prepare('SELECT * FROM b2b_cuentas WHERE id = ?').get(req.params.id);
   if (!c) return res.redirect('/b2b');
   if (c.deal_id) return res.redirect('/deals/' + c.deal_id);

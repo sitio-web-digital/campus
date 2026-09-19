@@ -117,7 +117,7 @@ function sysSwitch(sistema, user) {
       ${tieneSistema(user, 'clientes') ? `<a href="/clientes"><span>Panel de Leads</span></a>` : ''}
       ${sistemaVisible('propuestas') && tieneSistema(user, 'propuestas') ? `<a href="/propuestas"><span>Generador de Propuestas</span></a>` : ''}
       ${sistemaVisible('whatsapp') && user && user.role === 'admin' ? `<a href="/whatsapp"><span>WhatsApp</span><span class="soon-chip">Prueba</span></a>` : ''}
-      ${user && user.role === 'admin' ? `<a href="/b2b"><span>Inteligencia B2B</span><span class="soon-chip">Prueba</span></a>` : ''}
+      ${user && user.macro ? `<a href="/b2b"><span>Inteligencia B2B</span><span class="soon-chip">Prueba</span></a>` : ''}
       ${sistemaVisible('cobranza') && tieneSistema(user, 'cobranza') ? `<a href="/cobranza"><span>Panel de Cobranza</span>${infoCobranza()}</a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
       ${sistemaVisible('developers') ? (tieneSistema(user, 'developers') ? '<a href="/developers"><span>Panel de Developers</span></a>' : '<span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>') : ''}
@@ -4167,7 +4167,7 @@ function clientesPage({ user, prospectos, rubros, scans, misPaneles, intel = {},
       ${pr.estado === 'tomado' ? `<div class="pc-quien">Tomada por <strong>${esc(pr.tomado_nombre || '—')}</strong> · ${tiempoRel(pr.tomado_at)}${pr.deal_id ? ` · <a href="/deals/${pr.deal_id}">ver lead</a>` : ''}</div>` : ''}
       <div class="pc-acciones">
         ${pr.telefono ? `<a class="btn secondary small" href="https://wa.me/${tel}" target="_blank" rel="noopener">WhatsApp</a><a class="btn secondary small" href="tel:${tel}">Llamar</a>` : '<span class="caption" style="margin:0">Sin teléfono</span>'}
-        ${esAdmin ? (intel[pr.id] ? `<a class="btn secondary small b2b-mini" href="/b2b/${intel[pr.id].id}">B2B${intel[pr.id].score_total != null ? ` · ${intel[pr.id].score_total}` : ''}</a>`
+        ${user.macro ? (intel[pr.id] ? `<a class="btn secondary small b2b-mini" href="/b2b/${intel[pr.id].id}">B2B${intel[pr.id].score_total != null ? ` · ${intel[pr.id].score_total}` : ''}</a>`
           : `<form method="post" action="/b2b/investigar" onsubmit="var b = this.querySelector('button'); b.disabled = true; b.textContent = 'Investigando…';"><input type="hidden" name="prospecto_id" value="${pr.id}"><button class="btn secondary small b2b-mini" title="Investigar con Inteligencia B2B">Investigar</button></form>`) : ''}
         <span style="flex:1"></span>
         ${pr.estado === 'nuevo' ? `
@@ -4707,7 +4707,7 @@ function hubPage({ user }) {
         <p>Ventas de sitios web: pipeline, actividad y metas propias.</p>
         ${chipsPanel('sitioweb')}
       </a>` : ''}
-      ${user.role === 'admin' ? `
+      ${user.macro ? `
       <a class="hub-card" href="/b2b">
         <span class="hc-ic">${IC('<circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4M9 6.8v4.4M6.8 9h4.4"/>')}</span>
         <h3>Inteligencia B2B <span class="soon-chip">Prueba</span></h3>
