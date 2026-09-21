@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.4.4',
+    fecha: '2026-09-21',
+    cambios: [
+      { tipo: 'mejora', texto: 'Vuelve el panel Comercial Estanterías Reforzadas: pipeline, actividad y metas propias. Aparece en el menú de paneles y en el inicio para quienes tienen el permiso asignado (se gestiona por usuario en Panel Administración).' },
+    ],
+  },
+  {
     version: '3.4.3',
     fecha: '2026-09-19',
     cambios: [

@@ -50,7 +50,7 @@ const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permis
 
 // Simplificación 3.1: sistemas que EXISTEN pero se esconden de la vista de todos
 // (los usarán a futuro; para reactivar uno, sacarlo de este set y listo).
-const SISTEMAS_OCULTOS = new Set(['gondolas', 'estanterias', 'sitioweb', 'campus', 'propuestas', 'cobranza', 'developers', 'whatsapp']); // whatsapp vive como pestaña del panel CFD
+const SISTEMAS_OCULTOS = new Set(['gondolas', 'sitioweb', 'campus', 'propuestas', 'cobranza', 'developers', 'whatsapp']); // whatsapp vive como pestaña del panel CFD; estanterias volvió en 3.4.4
 const SITIOS_OCULTOS = new Set(['pco2']);
 const sistemaVisible = (slug) => !SISTEMAS_OCULTOS.has(slug);
 
