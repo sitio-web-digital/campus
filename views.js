@@ -50,7 +50,7 @@ const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permis
 
 // Simplificación 3.1: sistemas que EXISTEN pero se esconden de la vista de todos
 // (los usarán a futuro; para reactivar uno, sacarlo de este set y listo).
-const SISTEMAS_OCULTOS = new Set(['gondolas', 'sitioweb', 'campus', 'propuestas', 'cobranza', 'developers', 'whatsapp']); // whatsapp vive como pestaña del panel CFD; estanterias volvió en 3.4.4
+const SISTEMAS_OCULTOS = new Set(['gondolas', 'sitioweb', 'campus', 'propuestas', 'developers', 'whatsapp']); // whatsapp vive como pestaña del panel CFD; estanterias volvió en 3.4.4
 const SITIOS_OCULTOS = new Set(['pco2']);
 const sistemaVisible = (slug) => !SISTEMAS_OCULTOS.has(slug);
 
@@ -118,7 +118,7 @@ function sysSwitch(sistema, user) {
       ${sistemaVisible('propuestas') && tieneSistema(user, 'propuestas') ? `<a href="/propuestas"><span>Generador de Propuestas</span></a>` : ''}
       ${sistemaVisible('whatsapp') && user && user.role === 'admin' ? `<a href="/whatsapp"><span>WhatsApp</span><span class="soon-chip">Prueba</span></a>` : ''}
       ${user && user.macro ? `<a href="/b2b"><span>Inteligencia B2B</span><span class="soon-chip">Prueba</span></a>` : ''}
-      ${sistemaVisible('cobranza') && tieneSistema(user, 'cobranza') ? `<a href="/cobranza"><span>Panel de Cobranza</span>${infoCobranza()}</a>` : ''}
+      ${sistemaVisible('cobranza') && user && user.role === 'admin' ? `<a href="/cobranza"><span>Panel de Cobranza</span>${infoCobranza()}</a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
       ${sistemaVisible('developers') ? (tieneSistema(user, 'developers') ? '<a href="/developers"><span>Panel de Developers</span></a>' : '<span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>') : ''}
       ${sistemaVisible('campus') ? '<a href="/campus">Campus de formación</a>' : ''}
@@ -4725,7 +4725,7 @@ function hubPage({ user }) {
         <h3>Generador de Propuestas</h3>
         <p>Propuestas PDF por rubro: plantilla + nombre, colores y logo del cliente, textos retocables y descarga lista para mandar.</p>
       </a>` : ''}
-      ${sistemaVisible('cobranza') && tieneSistema(user, 'cobranza') ? `
+      ${sistemaVisible('cobranza') && user.role === 'admin' ? `
       <a class="hub-card" href="/cobranza">
         <span class="hc-ic">${ICONS.cobranza}</span>
         <h3>Panel de Cobranza</h3>

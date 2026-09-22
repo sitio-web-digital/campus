@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.4.5',
+    fecha: '2026-09-22',
+    cambios: [
+      { tipo: 'mejora', texto: 'Vuelve el Panel de Cobranza para administradores: comisiones del equipo — cuánto, a quién y cuándo pagar.' },
+    ],
+  },
+  {
     version: '3.4.4',
     fecha: '2026-09-21',
     cambios: [
