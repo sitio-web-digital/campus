@@ -45,7 +45,7 @@ const ICONS = {
 };
 const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F3459'/%3E%3Ctext x='16' y='21' font-size='12' font-family='Helvetica,Arial' font-weight='bold' fill='white' text-anchor='middle'%3EC4D%3C/text%3E%3C/svg%3E";
 
-const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', developers: 'Panel de Developers', clientes: 'Panel de Leads', propuestas: 'Generador de Propuestas', whatsapp: 'WhatsApp', b2b: 'Inteligencia B2B', hub: 'Campus C4D' };
+const SISTEMA_NOMBRE = { comercial: 'Comercial Cloud For Deploy', cfd: 'Comercial Cloud For Deploy', gondolas: 'Comercial Góndolas', estanterias: 'Comercial Estanterías Reforzadas', sitioweb: 'Comercial SitioWeb Digital', campus: 'Campus de formación', cobranza: 'Panel de Cobranza', admin: 'Panel Administración', developers: 'Panel de Developers', clientes: 'Panel de Leads', propuestas: 'Generador de Propuestas', whatsapp: 'WhatsApp', b2b: 'Inteligencia B2B', finanzas: 'Finanzas del grupo', hub: 'Campus C4D' };
 const tieneSistema = (user, s) => user && (user.role === 'admin' || (user.permisos || []).includes(s));
 
 // Simplificación 3.1: sistemas que EXISTEN pero se esconden de la vista de todos
@@ -119,6 +119,7 @@ function sysSwitch(sistema, user) {
       ${sistemaVisible('whatsapp') && user && user.role === 'admin' ? `<a href="/whatsapp"><span>WhatsApp</span><span class="soon-chip">Prueba</span></a>` : ''}
       ${user && user.macro ? `<a href="/b2b"><span>Inteligencia B2B</span><span class="soon-chip">Prueba</span></a>` : ''}
       ${sistemaVisible('cobranza') && user && user.role === 'admin' ? `<a href="/cobranza"><span>Panel de Cobranza</span>${infoCobranza()}</a>` : ''}
+      ${user && user.role === 'admin' ? `<a href="/finanzas"><span>Finanzas del grupo</span></a>` : ''}
       ${user && user.role === 'admin' ? `<a href="/admin">Panel Administración</a>` : ''}
       ${sistemaVisible('developers') ? (tieneSistema(user, 'developers') ? '<a href="/developers"><span>Panel de Developers</span></a>' : '<span class="soon"><span>Panel de Developers</span><span class="soon-chip">Próximamente</span></span>') : ''}
       ${sistemaVisible('campus') ? '<a href="/campus">Campus de formación</a>' : ''}
@@ -321,7 +322,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         <a href="/admin" class="${active === 'admin' ? 'on' : ''}">${ICONS.equipo}<span>Usuarios</span></a>
         <a href="/admin/comunicacion" class="${active === 'comunicacion' ? 'on' : ''}">${ICONS.bell}<span>Comunicación</span></a>
         <a href="/admin/preferencias" class="${active === 'preferencias' ? 'on' : ''}">${ICONS.docs}<span>Preferencias</span></a>`;
-  } else if (sistema === 'clientes' || sistema === 'b2b') {
+  } else if (sistema === 'clientes' || sistema === 'b2b' || sistema === 'finanzas') {
     links = ''; /* una sola pantalla: no hace falta menú propio */
   } else if (sistema === 'developers') {
     links = `
@@ -437,7 +438,7 @@ function layout({ title, user, active, body, msg, err, bodyClass, sistema = 'com
         cuerpo = H('', titulo + '<span style="flex:1"></span>' + L('height:2.2rem;width:11rem;border-radius:8px') + L('height:2.2rem;width:8rem;border-radius:8px')) +
           G('2.4rem repeat(7, 1fr)', '.45rem', horasCal + R(7, diaCal));
       }
-    } else if (ruta.indexOf('/dashboard') === 0) {
+    } else if (ruta.indexOf('/dashboard') === 0 || ruta.indexOf('/finanzas') === 0) {
       // Estadisticas: KPIs (2x2 en celular) + embudo + tabla
       var kpi = function () { return V('gap:.5rem;border:1px solid var(--line);border-radius:14px;padding:1rem', L('height:1.7rem;width:4.5rem') + L('height:.8rem;width:70%')); };
       cuerpo = H('', titulo + '<span style="flex:1"></span>' + (movil ? '' : L('height:2.1rem;width:12rem;border-radius:8px'))) +
@@ -2361,6 +2362,42 @@ html.dark .col { background:#262525; border-color:var(--line); }
 .pc-tomar { order:5; flex:1 1 100%; justify-content:flex-end; min-width:0; }
 .pc-tomar select { flex:1 1 auto; min-width:0; max-width:none; }
 .pc-tomar .btn { flex-shrink:0; }
+
+/* finanzas del grupo */
+.fin-mes { font-family:"Inter",sans-serif; font-size:.95rem; min-width:9.5rem; text-align:center; }
+.fin-emp { flex-wrap:wrap; }
+.fin-pos { color:var(--ok); }
+.fin-neg { color:var(--bad); }
+.fin-sub { font-size:.72rem; color:var(--muted); font-weight:400; }
+.fin-tag { font-size:.62rem; font-weight:700; border-radius:4px; padding:.1rem .4rem; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
+.fin-t-venta { background:var(--ok-soft); color:var(--ok); }
+.fin-t-comi { background:var(--bad-soft); color:var(--bad); }
+.fin-t-fijo { background:var(--surface2); color:var(--muted); }
+.fin-t-manual { background:var(--accent-soft); color:var(--accent-ink); }
+.fin-tabla td { vertical-align:middle; }
+.fin-tabla .btn-ic { width:1.7rem; height:1.7rem; }
+.fin-serie { display:grid; grid-template-columns:repeat(6, 1fr); gap:.4rem; align-items:end; }
+.fin-barra { display:flex; flex-direction:column; align-items:center; gap:.25rem; text-decoration:none; color:inherit; border-radius:8px; padding:.35rem .2rem .3rem; }
+.fin-barra:hover { background:var(--surface2); text-decoration:none; }
+.fin-barra.on { background:var(--accent-soft); }
+.fb-cols { display:flex; gap:.2rem; align-items:end; height:5.2rem; }
+.fb-cols i { display:block; width:.85rem; border-radius:4px 4px 2px 2px; min-height:2px; }
+.fb-in, i.fb-in { background:var(--ok); }
+.fb-eg, i.fb-eg { background:var(--bad); opacity:.75; }
+.fb-mes { font-size:.66rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+.fb-res { font-size:.68rem; font-weight:700; font-variant-numeric:tabular-nums; }
+.fin-leyenda { display:inline-block; width:.7rem; height:.7rem; border-radius:3px; vertical-align:-1px; }
+.fin-form { display:flex; flex-direction:column; gap:.5rem; }
+.fin-form input, .fin-form select { margin:0; }
+.fin-form-fila { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
+.fin-fijo { display:flex; gap:.6rem; align-items:center; padding:.5rem 0; border-bottom:1px solid var(--line); }
+.fin-fijo:last-of-type { border-bottom:none; }
+.fin-fijo-off { opacity:.55; }
+@media (max-width: 720px) {
+  .fin-serie { gap:.15rem; }
+  .fb-cols { height:3.6rem; }
+  .fin-fijo { flex-wrap:wrap; }
+}
 
 /* inteligencia B2B */
 .b2b-mini { font-size:.72rem; }
@@ -4302,6 +4339,151 @@ function iaConversacionesPage({ user, fecha: fechaSel, vendedorId, filas, dias, 
   });
 }
 
+/* --------- Finanzas del grupo (solo admins) --------- */
+
+function finanzasPage({ user, mes, fEmp, empresas, ventas, comisiones, movs, porEmpresa, serie, fijos, totales, msg, err }) {
+  const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const mesLindo = (m) => MESES[+m.slice(5, 7) - 1] + ' ' + m.slice(2, 4);
+  const mesLargo = (m) => ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4);
+  const mueveMes = (m, k) => { const d = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7) - 1 + k, 1)); return d.toISOString().slice(0, 7); };
+  const urlMes = (m) => `/finanzas?mes=${m}${fEmp ? '&empresa=' + fEmp : ''}`;
+  const nombreEmp = (slug) => { const e = empresas.find((x) => x.slug === slug); return e ? e.nombre : slug; };
+  const dinero = (n, signo) => `<span class="${signo > 0 ? 'fin-pos' : signo < 0 ? 'fin-neg' : ''}">${signo > 0 ? '+' : signo < 0 ? '−' : ''}${money(Math.abs(n))}</span>`;
+  const ddmm = (f) => f ? `${f.slice(8, 10)}/${f.slice(5, 7)}` : '—';
+  const hoyMes = new Date().toISOString().slice(0, 7);
+
+  // Una sola lista del mes: ventas + comisiones + movimientos, ordenada por fecha.
+  const filas = [
+    ...ventas.map((v) => ({ fecha: v.fecha, tag: ['Venta', 'fin-t-venta'], concepto: `${esc(v.cliente)} <span class="fin-sub">· ${esc(v.vendedor)}</span>`, link: '/deals/' + v.id, empresa: v.panel, monto: v.monto, signo: 1 })),
+    ...comisiones.map((c) => ({ fecha: c.fecha, tag: ['Comisión', 'fin-t-comi'], concepto: `${esc(c.vendedor)} <span class="fin-sub">· ${esc(c.cliente)}${c.estado === 'pagado' ? ' · pagada' : ''}</span>`, empresa: c.panel, monto: c.monto, signo: -1 })),
+    ...movs.map((m) => ({ fecha: m.fecha, tag: m.recurrente_id ? ['Fijo', 'fin-t-fijo'] : [m.tipo === 'ingreso' ? 'Ingreso' : 'Egreso', 'fin-t-manual'], concepto: `${esc(m.concepto)}${m.categoria ? ` <span class="fin-sub">· ${esc(m.categoria)}</span>` : ''}`, empresa: m.empresa, monto: m.monto, signo: m.tipo === 'ingreso' ? 1 : -1, id: m.id, borrable: true })),
+  ].sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+
+  const maxSerie = Math.max(1, ...serie.map((x) => Math.max(x.ingresos, x.egresos)));
+  const opcEmp = (sel) => empresas.map((e) => `<option value="${e.slug}" ${sel === e.slug ? 'selected' : ''}>${esc(e.nombre)}</option>`).join('');
+  const hidden = `<input type="hidden" name="mes" value="${mes}">${fEmp ? `<input type="hidden" name="empresa_f" value="${fEmp}">` : ''}`;
+
+  return layout({
+    title: 'Finanzas', user, active: 'finanzas', sistema: 'finanzas', msg, err,
+    body: `
+  <div class="toolbar" style="margin:.6rem 0 .2rem; flex-wrap:wrap">
+    <h1 style="margin:0">Finanzas del grupo</h1>
+    <div class="sp"></div>
+    <a class="btn secondary small" href="${urlMes(mueveMes(mes, -1))}">‹ ${mesLindo(mueveMes(mes, -1))}</a>
+    <strong class="fin-mes">${mesLargo(mes)}</strong>
+    ${mes < hoyMes ? `<a class="btn secondary small" href="${urlMes(mueveMes(mes, 1))}">${mesLindo(mueveMes(mes, 1))} ›</a>` : ''}
+    ${mes !== hoyMes ? `<a class="btn secondary small" href="${urlMes(hoyMes)}">Hoy</a>` : ''}
+  </div>
+  <div class="seg fin-emp">
+    <a href="/finanzas?mes=${mes}" class="${!fEmp ? 'on' : ''}">Todas</a>
+    ${empresas.map((e) => `<a href="/finanzas?mes=${mes}&empresa=${e.slug}" class="${fEmp === e.slug ? 'on' : ''}">${esc(e.nombre)}</a>`).join('')}
+  </div>
+
+  <div class="tiles" style="margin-top:.9rem">
+    <div class="tile"><div class="v fin-pos">${money(totales.ingresos)}</div><div class="l">Ingresos del mes${ventas.length ? ` · ${ventas.length} venta${ventas.length === 1 ? '' : 's'} aprobada${ventas.length === 1 ? '' : 's'}` : ''}</div></div>
+    <div class="tile"><div class="v fin-neg">${money(totales.egresos)}</div><div class="l">Egresos del mes</div></div>
+    <div class="tile"><div class="v">${money(totales.comisiones)}</div><div class="l">Comisiones devengadas (reglas de Cobranza)</div></div>
+    <div class="tile"><div class="v ${totales.resultado >= 0 ? 'fin-pos' : 'fin-neg'}">${money(totales.resultado)}</div><div class="l">Resultado del mes</div></div>
+  </div>
+
+  <div class="cfg-grid">
+  <section class="cfg-sec">
+    ${!fEmp ? `
+    <h2><span class="cfg-ic">${ICONS.dashboard}</span>Por empresa · ${mesLargo(mes)}</h2>
+    <div class="tablewrap card" style="padding:.3rem .5rem"><table>
+      <thead><tr><th>Empresa</th><th>Ingresos</th><th>Egresos</th><th>Resultado</th></tr></thead>
+      <tbody>${porEmpresa.map((e) => { const r = e.ingresos - e.egresos; return `
+        <tr class="rowlink" onclick="location='/finanzas?mes=${mes}&empresa=${e.slug}'">
+          <td><strong>${esc(e.nombre)}</strong></td>
+          <td>${e.ingresos ? dinero(e.ingresos, 1) : '<span class="muted">—</span>'}</td>
+          <td>${e.egresos ? dinero(e.egresos, -1) : '<span class="muted">—</span>'}</td>
+          <td>${e.ingresos || e.egresos ? `<strong class="${r >= 0 ? 'fin-pos' : 'fin-neg'}">${money(r)}</strong>` : '<span class="muted">—</span>'}</td>
+        </tr>`; }).join('')}</tbody>
+    </table></div>` : ''}
+
+    <h2><span class="cfg-ic">${ICONS.metas}</span>Últimos 6 meses${fEmp ? ' · ' + esc(nombreEmp(fEmp)) : ''}</h2>
+    <div class="card">
+      <div class="fin-serie">
+        ${serie.map((x) => `
+        <a class="fin-barra ${x.mes === mes ? 'on' : ''}" href="${urlMes(x.mes)}" title="Ingresos ${money(x.ingresos)} · Egresos ${money(x.egresos)}">
+          <span class="fb-cols"><i class="fb-in" style="height:${Math.round((x.ingresos / maxSerie) * 100)}%"></i><i class="fb-eg" style="height:${Math.round((x.egresos / maxSerie) * 100)}%"></i></span>
+          <span class="fb-mes">${mesLindo(x.mes)}</span>
+          <span class="fb-res ${x.ingresos - x.egresos >= 0 ? 'fin-pos' : 'fin-neg'}">${money(x.ingresos - x.egresos)}</span>
+        </a>`).join('')}
+      </div>
+      <p class="caption" style="margin:.5rem 0 0"><span class="fin-leyenda fb-in"></span> Ingresos · <span class="fin-leyenda fb-eg"></span> Egresos · el resultado va abajo de cada mes.</p>
+    </div>
+
+    <h2><span class="cfg-ic">${ICONS.docs}</span>Movimientos de ${mesLargo(mes).toLowerCase()}</h2>
+    ${filas.length ? `<div class="tablewrap card" style="padding:.3rem .5rem"><table class="fin-tabla">
+      <thead><tr><th>Día</th><th></th><th>Concepto</th><th>Empresa</th><th style="text-align:right">Monto</th><th></th></tr></thead>
+      <tbody>${filas.map((f) => `
+        <tr>
+          <td class="muted">${ddmm(f.fecha)}</td>
+          <td><span class="fin-tag ${f.tag[1]}">${f.tag[0]}</span></td>
+          <td>${f.link ? `<a href="${f.link}">${f.concepto}</a>` : f.concepto}</td>
+          <td class="muted">${esc(nombreEmp(f.empresa))}</td>
+          <td style="text-align:right; font-variant-numeric:tabular-nums">${dinero(f.monto, f.signo)}</td>
+          <td>${f.borrable ? `<form method="post" action="/finanzas/movimiento/${f.id}/borrar" onsubmit="return confirm('¿Borrar este movimiento?')">${hidden}<button class="btn secondary small btn-ic" title="Borrar">${IC24('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>')}</button></form>` : ''}</td>
+        </tr>`).join('')}</tbody>
+    </table></div>`
+    : '<div class="card"><p class="muted" style="margin:0">Sin movimientos este mes. Las ventas aprobadas y las comisiones aparecen solas; lo demás se carga acá al lado.</p></div>'}
+    <p class="caption">Las ventas (Ganado aprobado) y las comisiones se leen en vivo de los paneles: si una venta se anula, acá desaparece sola. Ojo: si borrás la cuota de un fijo que sigue activo, el mes que viene reaparece — para frenarlo, pausalo en "Gastos fijos".</p>
+  </section>
+
+  <section class="cfg-sec">
+    <h2><span class="cfg-ic">${IC24('<path d="M12 5v14M5 12h14"/>')}</span>Nuevo movimiento</h2>
+    <div class="card">
+      <form method="post" action="/finanzas/movimiento" class="fin-form">${hidden}
+        <div class="fin-form-fila">
+          <select name="tipo"><option value="egreso">Egreso −</option><option value="ingreso">Ingreso +</option></select>
+          <select name="empresa">${opcEmp(fEmp || 'general')}</select>
+        </div>
+        <input name="concepto" placeholder="Concepto (ej: Publicidad Meta septiembre)" required>
+        <div class="fin-form-fila">
+          <input name="monto" type="number" step="0.01" min="1" placeholder="Monto $" required>
+          <input name="fecha" type="date" value="${new Date().toISOString().slice(0, 10)}">
+        </div>
+        <input name="categoria" list="finCategorias" placeholder="Categoría (opcional)">
+        <datalist id="finCategorias">${['Sueldos', 'Alquiler', 'Servicios', 'Software y herramientas', 'Impuestos', 'Publicidad', 'Logística', 'Inversión', 'Otros'].map((c) => `<option value="${c}">`).join('')}</datalist>
+        <button class="btn small">Cargar movimiento</button>
+      </form>
+    </div>
+
+    <h2><span class="cfg-ic">${IC24('<path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v6h-6"/>')}</span>Gastos fijos</h2>
+    <div class="card">
+      <p class="caption" style="margin:0 0 .5rem">Se cargan solos cada mes (alquileres, sueldos, herramientas). Pausar frena los meses siguientes; lo ya cargado queda.</p>
+      ${fijos.length ? fijos.map((f) => `
+      <div class="fin-fijo ${f.activo ? '' : 'fin-fijo-off'}">
+        <div style="min-width:0; flex:1">
+          <strong>${esc(f.concepto)}</strong>
+          <span class="fin-sub" style="display:block">${esc(nombreEmp(f.empresa))} · día ${f.dia}${f.categoria ? ' · ' + esc(f.categoria) : ''}${f.activo ? '' : ' · pausado'}</span>
+        </div>
+        <strong class="${f.tipo === 'ingreso' ? 'fin-pos' : 'fin-neg'}" style="font-variant-numeric:tabular-nums">${f.tipo === 'ingreso' ? '+' : '−'}${money(f.monto)}</strong>
+        <form method="post" action="/finanzas/fijo/${f.id}/estado">${hidden}<button class="btn secondary small">${f.activo ? 'Pausar' : 'Activar'}</button></form>
+        <form method="post" action="/finanzas/fijo/${f.id}/borrar" onsubmit="return confirm('¿Eliminar este fijo? Lo ya cargado queda en la historia.')">${hidden}<button class="btn secondary small btn-ic" title="Eliminar">${IC24('<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>')}</button></form>
+      </div>`).join('') : '<p class="muted small" style="margin:0 0 .6rem">Todavía no hay gastos fijos.</p>'}
+      <details class="b2b-suma"><summary>+ Agregar gasto fijo</summary>
+        <form method="post" action="/finanzas/fijo" class="fin-form" style="margin-top:.5rem">${hidden}
+          <div class="fin-form-fila">
+            <select name="tipo"><option value="egreso">Egreso −</option><option value="ingreso">Ingreso +</option></select>
+            <select name="empresa">${opcEmp(fEmp || 'general')}</select>
+          </div>
+          <input name="concepto" placeholder="Concepto (ej: Alquiler oficina)" required>
+          <div class="fin-form-fila">
+            <input name="monto" type="number" step="0.01" min="1" placeholder="Monto $ por mes" required>
+            <input name="dia" type="number" min="1" max="28" value="1" title="Día del mes en que impacta">
+          </div>
+          <input name="categoria" list="finCategorias" placeholder="Categoría (opcional)">
+          <button class="btn small">Crear fijo</button>
+        </form>
+      </details>
+    </div>
+  </section>
+  </div>`,
+  });
+}
+
 /* --------- Inteligencia B2B (prueba, solo admins) --------- */
 
 const B2B_ROLES = { economic_buyer: 'Economic buyer', decision_maker: 'Decision maker', technical_buyer: 'Technical buyer', champion: 'Champion', end_user: 'End user' };
@@ -4731,6 +4913,12 @@ function hubPage({ user }) {
         <h3>Panel de Cobranza</h3>
         <p>${user.role === 'admin' ? 'Comisiones del equipo: cuánto, a quién y cuándo pagar.' : 'Tus comisiones: cuánto ganaste, qué está pendiente y cuándo cobrás.'}</p>
         ${chipsCobranza()}
+      </a>` : ''}
+      ${user.role === 'admin' ? `
+      <a class="hub-card" href="/finanzas">
+        <span class="hc-ic">${IC('<path d="M3 16.5V10M8 16.5V6M13 16.5v-6M18 16.5V3.5"/>')}</span>
+        <h3>Finanzas del grupo</h3>
+        <p>Entradas y salidas de todas las empresas: ventas, comisiones, gastos fijos y resultado del mes.</p>
       </a>` : ''}
       ${sistemaVisible('whatsapp') && user.role === 'admin' ? `
       <a class="hub-card" href="/whatsapp">
@@ -6238,7 +6426,7 @@ function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads
 }
 
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage, agendaPage, b2bListaPage, b2bFichaPage, propuestasPage, propuestaNuevaPage, propuestaVerPage, whatsappPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage, agendaPage, b2bListaPage, b2bFichaPage, finanzasPage, propuestasPage, propuestaNuevaPage, propuestaVerPage, whatsappPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusCursoPage, campusQuizPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,

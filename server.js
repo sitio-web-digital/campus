@@ -1720,6 +1720,146 @@ app.post('/clientes/:id/estado', requireAuth, requireSistema('clientes'), (req, 
   res.redirect('/clientes');
 });
 
+/* ---------------- Finanzas del grupo (solo admins) ---------------- */
+// Entradas y salidas de plata de todas las empresas. Las ventas aprobadas (deals Ganado)
+// y las comisiones (reglas del panel de cobranza) se leen EN VIVO — si una venta se anula,
+// finanzas se corrige sola. Lo manual y los gastos fijos viven en fin_movimientos/fin_recurrentes.
+
+const FIN_EMPRESAS = [...PANELES_COMERCIALES.map((P) => ({ slug: P.slug, nombre: P.nombre })), { slug: 'general', nombre: 'Grupo / General' }];
+const finEmpresaOk = (slug) => FIN_EMPRESAS.some((e) => e.slug === slug);
+
+// Los gastos fijos del mes se materializan como movimientos (una sola vez por mes, idempotente).
+function finMaterializarFijos(mes) {
+  if (mes > hoyAR().slice(0, 7)) return; // el futuro no se materializa
+  const ins = db.prepare(`INSERT OR IGNORE INTO fin_movimientos (empresa, tipo, categoria, concepto, monto, fecha, recurrente_id, periodo)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const f of db.prepare('SELECT * FROM fin_recurrentes WHERE activo = 1 AND desde <= ?').all(mes)) {
+    const dia = String(Math.min(28, Math.max(1, f.dia || 1))).padStart(2, '0');
+    ins.run(f.empresa, f.tipo, f.categoria, f.concepto, f.monto, `${mes}-${dia}`, f.id, mes);
+  }
+}
+
+app.get('/finanzas', requireAuth, requireAdmin, (req, res) => {
+  const mes = /^\d{4}-\d{2}$/.test(req.query.mes || '') ? req.query.mes : hoyAR().slice(0, 7);
+  const fEmp = finEmpresaOk(req.query.empresa) ? req.query.empresa : '';
+  finMaterializarFijos(mes);
+  const desde = mes + '-01', hasta = mes + '-31';
+
+  // Ventas aprobadas del mes (ingreso automático, por fecha de cierre).
+  const wV = ["d.etapa = 'Ganado'", "d.aprobacion = 'aprobado'", 'd.mrr > 0', 'd.fecha_cierre BETWEEN ? AND ?'];
+  const pV = [desde, hasta];
+  if (fEmp === 'general') wV.push('1 = 0');
+  else if (fEmp) { wV.push('d.panel = ?'); pV.push(fEmp); }
+  const ventas = db.prepare(`SELECT d.id, d.empresa AS cliente, d.panel, d.mrr AS monto, d.fecha_cierre AS fecha, u.name AS vendedor
+    FROM deals d JOIN users u ON u.id = d.user_id WHERE ${wV.join(' AND ')} ORDER BY d.fecha_cierre`).all(...pV);
+
+  // Comisiones devengadas del mes (egreso automático; canceladas no cuentan).
+  const wC = ["c.estado != 'cancelado'", 'c.fecha_devengada BETWEEN ? AND ?'];
+  const pC = [desde, hasta];
+  if (fEmp === 'general') wC.push('1 = 0');
+  else if (fEmp) { wC.push('d.panel = ?'); pC.push(fEmp); }
+  const comisiones = db.prepare(`SELECT c.id, c.monto, c.fecha_devengada AS fecha, c.concepto, c.estado, d.empresa AS cliente, d.panel, u.name AS vendedor
+    FROM commissions c JOIN deals d ON d.id = c.deal_id JOIN users u ON u.id = c.user_id WHERE ${wC.join(' AND ')} ORDER BY c.fecha_devengada`).all(...pC);
+
+  // Movimientos manuales + fijos materializados del mes.
+  const wM = ['fecha BETWEEN ? AND ?']; const pM = [desde, hasta];
+  if (fEmp) { wM.push('empresa = ?'); pM.push(fEmp); }
+  const movs = db.prepare(`SELECT m.*, u.name AS cargado_por FROM fin_movimientos m LEFT JOIN users u ON u.id = m.user_id
+    WHERE ${wM.join(' AND ')} ORDER BY m.fecha, m.id`).all(...pM);
+
+  // Resumen por empresa del mes (siempre sobre todas, para la tabla comparativa).
+  const porEmpresa = FIN_EMPRESAS.map((e) => ({ ...e, ingresos: 0, egresos: 0 }));
+  const emp = (slug) => porEmpresa.find((x) => x.slug === slug) || porEmpresa[porEmpresa.length - 1];
+  for (const r of db.prepare(`SELECT d.panel, SUM(d.mrr) s FROM deals d WHERE d.etapa = 'Ganado' AND d.aprobacion = 'aprobado' AND d.mrr > 0 AND d.fecha_cierre BETWEEN ? AND ? GROUP BY d.panel`).all(desde, hasta)) emp(r.panel).ingresos += r.s;
+  for (const r of db.prepare(`SELECT d.panel, SUM(c.monto) s FROM commissions c JOIN deals d ON d.id = c.deal_id WHERE c.estado != 'cancelado' AND c.fecha_devengada BETWEEN ? AND ? GROUP BY d.panel`).all(desde, hasta)) emp(r.panel).egresos += r.s;
+  for (const r of db.prepare(`SELECT empresa, tipo, SUM(monto) s FROM fin_movimientos WHERE fecha BETWEEN ? AND ? GROUP BY empresa, tipo`).all(desde, hasta)) {
+    if (r.tipo === 'ingreso') emp(r.empresa).ingresos += r.s; else emp(r.empresa).egresos += r.s;
+  }
+
+  // Serie de los últimos 6 meses (con el filtro de empresa aplicado).
+  const meses = [];
+  {
+    const [a, m] = mes.split('-').map(Number);
+    for (let i = 5; i >= 0; i--) { const d = new Date(Date.UTC(a, m - 1 - i, 1)); meses.push(d.toISOString().slice(0, 7)); }
+  }
+  const serie = meses.map((mm) => ({ mes: mm, ingresos: 0, egresos: 0 }));
+  const enSerie = (mm) => serie.find((x) => x.mes === mm);
+  const desde6 = meses[0] + '-01';
+  const wSV = ["etapa = 'Ganado'", "aprobacion = 'aprobado'", 'mrr > 0', 'fecha_cierre >= ?']; const pSV = [desde6];
+  if (fEmp === 'general') wSV.push('1 = 0'); else if (fEmp) { wSV.push('panel = ?'); pSV.push(fEmp); }
+  for (const r of db.prepare(`SELECT substr(fecha_cierre, 1, 7) mm, SUM(mrr) s FROM deals WHERE ${wSV.join(' AND ')} GROUP BY mm`).all(...pSV)) { const x = enSerie(r.mm); if (x) x.ingresos += r.s; }
+  const wSC = ["c.estado != 'cancelado'", 'c.fecha_devengada >= ?']; const pSC = [desde6];
+  if (fEmp === 'general') wSC.push('1 = 0'); else if (fEmp) { wSC.push('d.panel = ?'); pSC.push(fEmp); }
+  for (const r of db.prepare(`SELECT substr(c.fecha_devengada, 1, 7) mm, SUM(c.monto) s FROM commissions c JOIN deals d ON d.id = c.deal_id WHERE ${wSC.join(' AND ')} GROUP BY mm`).all(...pSC)) { const x = enSerie(r.mm); if (x) x.egresos += r.s; }
+  const wSM = ['fecha >= ?']; const pSM = [desde6];
+  if (fEmp) { wSM.push('empresa = ?'); pSM.push(fEmp); }
+  for (const r of db.prepare(`SELECT substr(fecha, 1, 7) mm, tipo, SUM(monto) s FROM fin_movimientos WHERE ${wSM.join(' AND ')} GROUP BY mm, tipo`).all(...pSM)) {
+    const x = enSerie(r.mm); if (x) { if (r.tipo === 'ingreso') x.ingresos += r.s; else x.egresos += r.s; }
+  }
+  // Los fijos de meses pasados que nunca se abrieron también cuentan en la serie (sin materializarlos).
+  for (const f of db.prepare('SELECT * FROM fin_recurrentes WHERE activo = 1').all()) {
+    if (fEmp && f.empresa !== fEmp) continue;
+    for (const x of serie) {
+      if (x.mes > hoyAR().slice(0, 7) || f.desde > x.mes) continue;
+      const ya = db.prepare('SELECT 1 FROM fin_movimientos WHERE recurrente_id = ? AND periodo = ?').get(f.id, x.mes);
+      if (!ya) { if (f.tipo === 'ingreso') x.ingresos += f.monto; else x.egresos += f.monto; }
+    }
+  }
+
+  const fijos = db.prepare('SELECT * FROM fin_recurrentes ORDER BY activo DESC, empresa, id').all();
+  const totIngresos = ventas.reduce((a, v) => a + v.monto, 0) + movs.filter((m) => m.tipo === 'ingreso').reduce((a, m) => a + m.monto, 0);
+  const totComisiones = comisiones.reduce((a, c) => a + c.monto, 0);
+  const totEgresos = totComisiones + movs.filter((m) => m.tipo === 'egreso').reduce((a, m) => a + m.monto, 0);
+  res.send(V.finanzasPage({
+    user: req.user, mes, fEmp, empresas: FIN_EMPRESAS, ventas, comisiones, movs, porEmpresa, serie, fijos,
+    totales: { ingresos: totIngresos, egresos: totEgresos, comisiones: totComisiones, resultado: totIngresos - totEgresos },
+    msg: clean(req.query.msg), err: clean(req.query.err),
+  }));
+});
+
+const finVolver = (req, extra) => '/finanzas?mes=' + (/^\d{4}-\d{2}$/.test(req.body.mes || '') ? req.body.mes : hoyAR().slice(0, 7)) + (finEmpresaOk(req.body.empresa_f) ? '&empresa=' + req.body.empresa_f : '') + (extra || '');
+
+app.post('/finanzas/movimiento', requireAuth, requireAdmin, (req, res) => {
+  const empresa = finEmpresaOk(req.body.empresa) ? req.body.empresa : 'general';
+  const tipo = cleanEnum(req.body.tipo, ['ingreso', 'egreso']);
+  const concepto = (clean(req.body.concepto) || '').slice(0, 200);
+  const monto = cleanNum(req.body.monto);
+  const fecha = cleanDate(req.body.fecha) || hoyAR();
+  if (!tipo || !concepto || !monto) return res.redirect(finVolver(req, '&err=' + encodeURIComponent('Completá tipo, concepto y monto.')));
+  db.prepare('INSERT INTO fin_movimientos (empresa, tipo, categoria, concepto, monto, fecha, notas, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(empresa, tipo, clean((req.body.categoria || '').slice(0, 80)), concepto, monto, fecha, clean((req.body.notas || '').slice(0, 500)), req.user.id);
+  res.redirect(finVolver(req, '&msg=' + encodeURIComponent('Movimiento cargado.')));
+});
+
+app.post('/finanzas/movimiento/:id/borrar', requireAuth, requireAdmin, (req, res) => {
+  // Si es la cuota de un fijo activo, borrar la fila la haría reaparecer: se avisa en la pantalla.
+  db.prepare('DELETE FROM fin_movimientos WHERE id = ?').run(req.params.id);
+  res.redirect(finVolver(req, '&msg=' + encodeURIComponent('Movimiento borrado.')));
+});
+
+app.post('/finanzas/fijo', requireAuth, requireAdmin, (req, res) => {
+  const empresa = finEmpresaOk(req.body.empresa) ? req.body.empresa : 'general';
+  const tipo = cleanEnum(req.body.tipo, ['ingreso', 'egreso']) || 'egreso';
+  const concepto = (clean(req.body.concepto) || '').slice(0, 200);
+  const monto = cleanNum(req.body.monto);
+  const dia = Math.min(28, Math.max(1, cleanInt(req.body.dia) || 1));
+  if (!concepto || !monto) return res.redirect(finVolver(req, '&err=' + encodeURIComponent('Completá concepto y monto del fijo.')));
+  db.prepare('INSERT INTO fin_recurrentes (empresa, tipo, categoria, concepto, monto, dia, desde) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(empresa, tipo, clean((req.body.categoria || '').slice(0, 80)), concepto, monto, dia, hoyAR().slice(0, 7));
+  res.redirect(finVolver(req, '&msg=' + encodeURIComponent('Gasto fijo creado: se carga solo todos los meses.')));
+});
+
+app.post('/finanzas/fijo/:id/estado', requireAuth, requireAdmin, (req, res) => {
+  db.prepare('UPDATE fin_recurrentes SET activo = 1 - activo WHERE id = ?').run(req.params.id);
+  res.redirect(finVolver(req));
+});
+
+app.post('/finanzas/fijo/:id/borrar', requireAuth, requireAdmin, (req, res) => {
+  // Se borra la regla; los meses ya materializados quedan como historia.
+  db.prepare('DELETE FROM fin_recurrentes WHERE id = ?').run(req.params.id);
+  res.redirect(finVolver(req, '&msg=' + encodeURIComponent('Fijo eliminado (lo ya cargado queda en la historia).')));
+});
+
 /* ---------------- Inteligencia B2B (prueba, solo admins) ---------------- */
 // Investiga una cuenta: Places (lo que ya hay del prospecto) + el sitio web de la empresa
 // (fetch simple, nada intrusivo) + chequeos técnicos observables + noticias públicas (RSS),

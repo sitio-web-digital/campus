@@ -332,6 +332,36 @@ if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'macro'
 }
 db.prepare("UPDATE users SET macro = 1 WHERE email = 'admin@cloudfordeploy.com'").run();
 
+// 3.5.0: Finanzas del grupo (solo admins) — movimientos manuales y gastos fijos recurrentes.
+// Las ventas aprobadas y las comisiones NO se copian acá: el panel las lee en vivo de deals/commissions.
+db.exec(`CREATE TABLE IF NOT EXISTS fin_movimientos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  empresa TEXT NOT NULL,
+  tipo TEXT NOT NULL CHECK (tipo IN ('ingreso', 'egreso')),
+  categoria TEXT,
+  concepto TEXT NOT NULL,
+  monto REAL NOT NULL,
+  fecha TEXT NOT NULL,
+  recurrente_id INTEGER,
+  periodo TEXT,
+  notas TEXT,
+  user_id INTEGER REFERENCES users(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fin_rec_periodo ON fin_movimientos (recurrente_id, periodo) WHERE recurrente_id IS NOT NULL;
+CREATE TABLE IF NOT EXISTS fin_recurrentes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  empresa TEXT NOT NULL,
+  tipo TEXT NOT NULL DEFAULT 'egreso' CHECK (tipo IN ('ingreso', 'egreso')),
+  categoria TEXT,
+  concepto TEXT NOT NULL,
+  monto REAL NOT NULL,
+  dia INTEGER NOT NULL DEFAULT 1,
+  desde TEXT NOT NULL,
+  activo INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);`);
+
 // 3.4.0: Inteligencia B2B (prueba, solo admins) — cuentas investigadas, hallazgos, personas y eventos.
 db.exec(`CREATE TABLE IF NOT EXISTS b2b_cuentas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
