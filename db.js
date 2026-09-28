@@ -346,6 +346,54 @@ db.exec(`CREATE TABLE IF NOT EXISTS form_links (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );`);
 
+// 3.6.1: planillas de preguntas (estilo Google Forms) + titulo del link.
+db.exec(`CREATE TABLE IF NOT EXISTS form_plantillas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL UNIQUE,
+  preguntas TEXT NOT NULL,
+  creado_por INTEGER REFERENCES users(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);`);
+if (!db.prepare('PRAGMA table_info(form_links)').all().some((c) => c.name === 'titulo')) {
+  db.exec('ALTER TABLE form_links ADD COLUMN titulo TEXT');
+}
+if (db.prepare('SELECT COUNT(*) AS c FROM form_plantillas').get().c === 0) {
+  const insPl = db.prepare('INSERT INTO form_plantillas (nombre, preguntas) VALUES (?, ?)');
+  insPl.run('Genéricas', JSON.stringify([
+    '¿Cómo se llama tu negocio y a qué se dedica?',
+    '¿Tenés página web o tienda online hoy? Si tenés, ¿cuál es?',
+    '¿Qué te gustaría resolver o mejorar? (página web, tienda online, sistema a medida…)',
+    '¿Qué funcionalidades no pueden faltar?',
+    '¿Manejás un presupuesto aproximado?',
+    '¿Para cuándo lo necesitás?',
+    '¿Cuál es el mejor medio y horario para contactarte?',
+  ]));
+  insPl.run('Página web', JSON.stringify([
+    '¿Tenés una web hoy? ¿Qué te gusta y qué no de la actual?',
+    '¿Qué secciones querés? (galería, contacto, ubicación, turnos, preguntas frecuentes…)',
+    '¿Tenés logo, fotos y textos propios, o hay que armarlos?',
+    '¿Qué webs de otros negocios te gustan como referencia?',
+    '¿Ya tenés dominio contratado? ¿Cuál?',
+    '¿Para cuándo la necesitás?',
+  ]));
+  insPl.run('Tienda online', JSON.stringify([
+    '¿Cuántos productos vas a vender aproximadamente?',
+    '¿Cómo cobrás hoy? (efectivo, transferencia, MercadoPago, tarjetas…)',
+    '¿Hacés envíos? ¿Con qué empresa o cómo?',
+    '¿Tenés fotos y descripciones de los productos?',
+    '¿Cómo manejás el stock hoy?',
+    '¿Manejás un presupuesto y un plazo?',
+  ]));
+  insPl.run('Sistema a medida', JSON.stringify([
+    '¿Qué proceso de tu negocio querés sistematizar?',
+    '¿Cómo lo manejan hoy? (papel, Excel, otro sistema…)',
+    '¿Cuántas personas lo usarían?',
+    '¿Qué reportes o números necesitás ver?',
+    '¿Tiene que integrarse con algo? (facturación, stock, otro software)',
+    '¿Qué urgencia y presupuesto manejás?',
+  ]));
+}
+
 // 3.5.0: Finanzas del grupo (solo admins) — movimientos manuales y gastos fijos recurrentes.
 // Las ventas aprobadas y las comisiones NO se copian acá: el panel las lee en vivo de deals/commissions.
 db.exec(`CREATE TABLE IF NOT EXISTS fin_movimientos (

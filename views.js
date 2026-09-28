@@ -2387,6 +2387,14 @@ html.dark .col { background:#262525; border-color:var(--line); }
 .fl-custom textarea { margin:0; }
 @media (max-width: 640px) { .fl-link { flex-wrap:wrap; } .fl-link input { flex-basis:100%; } }
 
+.fl-plantilla { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
+.fl-plantilla select { margin:0; width:auto; max-width:16rem; padding:.35rem .5rem; font-size:.8rem; }
+.fl-guardar { display:inline-flex; gap:.35rem; align-items:center; font-size:.78rem; font-weight:500; text-transform:none; letter-spacing:0; color:var(--muted); margin:.45rem 0 0; }
+.fl-guardar input { width:auto; margin:0; }
+.fl-pls { display:flex; gap:.3rem; flex-wrap:wrap; margin-top:.55rem; }
+.fl-pl-x { font-size:.68rem; font-weight:600; color:var(--muted); background:var(--surface2); border:1px solid var(--line); border-radius:999px; padding:.14rem .55rem; cursor:pointer; }
+.fl-pl-x:hover { color:var(--bad); border-color:var(--bad); }
+
 /* finanzas del grupo */
 .fin-mes { font-family:"Inter",sans-serif; font-size:.95rem; min-width:9.5rem; text-align:center; }
 .fin-emp { flex-wrap:wrap; }
@@ -2653,13 +2661,15 @@ function conMenciones(texto, personas) {
 
 const STAR_SVG = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.8l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 8.1l5-.7z"/></svg>';
 
-// Formularios efímeros de la lead: lista + creación (genérico o con preguntas propias).
-function formulariosLead(d, formularios, baseUrl) {
-  const activos = formularios.filter((f) => !f.respondido_at && f.expira_at >= new Date().toISOString().slice(0, 10));
+// Formularios efímeros de la lead: planillas de preguntas + creación; el link vive 48 hs.
+function formulariosLead(d, formularios, baseUrl, plantillas = [], user = null) {
+  const ahora = new Date().toISOString();
+  const activos = formularios.filter((f) => !f.respondido_at && f.expira_at >= ahora);
+  const horasRestantes = (f) => Math.max(1, Math.round((new Date(f.expira_at) - Date.now()) / 3600e3));
   const tel = d.telefono ? String(d.telefono).replace(/\D/g, '') : '';
   const filaForm = (f) => {
     const url = `${baseUrl}/f/${f.token}`;
-    const vigente = !f.respondido_at && f.expira_at >= new Date().toISOString().slice(0, 10);
+    const vigente = !f.respondido_at && f.expira_at >= ahora;
     let respuestas = [];
     try { respuestas = JSON.parse(f.respuestas || '[]'); } catch (e) {}
     const preguntas = (() => { try { return JSON.parse(f.preguntas); } catch (e) { return []; } })();
@@ -2667,7 +2677,7 @@ function formulariosLead(d, formularios, baseUrl) {
     <div class="fl-item">
       <div class="fl-item-top">
         <span class="fin-tag ${f.respondido_at ? 'fin-t-venta' : vigente ? 'fin-t-manual' : 'fin-t-fijo'}">${f.respondido_at ? 'Respondido' : vigente ? 'Activo' : 'Vencido'}</span>
-        <span class="fl-sub">${f.tipo === 'custom' ? 'Personalizado' : 'Genérico'} · ${preguntas.length} preguntas · ${f.respondido_at ? 'respondió ' + tiempoRel(f.respondido_at) : 'vence el ' + f.expira_at.slice(8, 10) + '/' + f.expira_at.slice(5, 7)} · por ${esc(f.creador)}</span>
+        <span class="fl-sub">${esc(f.titulo || (f.tipo === 'custom' ? 'Personalizado' : 'Genéricas'))} · ${preguntas.length} preguntas · ${f.respondido_at ? 'respondió ' + tiempoRel(f.respondido_at) : vigente ? 'le quedan ' + horasRestantes(f) + ' hs' : 'vencido'} · por ${esc(f.creador)}</span>
         ${vigente ? `<form method="post" action="/deals/${d.id}/formulario/${f.id}/borrar" onsubmit="return confirm('¿Anular este link? El cliente ya no va a poder abrirlo.')"><button class="btn secondary small btn-ic" title="Anular link">${IC24('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>')}</button></form>` : ''}
       </div>
       ${vigente ? `
@@ -2685,22 +2695,30 @@ function formulariosLead(d, formularios, baseUrl) {
   return `
   <details class="fl-caja" ${activos.length ? 'open' : ''}>
     <summary>📋 Formulario para el cliente${formularios.length ? ` <span class="fl-cant">${formularios.length}</span>` : ''}</summary>
-    <p class="caption" style="margin:.2rem 0 .5rem">Un link público que vence a los 7 días y se responde una sola vez: las respuestas caen al historial de la lead y te avisa la campanita.</p>
+    <p class="caption" style="margin:.2rem 0 .5rem">Elegí una planilla de preguntas y se genera un link público que <strong>muere a las 48 horas</strong> y se responde una sola vez: las respuestas caen al historial y te avisa la campanita.</p>
     ${formularios.map(filaForm).join('')}
     <div class="fl-crear">
-      <form method="post" action="/deals/${d.id}/formulario"><input type="hidden" name="modo" value="generico"><button class="btn secondary small">+ Link con preguntas genéricas (7)</button></form>
-      <details class="fl-custom"><summary class="btn secondary small" style="display:inline-flex">+ Link con mis preguntas</summary>
+      <form method="post" action="/deals/${d.id}/formulario" class="fl-plantilla">
+        <input type="hidden" name="modo" value="plantilla">
+        <select name="plantilla_id">${plantillas.map((pl) => { let n = 0; try { n = JSON.parse(pl.preguntas).length; } catch (e) {} return `<option value="${pl.id}">${esc(pl.nombre)} (${n})</option>`; }).join('')}</select>
+        <button class="btn secondary small">+ Crear link · 48 hs</button>
+      </form>
+      <details class="fl-custom"><summary class="btn secondary small" style="display:inline-flex">+ Con mis preguntas</summary>
         <form method="post" action="/deals/${d.id}/formulario" style="margin-top:.45rem">
           <input type="hidden" name="modo" value="custom">
           <textarea name="preguntas" rows="4" placeholder="Una pregunta por línea (máx. 12)&#10;¿Cuántas sucursales tenés?&#10;¿Qué sistema usás hoy para facturar?"></textarea>
-          <button class="btn small" style="margin-top:.4rem">Crear link</button>
+          <label class="fl-guardar"><input type="checkbox" name="guardar" value="1"> Guardar como planilla:</label>
+          <input name="plantilla_nombre" placeholder="Nombre de la planilla (ej: Distribuidoras)" style="margin-top:.3rem">
+          <button class="btn small" style="margin-top:.4rem">Crear link · 48 hs</button>
         </form>
+        ${user ? `<div class="fl-pls">${plantillas.filter((pl) => user.role === 'admin' || pl.creado_por === user.id).map((pl) => `
+          <form method="post" action="/formularios/plantillas/${pl.id}/borrar" onsubmit="return confirm('¿Borrar la planilla ${esc(pl.nombre).replace(/'/g, '')}?')"><input type="hidden" name="volver" value="/deals/${d.id}"><button class="fl-pl-x" title="Borrar planilla">${esc(pl.nombre)} ✕</button></form>`).join('')}</div>` : ''}
       </details>
     </div>
   </details>`;
 }
 
-function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, errCalif, errMigrar, tiempos, companeros = [], tomar = null, mencionables = [], reunionAgendada = null, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [], formularios = [], baseUrl = '' }) {
+function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, errCalif, errMigrar, tiempos, companeros = [], tomar = null, mencionables = [], reunionAgendada = null, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [], formularios = [], baseUrl = '', plantillas = [] }) {
   const d = deal || {};
   const isNew = !deal;
   const opt = (list, sel) => list.map((o) => `<option value="${esc(o)}" ${o === sel ? 'selected' : ''}>${esc(o)}</option>`).join('');
@@ -2813,7 +2831,7 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
       </div>
     </div>
     ${!isNew && ['admin', 'vendedor'].includes(user.role) ? `<p class="small" style="margin:.1rem 0 .5rem"><a href="/asesor?deal=${d.id}" onclick="if (window.miniJuanAbrir) { miniJuanAbrir(${d.id}, '${esc(d.empresa).replace(/'/g, '')}'); return false; }">💡 Preguntale a MiniJuan cómo responderle a este cliente →</a></p>` : ''}
-    ${!isNew && ['admin', 'vendedor'].includes(user.role) ? formulariosLead(d, formularios, baseUrl) : ''}
+    ${!isNew && ['admin', 'vendedor'].includes(user.role) ? formulariosLead(d, formularios, baseUrl, plantillas, user) : ''}
     <label>Agregar nota al historial <span class="muted" style="font-weight:400">· escribí <code>@</code> para mencionar a alguien del panel</span></label>
     <div class="men-wrap"><textarea name="notas" rows="3" data-menciones="${esc(JSON.stringify(mencionables))}" placeholder="Contexto, objeciones, acuerdos… Al guardar, la nota queda registrada en el historial con tu nombre y fecha, y este campo vuelve a quedar libre."></textarea></div>
     <script>

@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.6.1',
+    fecha: '2026-09-28',
+    cambios: [
+      { tipo: 'mejora', texto: 'El formulario para el cliente ahora es estilo Google Forms: elegís una planilla de preguntas (Genéricas, Página web, Tienda online, Sistema a medida) o escribís las tuyas y las guardás como planilla nueva para reutilizar en cualquier lead. Y el link ahora es efímero de verdad: muere a las 48 horas exactas.' },
+    ],
+  },
+  {
     version: '3.6.0',
     fecha: '2026-09-28',
     cambios: [

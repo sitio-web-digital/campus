@@ -443,6 +443,7 @@ app.get('/deals/:id', requireAuth, (req, res) => {
   const modal = V.dealFormModal({
     user: req.user, deal, vendedores, isAdmin: req.user.role === 'admin', eventos, ultimaEd,
     formularios: db.prepare('SELECT f.*, u.name AS creador FROM form_links f JOIN users u ON u.id = f.creado_por WHERE f.deal_id = ? ORDER BY f.id DESC').all(deal.id),
+    plantillas: db.prepare('SELECT * FROM form_plantillas ORDER BY id').all(),
     baseUrl: (req.headers['x-forwarded-proto'] || req.protocol) + '://' + req.get('host'),
     errAprob: req.query.err === 'valor', errCalif: req.query.err === 'calificacion', errMigrar: req.query.err === 'migrar-ganado',
     tiempos: tiemposDeLead(deal), companeros: companerosDe(deal, req.user), mencionables: mencionablesDe(deal.panel),
@@ -1727,31 +1728,44 @@ app.post('/clientes/:id/estado', requireAuth, requireSistema('clientes'), (req, 
 // genéricas o escritas a mano. Vence a los 7 días y admite UNA respuesta: cuando el
 // cliente contesta, las respuestas caen como nota en el historial y avisa por campanita.
 
-const FORM_GENERICO = [
-  '¿Cómo se llama tu negocio y a qué se dedica?',
-  '¿Tenés página web o tienda online hoy? Si tenés, ¿cuál es?',
-  '¿Qué te gustaría resolver o mejorar? (página web, tienda online, sistema a medida…)',
-  '¿Qué funcionalidades no pueden faltar?',
-  '¿Manejás un presupuesto aproximado?',
-  '¿Para cuándo lo necesitás?',
-  '¿Cuál es el mejor medio y horario para contactarte?',
-];
+// El link vive 48 horas exactas y después muere solo.
+const FORM_VIDA_HS = 48;
 
 app.post('/deals/:id/formulario', requireAuth, (req, res) => {
   const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(req.params.id);
   if (!deal) return res.redirect('/hub');
   if (!puede(req.user, deal.panel)) return res.status(403).send('Sin acceso a este panel.');
-  let preguntas = FORM_GENERICO;
+  let preguntas, titulo, tipo;
   if (req.body.modo === 'custom') {
+    tipo = 'custom'; titulo = 'Personalizado';
     preguntas = String(req.body.preguntas || '').split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 12).map((x) => x.slice(0, 250));
     if (!preguntas.length) return res.redirect(`/deals/${deal.id}?err=form`);
+    // "Guardar como planilla": queda disponible en el selector para todas las leads.
+    const nombrePl = clean((req.body.plantilla_nombre || '').slice(0, 80));
+    if (clean(req.body.guardar) && nombrePl) {
+      db.prepare('INSERT INTO form_plantillas (nombre, preguntas, creado_por) VALUES (?, ?, ?) ON CONFLICT(nombre) DO UPDATE SET preguntas = excluded.preguntas, creado_por = excluded.creado_por')
+        .run(nombrePl, JSON.stringify(preguntas), req.user.id);
+      titulo = nombrePl;
+    }
+  } else {
+    tipo = 'generico';
+    const pl = db.prepare('SELECT * FROM form_plantillas WHERE id = ?').get(parseInt(req.body.plantilla_id, 10) || 0);
+    if (!pl) return res.redirect(`/deals/${deal.id}?err=form`);
+    preguntas = JSON.parse(pl.preguntas); titulo = pl.nombre;
   }
   const token = require('crypto').randomBytes(12).toString('hex');
-  const expira = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
-  db.prepare('INSERT INTO form_links (deal_id, token, tipo, preguntas, expira_at, creado_por) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(deal.id, token, req.body.modo === 'custom' ? 'custom' : 'generico', JSON.stringify(preguntas), expira, req.user.id);
-  logDealEvent(deal.id, req.user.id, 'edicion', `Nota: 📋 Se creó un formulario ${req.body.modo === 'custom' ? 'personalizado' : 'genérico'} para el cliente (${preguntas.length} preguntas, vence el ${expira}).`);
+  const expira = new Date(Date.now() + FORM_VIDA_HS * 3600e3).toISOString();
+  db.prepare('INSERT INTO form_links (deal_id, token, tipo, titulo, preguntas, expira_at, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(deal.id, token, tipo, titulo, JSON.stringify(preguntas), expira, req.user.id);
+  logDealEvent(deal.id, req.user.id, 'edicion', `Nota: 📋 Se creó un formulario "${titulo}" para el cliente (${preguntas.length} preguntas, el link vive ${FORM_VIDA_HS} horas).`);
   res.redirect('/deals/' + deal.id);
+});
+
+// Borrar una planilla del selector (el que la creó o un admin; las de fábrica solo admin).
+app.post('/formularios/plantillas/:pid/borrar', requireAuth, (req, res) => {
+  const pl = db.prepare('SELECT * FROM form_plantillas WHERE id = ?').get(req.params.pid);
+  if (pl && (req.user.role === 'admin' || pl.creado_por === req.user.id)) db.prepare('DELETE FROM form_plantillas WHERE id = ?').run(pl.id);
+  res.redirect(req.body.volver && /^\/deals\/\d+$/.test(req.body.volver) ? req.body.volver : '/hub');
 });
 
 app.post('/deals/:id/formulario/:fid/borrar', requireAuth, (req, res) => {
@@ -1770,7 +1784,7 @@ app.get('/f/:token', (req, res) => {
   const f = formDe(req.params.token);
   if (!f) return res.status(404).send(V.formPublicoPage({ estado: 'no' }));
   if (f.respondido_at) return res.send(V.formPublicoPage({ estado: 'respondido' }));
-  if (f.expira_at < hoyAR()) return res.send(V.formPublicoPage({ estado: 'vencido' }));
+  if (f.expira_at < new Date().toISOString()) return res.send(V.formPublicoPage({ estado: 'vencido' }));
   res.send(V.formPublicoPage({ estado: 'ok', token: f.token, preguntas: JSON.parse(f.preguntas) }));
 });
 
@@ -1778,7 +1792,7 @@ app.post('/f/:token', (req, res) => {
   const f = formDe(req.params.token);
   if (!f) return res.status(404).send(V.formPublicoPage({ estado: 'no' }));
   if (f.respondido_at) return res.send(V.formPublicoPage({ estado: 'respondido' }));
-  if (f.expira_at < hoyAR()) return res.send(V.formPublicoPage({ estado: 'vencido' }));
+  if (f.expira_at < new Date().toISOString()) return res.send(V.formPublicoPage({ estado: 'vencido' }));
   if (clean(req.body.web)) return res.send(V.formPublicoPage({ estado: 'gracias' })); // honeypot: los bots llenan todo
   const preguntas = JSON.parse(f.preguntas);
   const respuestas = preguntas.map((q, i) => String(req.body['r' + i] || '').trim().slice(0, 2000));
