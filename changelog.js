@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.6.3',
+    fecha: '2026-09-28',
+    cambios: [
+      { tipo: 'fix', texto: 'El botón "Crear formulario" recargaba la ficha sin generar el link (chocaba con el formulario de guardado de la lead). Ahora crea el link de verdad y te lo muestra al instante, resaltado y listo para copiar.' },
+    ],
+  },
+  {
     version: '3.6.2',
     fecha: '2026-09-28',
     cambios: [

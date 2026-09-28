@@ -2679,7 +2679,7 @@ function formulariosLead(d, formularios, baseUrl, plantillas = [], user = null, 
       <div class="fl-item-top">
         <span class="fin-tag ${f.respondido_at ? 'fin-t-venta' : vigente ? 'fin-t-manual' : 'fin-t-fijo'}">${f.respondido_at ? 'Respondido' : vigente ? 'Activo' : 'Vencido'}</span>
         <span class="fl-sub">${esc(f.titulo || (f.tipo === 'custom' ? 'Personalizado' : 'Genéricas'))} · ${preguntas.length} preguntas · ${f.respondido_at ? 'respondió ' + tiempoRel(f.respondido_at) : vigente ? 'le quedan ' + horasRestantes(f) + ' hs' : 'vencido'} · por ${esc(f.creador)}</span>
-        ${vigente ? `<form method="post" action="/deals/${d.id}/formulario/${f.id}/borrar" onsubmit="return confirm('¿Anular este link? El cliente ya no va a poder abrirlo.')"><button class="btn secondary small btn-ic" title="Anular link">${IC24('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>')}</button></form>` : ''}
+        ${vigente ? `<button type="button" class="btn secondary small btn-ic fl-borrar" title="Anular link" onclick="if (confirm('¿Anular este link? El cliente ya no va a poder abrirlo.')) { this.disabled = true; fetch('/deals/${d.id}/formulario/${f.id}/borrar', { method: 'POST' }).then(function (r) { location.href = r.url; }); }">${IC24('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>')}</button>` : ''}
       </div>
       ${vigente ? `
       <div class="fl-link">
@@ -2698,10 +2698,10 @@ function formulariosLead(d, formularios, baseUrl, plantillas = [], user = null, 
     <summary>Formulario para el cliente${formularios.length ? ` <span class="fl-cant">${formularios.length}</span>` : ''}</summary>
     <p class="caption" style="margin:.2rem 0 .5rem">Elegí la planilla, apretá crear y <strong>el link te aparece al instante</strong>, listo para copiar o mandar por WhatsApp. Vive <strong>48 horas</strong> y se responde una sola vez. Podés tener varios a la vez: todo queda registrado en esta lead.</p>
     <div class="fl-crear">
-      <form method="post" action="/deals/${d.id}/formulario" class="fl-plantilla">
-        <select name="plantilla_id">${plantillas.map((pl) => { let n = 0; try { n = JSON.parse(pl.preguntas).length; } catch (e) {} return `<option value="${pl.id}">${esc(pl.nombre)} · ${n} preguntas</option>`; }).join('')}</select>
-        <button class="btn small">Crear formulario</button>
-      </form>
+      <div class="fl-plantilla">
+        <select id="flPlanilla${d.id}">${plantillas.map((pl) => { let n = 0; try { n = JSON.parse(pl.preguntas).length; } catch (e) {} return `<option value="${pl.id}">${esc(pl.nombre)} · ${n} preguntas</option>`; }).join('')}</select>
+        <button type="button" class="btn small" onclick="var b = this; b.disabled = true; b.textContent = 'Creando el link…'; fetch('/deals/${d.id}/formulario', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'plantilla_id=' + encodeURIComponent(document.getElementById('flPlanilla${d.id}').value) }).then(function (r) { location.href = r.url; }).catch(function () { b.disabled = false; b.textContent = 'Crear formulario'; })">Crear formulario</button>
+      </div>
     </div>
     ${formularios.map(filaForm).join('')}
     ${nuevoId ? `<script>(function () { var n = document.querySelector('.fl-nuevo .fl-link input'); if (n) { n.scrollIntoView({ block: 'center' }); n.select(); } })();</script>` : ''}
