@@ -1774,7 +1774,7 @@ app.get('/f/:token', (req, res) => {
   if (!f) return res.status(404).send(V.formPublicoPage({ estado: 'no' }));
   if (f.respondido_at) return res.send(V.formPublicoPage({ estado: 'respondido' }));
   if (f.expira_at < new Date().toISOString()) return res.send(V.formPublicoPage({ estado: 'vencido' }));
-  res.send(V.formPublicoPage({ estado: 'ok', token: f.token, preguntas: JSON.parse(f.preguntas) }));
+  res.send(V.formPublicoPage({ estado: 'ok', token: f.token, preguntas: JSON.parse(f.preguntas), expira: f.expira_at }));
 });
 
 app.post('/f/:token', (req, res) => {
@@ -1785,7 +1785,7 @@ app.post('/f/:token', (req, res) => {
   if (clean(req.body.web)) return res.send(V.formPublicoPage({ estado: 'gracias' })); // honeypot: los bots llenan todo
   const preguntas = JSON.parse(f.preguntas);
   const respuestas = preguntas.map((q, i) => String(req.body['r' + i] || '').trim().slice(0, 2000));
-  if (!respuestas.some(Boolean)) return res.send(V.formPublicoPage({ estado: 'ok', token: f.token, preguntas, err: 'Contestá al menos una pregunta, ¡así te podemos ayudar mejor!' }));
+  if (!respuestas.some(Boolean)) return res.send(V.formPublicoPage({ estado: 'ok', token: f.token, preguntas, expira: f.expira_at, err: 'Contestá al menos una pregunta, ¡así te podemos ayudar mejor!' }));
   db.prepare("UPDATE form_links SET respuestas = ?, respondido_at = datetime('now') WHERE id = ?").run(JSON.stringify(respuestas), f.id);
   const resumen = preguntas.map((q, i) => (q && typeof q === 'object')
     ? (q.t ? `\n— ${q.t} —` : null)

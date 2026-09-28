@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.7.3',
+    fecha: '2026-09-28',
+    cambios: [
+      { tipo: 'mejora', texto: 'El formulario del cliente ahora guarda borrador solo: si lo dejan a medias, al volver desde el mismo dispositivo retoman donde estaban. La barra muestra en vivo cuántas horas le quedan al link (se pone naranja y roja cuando queda poco), y al abrir aparece la animación de carga de Cloud For Deploy — la nube con el avioncito del sitio. Al enviar, las respuestas quedan guardadas en la lead como siempre.' },
+    ],
+  },
+  {
     version: '3.7.1',
     fecha: '2026-09-28',
     cambios: [

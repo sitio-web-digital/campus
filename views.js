@@ -4422,7 +4422,7 @@ function iaConversacionesPage({ user, fecha: fechaSel, vendedorId, filas, dias, 
 
 /* --------- formulario público del cliente (sin login) --------- */
 
-function formPublicoPage({ estado, token = '', preguntas = [], err = '' }) {
+function formPublicoPage({ estado, token = '', preguntas = [], err = '', expira = '' }) {
   const cuerpo = estado === 'ok' ? `
     <p class="fp-intro">Tus respuestas nos ayudan a preparar una propuesta a tu medida. Son ${preguntas.filter((q) => typeof q === 'string').length} preguntas — contestá las que puedas, con el detalle que quieras.</p>
     ${err ? `<div class="fp-err">${esc(err)}</div>` : ''}
@@ -4496,14 +4496,51 @@ textarea:focus { outline:none; border-color:var(--cielo); box-shadow:0 0 0 3.5px
 .fp-fin h2 { font-size:1.15rem; font-weight:800; color:var(--navy2); margin:.6rem 0 .25rem; }
 .fp-fin p { font-size:.88rem; color:var(--muted); margin:0; }
 .fp-pie { text-align:center; font-size:.7rem; font-weight:500; color:var(--muted); margin-top:1.1rem; }
+
+/* splash de carga: el pin del sitio (nube flotando + avioncito en órbita) */
+#fpSplash { position:fixed; inset:0; z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.4rem;
+  background:linear-gradient(135deg, #0F3459 0%, #2C5884 50%, #5883AE 100%); transition:opacity .45s ease; }
+#fpSplash.fps-fuera { opacity:0; pointer-events:none; }
+#fpSplash p { color:rgba(255,255,255,.85); font-size:.8rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase; margin:0; animation:fps-late 1.4s ease-in-out infinite; }
+@keyframes fps-late { 0%, 100% { opacity:.55; } 50% { opacity:1; } }
+.fps-glow { position:absolute; width:340px; height:340px; border-radius:50%; background:radial-gradient(circle, rgba(255,255,255,.35) 0%, rgba(255,255,255,0) 70%); filter:blur(40px); }
+.fps-mark { position:relative; width:130px; height:130px; }
+.fps-mark svg { position:absolute; }
+.fps-cloud-main { top:50%; left:50%; transform:translate(-50%,-50%); animation:fps-flota 3s ease-in-out infinite; }
+.fps-cloud-a { top:12%; left:2%; opacity:.8; }
+.fps-cloud-b { top:18%; right:6%; opacity:.7; }
+.fps-plane { top:44%; left:38%; width:26px; height:26px; filter:drop-shadow(0 2px 4px rgba(0,0,0,.2)); animation:fps-orbita 4s linear infinite; }
+@keyframes fps-flota { 0%, 100% { transform:translate(-50%,-50%) translateY(0px) rotate(0deg); } 33% { transform:translate(-50%,-50%) translateY(-6px) rotate(1deg); } 66% { transform:translate(-50%,-50%) translateY(-4px) rotate(-1deg); } }
+@keyframes fps-orbita { 0% { transform:translateX(-50%) rotate(0deg) translateY(-42px) rotate(90deg); } 100% { transform:translateX(-50%) rotate(360deg) translateY(-42px) rotate(90deg); } }
+
+/* vencimiento y aviso de borrador restaurado */
+.fp-vence { color:var(--muted); font-weight:700; }
+.fp-vence b { color:var(--navy); }
+.fp-vence.fp-vence-pronto b { color:#B26A00; }
+.fp-vence.fp-vence-critico b { color:var(--bad); }
+.fp-toast { position:fixed; left:50%; bottom:1.1rem; transform:translateX(-50%); z-index:50; background:var(--navy2); color:#fff; font-size:.8rem; font-weight:600; padding:.6rem 1rem; border-radius:99px; box-shadow:0 8px 24px rgba(15,52,89,.35); opacity:0; transition:opacity .35s ease; pointer-events:none; max-width:92vw; text-align:center; }
+.fp-toast.fp-toast-viva { opacity:1; }
+@media (max-width: 460px) { .fp-prog-txt { flex-wrap:wrap; gap:.15rem .6rem; } .fp-vence { order:3; flex-basis:100%; text-align:center; } }
+@media (prefers-reduced-motion: reduce) { .fps-cloud-main, .fps-plane, #fpSplash p { animation:none; } #fpSplash { transition:none; } }
 @media (prefers-reduced-motion: reduce) { .fp-card, .fp-campo, .fp-hero img, .fp-fin-ic { animation:none; } .fp-barra i { transition:none; } }
 </style>
 </head>
 <body>
+${estado === 'ok' ? `
+<div id="fpSplash">
+  <div class="fps-glow"></div>
+  <div class="fps-mark">
+    <svg class="fps-cloud-a" width="28" height="20" viewBox="0 0 50 35" fill="white"><circle cx="15" cy="20" r="6"/><circle cx="25" cy="15" r="8"/><circle cx="35" cy="18" r="6"/><rect x="9" y="20" width="30" height="8" rx="4"/></svg>
+    <svg class="fps-cloud-b" width="22" height="16" viewBox="0 0 40 25" fill="rgba(255,255,255,.7)"><circle cx="12" cy="15" r="5"/><circle cx="22" cy="10" r="7"/><circle cx="30" cy="13" r="5"/><rect x="7" y="15" width="25" height="6" rx="3"/></svg>
+    <svg class="fps-cloud-main" width="80" height="58" viewBox="0 0 100 75" fill="white"><circle cx="25" cy="50" r="18"/><circle cx="45" cy="35" r="22"/><circle cx="65" cy="40" r="18"/><circle cx="75" cy="55" r="13"/><rect x="7" y="50" width="75" height="18" rx="9"/></svg>
+    <svg class="fps-plane" viewBox="0 0 32 32" fill="white"><path d="M16 2L14 4V10L10 14V18L14 16V24L10 28V30L14 28L18 30V28L14 24V16L18 18V14L14 10V4L16 2Z"/></svg>
+  </div>
+  <p>Preparando tu formulario…</p>
+</div>` : ''}
 <div class="fp-hero"><div class="fp-hero-in"><img src="/logo.png" alt="Cloud For Deploy"><div><strong>Cloud For Deploy</strong><span>Software y desarrollo web</span></div></div></div>
 ${estado === 'ok' ? `
 <div class="fp-prog"><div class="fp-prog-in">
-  <div class="fp-prog-txt"><span>Tu avance · <b id="fpPct">0%</b></span><span><b id="fpN">0</b> de ${preguntas.filter((q) => typeof q === 'string').length} respondidas</span></div>
+  <div class="fp-prog-txt"><span>Tu avance · <b id="fpPct">0%</b></span><span class="fp-vence" id="fpVence" hidden></span><span><b id="fpN">0</b> de ${preguntas.filter((q) => typeof q === 'string').length} respondidas</span></div>
   <div class="fp-barra"><i id="fpBarra"></i></div>
 </div></div>` : ''}
 <div class="fp-wrap">
@@ -4518,6 +4555,8 @@ ${estado === 'ok' ? `
 (function () {
   var tas = [].slice.call(document.querySelectorAll('#fpForm textarea'));
   var barra = document.getElementById('fpBarra'), num = document.getElementById('fpN'), pct = document.getElementById('fpPct');
+  var CLAVE = 'c4dform-${esc(token)}';
+
   function avance() {
     var n = 0;
     tas.forEach(function (t) {
@@ -4530,11 +4569,67 @@ ${estado === 'ok' ? `
     num.textContent = n;
     pct.textContent = p + '%';
   }
-  tas.forEach(function (t) { t.addEventListener('input', avance); });
+
+  function toast(texto) {
+    var d = document.createElement('div'); d.className = 'fp-toast'; d.textContent = texto;
+    document.body.appendChild(d);
+    requestAnimationFrame(function () { d.classList.add('fp-toast-viva'); });
+    setTimeout(function () { d.classList.remove('fp-toast-viva'); setTimeout(function () { d.remove(); }, 400); }, 3200);
+  }
+
+  // Borrador local: si no lo terminan, queda guardado en este dispositivo y se retoma al volver.
+  var timerGuardar = null;
+  function guardar() {
+    clearTimeout(timerGuardar);
+    timerGuardar = setTimeout(function () {
+      try {
+        var datos = {};
+        tas.forEach(function (t) { if (t.value.trim()) datos[t.name] = t.value; });
+        if (Object.keys(datos).length) localStorage.setItem(CLAVE, JSON.stringify(datos));
+        else localStorage.removeItem(CLAVE);
+      } catch (e) {}
+    }, 350);
+  }
+  try {
+    var previo = JSON.parse(localStorage.getItem(CLAVE) || 'null');
+    if (previo) {
+      var repuestas = 0;
+      tas.forEach(function (t) { if (previo[t.name]) { t.value = previo[t.name]; repuestas++; } });
+      if (repuestas) toast('Retomamos donde lo dejaste: ' + repuestas + ' respuesta' + (repuestas === 1 ? '' : 's') + ' recuperada' + (repuestas === 1 ? '' : 's') + ' de este dispositivo.');
+    }
+  } catch (e) {}
+
+  tas.forEach(function (t) { t.addEventListener('input', function () { avance(); guardar(); }); });
   avance();
+
+  // Cuánta vida le queda al link, en vivo.
+  var vence = document.getElementById('fpVence');
+  var expira = new Date('${esc(expira)}');
+  function reloj() {
+    if (!vence || isNaN(expira)) return;
+    var ms = expira - Date.now();
+    if (ms <= 0) { vence.hidden = false; vence.className = 'fp-vence fp-vence-critico'; vence.innerHTML = 'El link <b>venció</b>'; return; }
+    var h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+    vence.hidden = false;
+    vence.className = 'fp-vence' + (h < 2 ? ' fp-vence-critico' : h < 6 ? ' fp-vence-pronto' : '');
+    vence.innerHTML = 'Vence en <b>' + (h > 0 ? h + ' h ' + m + ' m' : m + ' minutos') + '</b>';
+  }
+  reloj();
+  setInterval(reloj, 30000);
+
   document.getElementById('fpForm').addEventListener('submit', function () {
     var b = this.querySelector('.fp-btn'); b.disabled = true; b.textContent = 'Enviando…';
+    try { localStorage.removeItem(CLAVE); } catch (e) {}
   });
+
+  // El splash con el pin de Cloud For Deploy se va cuando la página está lista.
+  var splash = document.getElementById('fpSplash');
+  if (splash) {
+    var irse = function () { splash.classList.add('fps-fuera'); setTimeout(function () { splash.remove(); }, 500); };
+    if (document.readyState === 'complete') setTimeout(irse, 650);
+    else window.addEventListener('load', function () { setTimeout(irse, 650); });
+    setTimeout(irse, 2600); // red de seguridad: nunca más de 2,6 s
+  }
 })();
 </script>` : ''}
 </body>
