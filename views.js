@@ -2378,6 +2378,7 @@ html.dark .col { background:#262525; border-color:var(--line); }
 .fl-resp { margin-top:.4rem; }
 .fl-resp summary { cursor:pointer; font-size:.78rem; font-weight:600; color:var(--accent-ink); }
 .fl-qa { margin:.45rem 0 0; }
+.fl-qa-topico { margin:.7rem 0 .1rem; font-size:.68rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); }
 .fl-qa span { display:block; font-size:.74rem; font-weight:600; color:var(--muted); }
 .fl-qa p { margin:.1rem 0 0; font-size:.84rem; white-space:pre-wrap; }
 .fl-crear { display:flex; gap:.5rem; align-items:flex-start; flex-wrap:wrap; margin-top:.5rem; }
@@ -2678,7 +2679,7 @@ function formulariosLead(d, formularios, baseUrl, plantillas = [], user = null, 
     <div class="fl-item ${f.id === nuevoId ? 'fl-nuevo' : ''}">
       <div class="fl-item-top">
         <span class="fin-tag ${f.respondido_at ? 'fin-t-venta' : vigente ? 'fin-t-manual' : 'fin-t-fijo'}">${f.respondido_at ? 'Respondido' : vigente ? 'Activo' : 'Vencido'}</span>
-        <span class="fl-sub">${esc(f.titulo || (f.tipo === 'custom' ? 'Personalizado' : 'Genéricas'))} · ${preguntas.length} preguntas · ${f.respondido_at ? 'respondió ' + tiempoRel(f.respondido_at) : vigente ? 'le quedan ' + horasRestantes(f) + ' hs' : 'vencido'} · por ${esc(f.creador)}</span>
+        <span class="fl-sub">${esc(f.titulo || (f.tipo === 'custom' ? 'Personalizado' : 'Genéricas'))} · ${preguntas.filter((q) => typeof q === 'string').length} preguntas · ${f.respondido_at ? 'respondió ' + tiempoRel(f.respondido_at) : vigente ? 'le quedan ' + horasRestantes(f) + ' hs' : 'vencido'} · por ${esc(f.creador)}</span>
         ${vigente ? `<button type="button" class="btn secondary small btn-ic fl-borrar" title="Anular link" onclick="if (confirm('¿Anular este link? El cliente ya no va a poder abrirlo.')) { this.disabled = true; fetch('/deals/${d.id}/formulario/${f.id}/borrar', { method: 'POST' }).then(function (r) { location.href = r.url; }); }">${IC24('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>')}</button>` : ''}
       </div>
       ${vigente ? `
@@ -2689,7 +2690,7 @@ function formulariosLead(d, formularios, baseUrl, plantillas = [], user = null, 
       </div>` : ''}
       ${f.respondido_at && respuestas.length ? `
       <details class="fl-resp"><summary>Ver las respuestas</summary>
-        ${preguntas.map((q, i) => respuestas[i] ? `<div class="fl-qa"><span>${esc(q)}</span><p>${esc(respuestas[i])}</p></div>` : '').join('')}
+        ${preguntas.map((q, i) => (q && typeof q === 'object') ? (q.t ? `<div class="fl-qa-topico">${esc(q.t)}</div>` : '') : (respuestas[i] ? `<div class="fl-qa"><span>${esc(q)}</span><p>${esc(respuestas[i])}</p></div>` : '')).join('')}
       </details>` : ''}
     </div>`;
   };
@@ -2699,7 +2700,7 @@ function formulariosLead(d, formularios, baseUrl, plantillas = [], user = null, 
     <p class="caption" style="margin:.2rem 0 .5rem">Elegí la planilla, apretá crear y <strong>el link te aparece al instante</strong>, listo para copiar o mandar por WhatsApp. Vive <strong>48 horas</strong> y se responde una sola vez. Podés tener varios a la vez: todo queda registrado en esta lead.</p>
     <div class="fl-crear">
       <div class="fl-plantilla">
-        <select id="flPlanilla${d.id}">${plantillas.map((pl) => { let n = 0; try { n = JSON.parse(pl.preguntas).length; } catch (e) {} return `<option value="${pl.id}">${esc(pl.nombre)} · ${n} preguntas</option>`; }).join('')}</select>
+        <select id="flPlanilla${d.id}">${plantillas.map((pl) => { let n = 0; try { n = JSON.parse(pl.preguntas).filter((x) => typeof x === 'string').length; } catch (e) {} return `<option value="${pl.id}">${esc(pl.nombre)} · ${n} preguntas</option>`; }).join('')}</select>
         <button type="button" class="btn small" onclick="var b = this; b.disabled = true; b.textContent = 'Creando el link…'; fetch('/deals/${d.id}/formulario', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'plantilla_id=' + encodeURIComponent(document.getElementById('flPlanilla${d.id}').value) }).then(function (r) { location.href = r.url; }).catch(function () { b.disabled = false; b.textContent = 'Crear formulario'; })">Crear formulario</button>
       </div>
     </div>
@@ -4423,15 +4424,17 @@ function iaConversacionesPage({ user, fecha: fechaSel, vendedorId, filas, dias, 
 
 function formPublicoPage({ estado, token = '', preguntas = [], err = '' }) {
   const cuerpo = estado === 'ok' ? `
-    <p class="fp-intro">Tus respuestas nos ayudan a preparar una propuesta a tu medida. Son ${preguntas.length} preguntas — contestá las que puedas, con el detalle que quieras.</p>
+    <p class="fp-intro">Tus respuestas nos ayudan a preparar una propuesta a tu medida. Son ${preguntas.filter((q) => typeof q === 'string').length} preguntas — contestá las que puedas, con el detalle que quieras.</p>
     ${err ? `<div class="fp-err">${esc(err)}</div>` : ''}
     <form method="post" action="/f/${esc(token)}" id="fpForm">
       <input type="text" name="web" tabindex="-1" autocomplete="off" style="position:absolute; left:-5000px" aria-hidden="true">
-      ${preguntas.map((q, i) => `
-      <label class="fp-campo" style="animation-delay:${Math.min(i * 60, 600)}ms">
-        <span><em>${i + 1}</em>${esc(q)}</span>
+      ${(() => { let num = 0; return preguntas.map((q, i) => (q && typeof q === 'object')
+        ? (q.t ? `<h2 class="fp-topico" style="animation-delay:${Math.min(i * 45, 500)}ms"><span>${esc(q.t)}</span></h2>` : '')
+        : (num++, `
+      <label class="fp-campo" style="animation-delay:${Math.min(i * 45, 500)}ms">
+        <span><em>${num}</em>${esc(q)}</span>
         <textarea name="r${i}" rows="2" maxlength="2000"></textarea>
-      </label>`).join('')}
+      </label>`)).join(''); })()}
       <button class="fp-btn" type="submit">Enviar respuestas</button>
     </form>`
   : estado === 'gracias' ? `<div class="fp-fin"><span class="fp-fin-ic">✅</span><h2>¡Listo, gracias!</h2><p>Recibimos tus respuestas. En breve nos ponemos en contacto para avanzar con tu propuesta.</p></div>`
@@ -4483,6 +4486,9 @@ textarea:focus { outline:none; border-color:var(--cielo); box-shadow:0 0 0 3.5px
 .fp-btn { width:100%; margin-top:.6rem; background:linear-gradient(135deg, var(--navy), var(--navy2)); color:#fff; border:none; border-radius:11px; padding:.85rem 1rem; font:700 .98rem 'Montserrat', sans-serif; letter-spacing:.01em; cursor:pointer; box-shadow:0 6px 18px rgba(15,52,89,.28); transition:transform .15s, box-shadow .15s; }
 .fp-btn:hover { transform:translateY(-1.5px); box-shadow:0 10px 24px rgba(15,52,89,.34); }
 .fp-btn:active { transform:none; }
+.fp-topico { display:flex; align-items:center; gap:.7rem; margin:1.6rem 0 .9rem; font-size:.78rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--navy); animation:fp-sube .45s ease both; }
+.fp-topico::after { content:''; flex:1; height:2px; background:linear-gradient(90deg, var(--line2), transparent); border-radius:2px; }
+.fp-topico span { background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:.3rem .8rem; }
 .fp-err { background:var(--bad-soft); color:var(--bad); border-radius:9px; padding:.6rem .8rem; font-size:.85rem; font-weight:600; margin-bottom:1rem; }
 .fp-fin { text-align:center; padding:1.3rem 0 .9rem; }
 .fp-fin-ic { font-size:2.6rem; display:inline-block; animation:fp-pop .55s cubic-bezier(.2, 1.4, .4, 1) both; }
@@ -4497,7 +4503,7 @@ textarea:focus { outline:none; border-color:var(--cielo); box-shadow:0 0 0 3.5px
 <div class="fp-hero"><div class="fp-hero-in"><img src="/logo.png" alt="Cloud For Deploy"><div><strong>Cloud For Deploy</strong><span>Software y desarrollo web</span></div></div></div>
 ${estado === 'ok' ? `
 <div class="fp-prog"><div class="fp-prog-in">
-  <div class="fp-prog-txt"><span>Tu avance</span><span><b id="fpN">0</b> de ${preguntas.length} respondidas</span></div>
+  <div class="fp-prog-txt"><span>Tu avance</span><span><b id="fpN">0</b> de ${preguntas.filter((q) => typeof q === 'string').length} respondidas</span></div>
   <div class="fp-barra"><i id="fpBarra"></i></div>
 </div></div>` : ''}
 <div class="fp-wrap">

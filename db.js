@@ -413,59 +413,11 @@ if (db.prepare('SELECT COUNT(*) AS c FROM form_plantillas').get().c === 0) {
   ]));
 }
 
-// 3.7.0: plantillas de relevamiento para sistemas a medida (3 partes).
+// 3.7.1: relevamiento unificado con tópicos (los ítems {"t": "..."} son títulos de sección).
 {
-  const insPl3 = db.prepare('INSERT OR IGNORE INTO form_plantillas (nombre, preguntas) VALUES (?, ?)');
-  insPl3.run('Relevamiento 1 · Operación y stock', JSON.stringify([
-    '¿Cómo es el proceso completo desde que llega la mercadería hasta que queda disponible para vender?',
-    '¿Qué representa exactamente una etiqueta dentro de la operación?',
-    '¿Cuál es la unidad mínima que necesitan poder rastrear individualmente?',
-    '¿En qué momento exacto una mercadería entra al stock y en qué momento deja de estar disponible?',
-    '¿Qué información necesitan conocer de una unidad de stock en cualquier momento?',
-    '¿Qué tipos de fraccionamiento realizan y cómo administran el saldo restante de una etiqueta parcialmente utilizada?',
-    '¿Qué tipos de transformación realizan actualmente y qué productos pueden obtenerse de cada una?',
-    '¿Una transformación puede utilizar varias etiquetas, lotes, marcas o proveedores al mismo tiempo? ¿Cómo debería mantenerse la trazabilidad?',
-    '¿Qué ocurre con la etiqueta de origen después de un fraccionamiento o transformación?',
-    '¿Cómo registran y clasifican diferencias de peso, mermas, descartes y subproductos?',
-    '¿Qué errores operativos son los más frecuentes actualmente?',
-    '¿Qué debería hacer el sistema cuando dos personas intentan trabajar simultáneamente sobre la misma existencia?',
-    'Si un cliente reclama un producto vendido meses atrás, ¿qué información necesitan poder reconstruir desde la venta hasta el ingreso original?',
-    '¿Qué procesos vinculados al stock realizan hoy fuera del sistema?',
-  ]));
-  insPl3.run('Relevamiento 2 · Administración y costos', JSON.stringify([
-    '¿Cómo se relaciona una recepción de mercadería con la factura y el remito del proveedor?',
-    '¿Qué ocurre cuando el peso recibido no coincide con el peso facturado?',
-    '¿Cómo determinan actualmente el costo de una mercadería al momento de ingresarla?',
-    'Cuando un producto se fracciona o transforma, ¿cómo distribuyen el costo original entre los productos resultantes?',
-    '¿Cómo se valorizan mermas, descartes, grasa, hueso y otros subproductos?',
-    '¿Qué método de costeo utilizan o desean utilizar?',
-    '¿Cómo es el proceso completo desde que un cliente realiza un pedido hasta que la mercadería es entregada y facturada?',
-    '¿En qué momento se reserva o descuenta el stock de un pedido?',
-    '¿Qué reglas comerciales existen por cliente?',
-    '¿Cómo se registra actualmente un cobro y cuándo se considera realmente confirmado?',
-    '¿Cómo funciona la rendición de los choferes y qué controles realiza Tesorería o Administración antes de imputar los pagos?',
-    '¿Cómo debería funcionar la cuenta corriente de clientes y la de proveedores?',
-    '¿Qué información necesitan obtener para calcular correctamente costo de mercadería vendida, margen y rentabilidad?',
-    '¿Qué reportes o indicadores utilizan realmente para tomar decisiones diarias, semanales y mensuales?',
-    '¿Qué tareas administrativas realizan hoy manualmente o fuera del sistema y consideran prioritario eliminar o automatizar?',
-  ]));
-  insPl3.run('Relevamiento 3 · Sistema y seguridad', JSON.stringify([
-    '¿Qué funcionalidades del sistema actual son imprescindibles y no pueden perderse en una nueva solución?',
-    '¿Qué problemas concretos del sistema actual quieren eliminar sí o sí?',
-    '¿Qué operaciones deberían poder corregirse o anularse y cuáles nunca deberían eliminarse físicamente?',
-    '¿Qué roles de usuario existen y qué debería poder hacer cada uno?',
-    '¿Qué operaciones deberían requerir autorización especial o doble aprobación?',
-    '¿Qué información debe quedar registrada para poder auditar una operación meses después?',
-    '¿Qué información consideran sensible o confidencial y quién debería poder acceder, visualizarla o exportarla?',
-    '¿Qué sistemas o equipos deben integrarse obligatoriamente con la nueva solución?',
-    '¿Qué información esperan intercambiar con cada integración y con qué frecuencia?',
-    '¿Qué debe ocurrir si se corta Internet, falla una integración o un dispositivo deja de funcionar?',
-    '¿Cuántos usuarios y operaciones simultáneas estiman en un día normal y en temporada alta?',
-    '¿Qué nivel de disponibilidad necesitan y cuánto tiempo podrían operar sin sistema?',
-    '¿Qué política esperan para backups y recuperación ante pérdida de información?',
-    '¿Qué información del sistema actual debe migrarse?',
-    '¿Qué acceso existe hoy al sistema actual y a su base de datos para analizar, exportar y validar la información antes de la migración?',
-  ]));
+  db.prepare("DELETE FROM form_plantillas WHERE nombre LIKE 'Relevamiento _ ·%'").run();
+  db.prepare('INSERT OR IGNORE INTO form_plantillas (nombre, preguntas) VALUES (?, ?)')
+    .run('Relevamiento sistema a medida', JSON.stringify([{"t": "Operación y stock"}, "¿Cómo es el proceso completo desde que llega la mercadería hasta que queda disponible para vender?", "¿Qué representa exactamente una etiqueta dentro de la operación?", "¿Cuál es la unidad mínima que necesitan poder rastrear individualmente?", "¿En qué momento exacto una mercadería entra al stock y en qué momento deja de estar disponible?", "¿Qué información necesitan conocer de una unidad de stock en cualquier momento?", "¿Qué tipos de fraccionamiento realizan y cómo administran el saldo restante de una etiqueta parcialmente utilizada?", "¿Qué tipos de transformación realizan actualmente y qué productos pueden obtenerse de cada una?", "¿Una transformación puede utilizar varias etiquetas, lotes, marcas o proveedores al mismo tiempo? ¿Cómo debería mantenerse la trazabilidad?", "¿Qué ocurre con la etiqueta de origen después de un fraccionamiento o transformación?", "¿Cómo registran y clasifican diferencias de peso, mermas, descartes y subproductos?", "¿Qué errores operativos son los más frecuentes actualmente?", "¿Qué debería hacer el sistema cuando dos personas intentan trabajar simultáneamente sobre la misma existencia?", "Si un cliente reclama un producto vendido meses atrás, ¿qué información necesitan poder reconstruir desde la venta hasta el ingreso original?", "¿Qué procesos vinculados al stock realizan hoy fuera del sistema?", {"t": "Administración y costos"}, "¿Cómo se relaciona una recepción de mercadería con la factura y el remito del proveedor?", "¿Qué ocurre cuando el peso recibido no coincide con el peso facturado?", "¿Cómo determinan actualmente el costo de una mercadería al momento de ingresarla?", "Cuando un producto se fracciona o transforma, ¿cómo distribuyen el costo original entre los productos resultantes?", "¿Cómo se valorizan mermas, descartes, grasa, hueso y otros subproductos?", "¿Qué método de costeo utilizan o desean utilizar?", "¿Cómo es el proceso completo desde que un cliente realiza un pedido hasta que la mercadería es entregada y facturada?", "¿En qué momento se reserva o descuenta el stock de un pedido?", "¿Qué reglas comerciales existen por cliente?", "¿Cómo se registra actualmente un cobro y cuándo se considera realmente confirmado?", "¿Cómo funciona la rendición de los choferes y qué controles realiza Tesorería o Administración antes de imputar los pagos?", "¿Cómo debería funcionar la cuenta corriente de clientes y la de proveedores?", "¿Qué información necesitan obtener para calcular correctamente costo de mercadería vendida, margen y rentabilidad?", "¿Qué reportes o indicadores utilizan realmente para tomar decisiones diarias, semanales y mensuales?", "¿Qué tareas administrativas realizan hoy manualmente o fuera del sistema y consideran prioritario eliminar o automatizar?", {"t": "Sistema y seguridad"}, "¿Qué funcionalidades del sistema actual son imprescindibles y no pueden perderse en una nueva solución?", "¿Qué problemas concretos del sistema actual quieren eliminar sí o sí?", "¿Qué operaciones deberían poder corregirse o anularse y cuáles nunca deberían eliminarse físicamente?", "¿Qué roles de usuario existen y qué debería poder hacer cada uno?", "¿Qué operaciones deberían requerir autorización especial o doble aprobación?", "¿Qué información debe quedar registrada para poder auditar una operación meses después?", "¿Qué información consideran sensible o confidencial y quién debería poder acceder, visualizarla o exportarla?", "¿Qué sistemas o equipos deben integrarse obligatoriamente con la nueva solución?", "¿Qué información esperan intercambiar con cada integración y con qué frecuencia?", "¿Qué debe ocurrir si se corta Internet, falla una integración o un dispositivo deja de funcionar?", "¿Cuántos usuarios y operaciones simultáneas estiman en un día normal y en temporada alta?", "¿Qué nivel de disponibilidad necesitan y cuánto tiempo podrían operar sin sistema?", "¿Qué política esperan para backups y recuperación ante pérdida de información?", "¿Qué información del sistema actual debe migrarse?", "¿Qué acceso existe hoy al sistema actual y a su base de datos para analizar, exportar y validar la información antes de la migración?"]));
 }
 
 // 3.5.0: Finanzas del grupo (solo admins) — movimientos manuales y gastos fijos recurrentes.

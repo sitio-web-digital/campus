@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.7.1',
+    fecha: '2026-09-28',
+    cambios: [
+      { tipo: 'mejora', texto: 'El relevamiento para sistemas a medida ahora es UNA sola planilla con tópicos: Operación y stock, Administración y costos, y Sistema y seguridad aparecen como secciones dentro del mismo formulario (44 preguntas), con sus títulos también en el historial de la lead y en el visor de respuestas.' },
+    ],
+  },
+  {
     version: '3.7.0',
     fecha: '2026-09-28',
     cambios: [

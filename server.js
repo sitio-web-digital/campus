@@ -1744,7 +1744,8 @@ app.post('/deals/:id/formulario', requireAuth, (req, res) => {
   const expira = new Date(Date.now() + FORM_VIDA_HS * 3600e3).toISOString();
   const nuevo = db.prepare('INSERT INTO form_links (deal_id, token, tipo, titulo, preguntas, expira_at, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .run(deal.id, token, 'generico', pl.nombre, JSON.stringify(preguntas), expira, req.user.id).lastInsertRowid;
-  logDealEvent(deal.id, req.user.id, 'edicion', `Nota: Se creó el formulario "${pl.nombre}" para el cliente (${preguntas.length} preguntas, el link vive ${FORM_VIDA_HS} horas).`);
+  const nPreguntas = preguntas.filter((q) => typeof q === 'string').length;
+  logDealEvent(deal.id, req.user.id, 'edicion', `Nota: Se creó el formulario "${pl.nombre}" para el cliente (${nPreguntas} preguntas, el link vive ${FORM_VIDA_HS} horas).`);
   // El redirect marca el link recién creado: la ficha lo muestra resaltado y con la URL seleccionada.
   res.redirect(`/deals/${deal.id}?fl=${nuevo}`);
 });
@@ -1786,7 +1787,9 @@ app.post('/f/:token', (req, res) => {
   const respuestas = preguntas.map((q, i) => String(req.body['r' + i] || '').trim().slice(0, 2000));
   if (!respuestas.some(Boolean)) return res.send(V.formPublicoPage({ estado: 'ok', token: f.token, preguntas, err: 'Contestá al menos una pregunta, ¡así te podemos ayudar mejor!' }));
   db.prepare("UPDATE form_links SET respuestas = ?, respondido_at = datetime('now') WHERE id = ?").run(JSON.stringify(respuestas), f.id);
-  const resumen = preguntas.map((q, i) => respuestas[i] ? `• ${q}\n   → ${respuestas[i]}` : null).filter(Boolean).join('\n');
+  const resumen = preguntas.map((q, i) => (q && typeof q === 'object')
+    ? (q.t ? `\n— ${q.t} —` : null)
+    : (respuestas[i] ? `• ${q}\n   → ${respuestas[i]}` : null)).filter(Boolean).join('\n');
   logDealEvent(f.deal_id, f.creado_por, 'edicion', ('Nota: El cliente respondió el formulario:\n' + resumen).slice(0, 3500));
   const insN = db.prepare('INSERT INTO notifications (user_id, texto, url) VALUES (?, ?, ?)');
   for (const uid of new Set([f.creado_por, f.dueno])) insN.run(uid, `${f.empresa} respondió el formulario de la lead`, '/deals/' + f.deal_id);
