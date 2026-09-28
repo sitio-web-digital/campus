@@ -444,6 +444,7 @@ app.get('/deals/:id', requireAuth, (req, res) => {
     user: req.user, deal, vendedores, isAdmin: req.user.role === 'admin', eventos, ultimaEd,
     formularios: db.prepare('SELECT f.*, u.name AS creador FROM form_links f JOIN users u ON u.id = f.creado_por WHERE f.deal_id = ? ORDER BY f.id DESC').all(deal.id),
     plantillas: db.prepare('SELECT * FROM form_plantillas ORDER BY id').all(),
+    flNuevo: parseInt(req.query.fl, 10) || 0,
     baseUrl: (req.headers['x-forwarded-proto'] || req.protocol) + '://' + req.get('host'),
     errAprob: req.query.err === 'valor', errCalif: req.query.err === 'calificacion', errMigrar: req.query.err === 'migrar-ganado',
     tiempos: tiemposDeLead(deal), companeros: companerosDe(deal, req.user), mencionables: mencionablesDe(deal.panel),
@@ -1735,30 +1736,17 @@ app.post('/deals/:id/formulario', requireAuth, (req, res) => {
   const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(req.params.id);
   if (!deal) return res.redirect('/hub');
   if (!puede(req.user, deal.panel)) return res.status(403).send('Sin acceso a este panel.');
-  let preguntas, titulo, tipo;
-  if (req.body.modo === 'custom') {
-    tipo = 'custom'; titulo = 'Personalizado';
-    preguntas = String(req.body.preguntas || '').split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 12).map((x) => x.slice(0, 250));
-    if (!preguntas.length) return res.redirect(`/deals/${deal.id}?err=form`);
-    // "Guardar como planilla": queda disponible en el selector para todas las leads.
-    const nombrePl = clean((req.body.plantilla_nombre || '').slice(0, 80));
-    if (clean(req.body.guardar) && nombrePl) {
-      db.prepare('INSERT INTO form_plantillas (nombre, preguntas, creado_por) VALUES (?, ?, ?) ON CONFLICT(nombre) DO UPDATE SET preguntas = excluded.preguntas, creado_por = excluded.creado_por')
-        .run(nombrePl, JSON.stringify(preguntas), req.user.id);
-      titulo = nombrePl;
-    }
-  } else {
-    tipo = 'generico';
-    const pl = db.prepare('SELECT * FROM form_plantillas WHERE id = ?').get(parseInt(req.body.plantilla_id, 10) || 0);
-    if (!pl) return res.redirect(`/deals/${deal.id}?err=form`);
-    preguntas = JSON.parse(pl.preguntas); titulo = pl.nombre;
-  }
+  // Por ahora solo planillas genéricas: elegís una y el link sale al instante.
+  const pl = db.prepare('SELECT * FROM form_plantillas WHERE id = ?').get(parseInt(req.body.plantilla_id, 10) || 0);
+  if (!pl) return res.redirect(`/deals/${deal.id}?err=form`);
+  const preguntas = JSON.parse(pl.preguntas);
   const token = require('crypto').randomBytes(12).toString('hex');
   const expira = new Date(Date.now() + FORM_VIDA_HS * 3600e3).toISOString();
-  db.prepare('INSERT INTO form_links (deal_id, token, tipo, titulo, preguntas, expira_at, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(deal.id, token, tipo, titulo, JSON.stringify(preguntas), expira, req.user.id);
-  logDealEvent(deal.id, req.user.id, 'edicion', `Nota: 📋 Se creó un formulario "${titulo}" para el cliente (${preguntas.length} preguntas, el link vive ${FORM_VIDA_HS} horas).`);
-  res.redirect('/deals/' + deal.id);
+  const nuevo = db.prepare('INSERT INTO form_links (deal_id, token, tipo, titulo, preguntas, expira_at, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(deal.id, token, 'generico', pl.nombre, JSON.stringify(preguntas), expira, req.user.id).lastInsertRowid;
+  logDealEvent(deal.id, req.user.id, 'edicion', `Nota: Se creó el formulario "${pl.nombre}" para el cliente (${preguntas.length} preguntas, el link vive ${FORM_VIDA_HS} horas).`);
+  // El redirect marca el link recién creado: la ficha lo muestra resaltado y con la URL seleccionada.
+  res.redirect(`/deals/${deal.id}?fl=${nuevo}`);
 });
 
 // Borrar una planilla del selector (el que la creó o un admin; las de fábrica solo admin).
@@ -1799,9 +1787,9 @@ app.post('/f/:token', (req, res) => {
   if (!respuestas.some(Boolean)) return res.send(V.formPublicoPage({ estado: 'ok', token: f.token, preguntas, err: 'Contestá al menos una pregunta, ¡así te podemos ayudar mejor!' }));
   db.prepare("UPDATE form_links SET respuestas = ?, respondido_at = datetime('now') WHERE id = ?").run(JSON.stringify(respuestas), f.id);
   const resumen = preguntas.map((q, i) => respuestas[i] ? `• ${q}\n   → ${respuestas[i]}` : null).filter(Boolean).join('\n');
-  logDealEvent(f.deal_id, f.creado_por, 'edicion', ('Nota: 📋 El cliente respondió el formulario:\n' + resumen).slice(0, 3500));
+  logDealEvent(f.deal_id, f.creado_por, 'edicion', ('Nota: El cliente respondió el formulario:\n' + resumen).slice(0, 3500));
   const insN = db.prepare('INSERT INTO notifications (user_id, texto, url) VALUES (?, ?, ?)');
-  for (const uid of new Set([f.creado_por, f.dueno])) insN.run(uid, `📋 ${f.empresa} respondió el formulario de la lead`, '/deals/' + f.deal_id);
+  for (const uid of new Set([f.creado_por, f.dueno])) insN.run(uid, `${f.empresa} respondió el formulario de la lead`, '/deals/' + f.deal_id);
   res.send(V.formPublicoPage({ estado: 'gracias' }));
 });
 

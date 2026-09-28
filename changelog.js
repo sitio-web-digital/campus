@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.6.2',
+    fecha: '2026-09-28',
+    cambios: [
+      { tipo: 'mejora', texto: 'Formulario para el cliente, más directo: elegís la planilla, apretás "Crear formulario" y el link de 48 horas te aparece al instante, resaltado y con la URL ya seleccionada para copiar. Se sumaron dos planillas (Post-reunión y Arranque de proyecto) y podés tener varios formularios a la vez en la misma lead — todo queda registrado en su historial.' },
+    ],
+  },
+  {
     version: '3.6.1',
     fecha: '2026-09-28',
     cambios: [

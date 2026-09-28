@@ -394,6 +394,25 @@ if (db.prepare('SELECT COUNT(*) AS c FROM form_plantillas').get().c === 0) {
   ]));
 }
 
+// 3.6.2: dos planillas genéricas más (INSERT OR IGNORE: entra también en bases existentes).
+{
+  const insPl2 = db.prepare('INSERT OR IGNORE INTO form_plantillas (nombre, preguntas) VALUES (?, ?)');
+  insPl2.run('Post-reunión', JSON.stringify([
+    '¿Qué te pareció lo que charlamos en la reunión?',
+    '¿Qué dudas te quedaron dando vueltas?',
+    '¿Participa alguien más de la decisión? ¿Quién?',
+    '¿El presupuesto que hablamos te cierra, o necesitás otra alternativa?',
+    '¿Cuándo te gustaría arrancar?',
+  ]));
+  insPl2.run('Arranque de proyecto', JSON.stringify([
+    'Nombre o razón social para la facturación',
+    '¿Tenés logo y colores definidos? ¿Dónde los conseguimos?',
+    'Textos y fotos: ¿los tenés vos o los armamos nosotros?',
+    'Accesos que haya que tener a mano (dominio, hosting, redes)',
+    '¿Quién va a ser el contacto del día a día y su teléfono?',
+  ]));
+}
+
 // 3.5.0: Finanzas del grupo (solo admins) — movimientos manuales y gastos fijos recurrentes.
 // Las ventas aprobadas y las comisiones NO se copian acá: el panel las lee en vivo de deals/commissions.
 db.exec(`CREATE TABLE IF NOT EXISTS fin_movimientos (
