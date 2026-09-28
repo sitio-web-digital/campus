@@ -4458,12 +4458,12 @@ function formPublicoPage({ estado, token = '', preguntas = [], err = '' }) {
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.65 'Montserrat', 'Segoe UI', -apple-system, Roboto, Arial, sans-serif; -webkit-font-smoothing:antialiased; }
 
-.fp-hero { background:linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%); color:#fff; padding:1.4rem 1rem 3.2rem; }
-.fp-hero-in { max-width:38rem; margin:0 auto; display:flex; align-items:center; gap:.8rem; }
-.fp-hero img { width:64px; height:auto; filter:drop-shadow(0 2px 6px rgba(0,0,0,.25)); animation:fp-logo .7s ease both; }
-@keyframes fp-logo { from { opacity:0; transform:translateY(-8px); } }
-.fp-hero strong { display:block; font-size:1.05rem; font-weight:800; letter-spacing:-.01em; }
-.fp-hero span { display:block; font-size:.62rem; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:rgba(255,255,255,.75); }
+.fp-hero { background:linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%); color:#fff; padding:.55rem 1rem; }
+.fp-hero-in { max-width:38rem; margin:0 auto; display:flex; align-items:center; gap:.6rem; }
+.fp-hero img { width:34px; height:auto; filter:drop-shadow(0 1px 4px rgba(0,0,0,.25)); animation:fp-logo .6s ease both; }
+@keyframes fp-logo { from { opacity:0; transform:translateY(-6px); } }
+.fp-hero strong { display:block; font-size:.85rem; font-weight:800; letter-spacing:-.01em; line-height:1.2; }
+.fp-hero span { display:block; font-size:.52rem; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:rgba(255,255,255,.72); }
 
 .fp-prog { position:sticky; top:0; z-index:5; background:var(--surface); border-bottom:1px solid var(--line); box-shadow:0 2px 10px rgba(15,52,89,.06); }
 .fp-prog-in { max-width:38rem; margin:0 auto; padding:.5rem 1rem .6rem; }
@@ -4472,7 +4472,7 @@ body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.65 'Montser
 .fp-barra { height:.5rem; background:var(--bg); border-radius:99px; overflow:hidden; }
 .fp-barra i { display:block; height:100%; width:0%; border-radius:99px; background:linear-gradient(90deg, var(--cielo), var(--navy)); transition:width .45s cubic-bezier(.25, 1, .35, 1); }
 
-.fp-wrap { max-width:38rem; margin:-2rem auto 0; padding:0 1rem 3rem; }
+.fp-wrap { max-width:38rem; margin:.9rem auto 0; padding:0 1rem 3rem; }
 .fp-card { background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:1.5rem 1.3rem; box-shadow:0 12px 34px rgba(15,52,89,.10); animation:fp-sube .5s ease both; }
 @keyframes fp-sube { from { opacity:0; transform:translateY(14px); } }
 h1 { font-size:1.3rem; font-weight:800; letter-spacing:-.02em; margin:0 0 .3rem; color:var(--navy2); }
@@ -4503,7 +4503,7 @@ textarea:focus { outline:none; border-color:var(--cielo); box-shadow:0 0 0 3.5px
 <div class="fp-hero"><div class="fp-hero-in"><img src="/logo.png" alt="Cloud For Deploy"><div><strong>Cloud For Deploy</strong><span>Software y desarrollo web</span></div></div></div>
 ${estado === 'ok' ? `
 <div class="fp-prog"><div class="fp-prog-in">
-  <div class="fp-prog-txt"><span>Tu avance</span><span><b id="fpN">0</b> de ${preguntas.filter((q) => typeof q === 'string').length} respondidas</span></div>
+  <div class="fp-prog-txt"><span>Tu avance · <b id="fpPct">0%</b></span><span><b id="fpN">0</b> de ${preguntas.filter((q) => typeof q === 'string').length} respondidas</span></div>
   <div class="fp-barra"><i id="fpBarra"></i></div>
 </div></div>` : ''}
 <div class="fp-wrap">
@@ -4517,7 +4517,7 @@ ${estado === 'ok' ? `
 <script>
 (function () {
   var tas = [].slice.call(document.querySelectorAll('#fpForm textarea'));
-  var barra = document.getElementById('fpBarra'), num = document.getElementById('fpN');
+  var barra = document.getElementById('fpBarra'), num = document.getElementById('fpN'), pct = document.getElementById('fpPct');
   function avance() {
     var n = 0;
     tas.forEach(function (t) {
@@ -4525,8 +4525,10 @@ ${estado === 'ok' ? `
       if (lleno) n++;
       t.closest('.fp-campo').classList.toggle('fp-lista', lleno);
     });
-    barra.style.width = (tas.length ? Math.round((n / tas.length) * 100) : 0) + '%';
+    var p = tas.length ? Math.round((n / tas.length) * 100) : 0;
+    barra.style.width = p + '%';
     num.textContent = n;
+    pct.textContent = p + '%';
   }
   tas.forEach(function (t) { t.addEventListener('input', avance); });
   avance();
