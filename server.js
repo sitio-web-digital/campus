@@ -1766,6 +1766,18 @@ app.post('/deals/:id/formulario/:fid/borrar', requireAuth, (req, res) => {
   res.redirect('/deals/' + deal.id);
 });
 
+// El formulario contestado tiene su propia página interna (para el equipo, con login).
+app.get('/formularios/:fid', requireAuth, (req, res) => {
+  const f = db.prepare(`SELECT f.*, d.empresa, d.panel, u.name AS creador FROM form_links f
+    JOIN deals d ON d.id = f.deal_id JOIN users u ON u.id = f.creado_por WHERE f.id = ?`).get(req.params.fid);
+  if (!f) return res.redirect('/hub');
+  if (!puede(req.user, f.panel)) return res.status(403).send('Sin acceso a este panel.');
+  res.send(V.formRespuestasPage({
+    f, preguntas: JSON.parse(f.preguntas),
+    respuestas: (() => { try { return JSON.parse(f.respuestas || '[]'); } catch (e) { return []; } })(),
+  }));
+});
+
 // ---- Público (sin login): el cliente abre el link y contesta una sola vez ----
 const formDe = (token) => db.prepare('SELECT f.*, d.empresa, d.user_id AS dueno FROM form_links f JOIN deals d ON d.id = f.deal_id WHERE f.token = ?').get(String(token || '').slice(0, 40));
 

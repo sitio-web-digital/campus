@@ -2688,10 +2688,7 @@ function formulariosLead(d, formularios, baseUrl, plantillas = [], user = null, 
         <button type="button" class="btn secondary small" onclick="var i = this.previousElementSibling; i.select(); navigator.clipboard.writeText(i.value).then(() => { this.textContent = 'Copiado ✓'; })">Copiar</button>
         ${tel ? `<a class="btn secondary small" target="_blank" rel="noopener" href="https://wa.me/${tel}?text=${encodeURIComponent('¡Hola! Te paso un formulario cortito para entender mejor lo que necesitás y prepararte una buena propuesta: ' + url)}">WhatsApp</a>` : ''}
       </div>` : ''}
-      ${f.respondido_at && respuestas.length ? `
-      <details class="fl-resp"><summary>Ver las respuestas</summary>
-        ${preguntas.map((q, i) => (q && typeof q === 'object') ? (q.t ? `<div class="fl-qa-topico">${esc(q.t)}</div>` : '') : (respuestas[i] ? `<div class="fl-qa"><span>${esc(q)}</span><p>${esc(respuestas[i])}</p></div>` : '')).join('')}
-      </details>` : ''}
+      ${f.respondido_at ? `<div style="margin-top:.45rem"><a class="btn secondary small" href="/formularios/${f.id}">Ver el formulario contestado →</a></div>` : ''}
     </div>`;
   };
   return `
@@ -4437,10 +4434,10 @@ function formPublicoPage({ estado, token = '', preguntas = [], err = '', expira 
       </label>`)).join(''); })()}
       <button class="fp-btn" type="submit">Enviar respuestas</button>
     </form>`
-  : estado === 'gracias' ? `<div class="fp-fin"><span class="fp-fin-ic">✅</span><h2>¡Listo, gracias!</h2><p>Recibimos tus respuestas. En breve nos ponemos en contacto para avanzar con tu propuesta.</p></div>`
-  : estado === 'respondido' ? `<div class="fp-fin"><span class="fp-fin-ic">📬</span><h2>Este formulario ya fue respondido</h2><p>Gracias por completarlo. Si querés agregar algo, escribile directamente a tu asesor.</p></div>`
-  : estado === 'vencido' ? `<div class="fp-fin"><span class="fp-fin-ic">⏰</span><h2>Este link venció</h2><p>Pedile a tu asesor que te genere uno nuevo — tarda un segundo.</p></div>`
-  : `<div class="fp-fin"><span class="fp-fin-ic">🔎</span><h2>Link no encontrado</h2><p>Revisá que la dirección esté completa o pedí uno nuevo.</p></div>`;
+  : estado === 'gracias' ? `<div class="fp-fin"><span class="fp-fin-ic fp-ic-ok"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" fill="none"/><path d="M15 27l7.5 7.5L37.5 19" fill="none"/></svg></span><h2>¡Listo, gracias!</h2><p>Recibimos tus respuestas. En breve nos ponemos en contacto para avanzar con tu propuesta.</p></div>`
+  : estado === 'respondido' ? `<div class="fp-fin"><span class="fp-fin-ic"><svg viewBox="0 0 52 52"><rect x="9" y="15" width="34" height="24" rx="4" fill="none"/><path d="M10 17l16 13 16-13" fill="none"/></svg></span><h2>Este formulario ya fue respondido</h2><p>Gracias por completarlo. Si querés agregar algo, escribile directamente a tu asesor.</p></div>`
+  : estado === 'vencido' ? `<div class="fp-fin"><span class="fp-fin-ic"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none"/><path d="M26 14v13l9 5" fill="none"/></svg></span><h2>Este link venció</h2><p>Pedile a tu asesor que te genere uno nuevo — tarda un segundo.</p></div>`
+  : `<div class="fp-fin"><span class="fp-fin-ic"><svg viewBox="0 0 52 52"><circle cx="23" cy="23" r="13" fill="none"/><path d="M33 33l10 10" fill="none"/></svg></span><h2>Link no encontrado</h2><p>Revisá que la dirección esté completa o pedí uno nuevo.</p></div>`;
   return `<!doctype html>
 <html lang="es">
 <head>
@@ -4491,7 +4488,11 @@ textarea:focus { outline:none; border-color:var(--cielo); box-shadow:0 0 0 3.5px
 .fp-topico span { background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:.3rem .8rem; }
 .fp-err { background:var(--bad-soft); color:var(--bad); border-radius:9px; padding:.6rem .8rem; font-size:.85rem; font-weight:600; margin-bottom:1rem; }
 .fp-fin { text-align:center; padding:1.3rem 0 .9rem; }
-.fp-fin-ic { font-size:2.6rem; display:inline-block; animation:fp-pop .55s cubic-bezier(.2, 1.4, .4, 1) both; }
+.fp-fin-ic { display:inline-grid; place-items:center; width:4.6rem; height:4.6rem; border-radius:50%; background:linear-gradient(135deg, var(--navy), var(--cielo)); box-shadow:0 10px 28px rgba(15,52,89,.3); animation:fp-pop .55s cubic-bezier(.2, 1.4, .4, 1) both; }
+.fp-fin-ic svg { width:2.4rem; height:2.4rem; stroke:#fff; stroke-width:3.2; stroke-linecap:round; stroke-linejoin:round; }
+.fp-ic-ok svg path { stroke-dasharray:36; stroke-dashoffset:36; animation:fp-tilde .5s ease-out .35s forwards; }
+.fp-ic-ok svg circle { stroke-dasharray:160; stroke-dashoffset:160; animation:fp-tilde .7s ease-out .15s forwards; }
+@keyframes fp-tilde { to { stroke-dashoffset:0; } }
 @keyframes fp-pop { from { opacity:0; transform:scale(.4); } }
 .fp-fin h2 { font-size:1.15rem; font-weight:800; color:var(--navy2); margin:.6rem 0 .25rem; }
 .fp-fin p { font-size:.88rem; color:var(--muted); margin:0; }
@@ -4626,12 +4627,76 @@ ${estado === 'ok' ? `
   var splash = document.getElementById('fpSplash');
   if (splash) {
     var irse = function () { splash.classList.add('fps-fuera'); setTimeout(function () { splash.remove(); }, 500); };
-    if (document.readyState === 'complete') setTimeout(irse, 650);
-    else window.addEventListener('load', function () { setTimeout(irse, 650); });
-    setTimeout(irse, 2600); // red de seguridad: nunca más de 2,6 s
+    if (document.readyState === 'complete') setTimeout(irse, 2000);
+    else window.addEventListener('load', function () { setTimeout(irse, 2000); });
+    setTimeout(irse, 4000); // red de seguridad: nunca más de 4 s
   }
 })();
 </script>` : ''}
+</body>
+</html>`;
+}
+
+// El formulario ya contestado, en su propia página (interna, misma estética que la pública).
+function formRespuestasPage({ f, preguntas = [], respuestas = [] }) {
+  const contestadas = preguntas.filter((q, i) => typeof q === 'string' && respuestas[i]).length;
+  const total = preguntas.filter((q) => typeof q === 'string').length;
+  let num = 0;
+  const cuerpo = preguntas.map((q, i) => {
+    if (q && typeof q === 'object') return q.t ? `<h2 class="fp-topico"><span>${esc(q.t)}</span></h2>` : '';
+    num++;
+    return `
+    <div class="fp-campo ${respuestas[i] ? 'fp-lista' : ''}">
+      <span><em>${num}</em>${esc(q)}</span>
+      ${respuestas[i] ? `<div class="fr-resp">${esc(respuestas[i])}</div>` : '<div class="fr-resp fr-vacia">Sin responder</div>'}
+    </div>`;
+  }).join('');
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>${esc(f.empresa)} · Formulario contestado</title>
+<style>
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/montserrat-400.woff2) format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 600; font-display: swap; src: url(/fonts/montserrat-600.woff2) format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 800; font-display: swap; src: url(/fonts/montserrat-800.woff2) format('woff2'); }
+:root { --navy:#0F3459; --navy2:#0A2540; --cielo:#2B6CB0; --bg:#F2F5F9; --surface:#fff; --ink:#132033; --muted:#5B6773; --line:#DFE6EE; --line2:#C6D2DF; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.65 'Montserrat', 'Segoe UI', -apple-system, Roboto, Arial, sans-serif; -webkit-font-smoothing:antialiased; }
+.fp-hero { background:linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%); color:#fff; padding:.55rem 1rem; }
+.fp-hero-in { max-width:38rem; margin:0 auto; display:flex; align-items:center; gap:.6rem; }
+.fp-hero img { width:34px; height:auto; }
+.fp-hero strong { display:block; font-size:.85rem; font-weight:800; line-height:1.2; }
+.fp-hero span { display:block; font-size:.52rem; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:rgba(255,255,255,.72); }
+.fp-hero a { margin-left:auto; color:#fff; font-size:.74rem; font-weight:700; text-decoration:none; background:rgba(255,255,255,.14); border-radius:8px; padding:.35rem .7rem; }
+.fp-wrap { max-width:38rem; margin:.9rem auto 0; padding:0 1rem 3rem; }
+.fp-card { background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:1.5rem 1.3rem; box-shadow:0 12px 34px rgba(15,52,89,.10); }
+h1 { font-size:1.2rem; font-weight:800; letter-spacing:-.02em; margin:0 0 .2rem; color:var(--navy2); }
+.fr-meta { font-size:.78rem; color:var(--muted); margin:0 0 1.2rem; }
+.fp-topico { display:flex; align-items:center; gap:.7rem; margin:1.6rem 0 .9rem; font-size:.78rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--navy); }
+.fp-topico::after { content:''; flex:1; height:2px; background:linear-gradient(90deg, var(--line2), transparent); border-radius:2px; }
+.fp-topico span { background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:.3rem .8rem; }
+.fp-campo { margin:0 0 1.05rem; }
+.fp-campo > span { display:flex; gap:.5rem; align-items:baseline; font-size:.85rem; font-weight:600; margin-bottom:.35rem; }
+.fp-campo em { font-style:normal; flex-shrink:0; display:inline-grid; place-items:center; min-width:1.5rem; height:1.5rem; border-radius:50%; background:var(--bg); color:var(--navy); font-size:.7rem; font-weight:800; }
+.fp-campo.fp-lista em { background:var(--navy); color:#fff; }
+.fr-resp { border:1.5px solid var(--line); border-left:4px solid var(--cielo); border-radius:10px; background:#F8FAFD; padding:.55rem .7rem; font-size:.9rem; white-space:pre-wrap; }
+.fr-vacia { border-left-color:var(--line2); color:var(--muted); font-style:italic; background:var(--bg); }
+.fp-pie { text-align:center; font-size:.7rem; font-weight:500; color:var(--muted); margin-top:1.1rem; }
+</style>
+</head>
+<body>
+<div class="fp-hero"><div class="fp-hero-in"><img src="/logo.png" alt="Cloud For Deploy"><div><strong>Cloud For Deploy</strong><span>Formulario contestado</span></div><a href="/deals/${f.deal_id}">← Volver a la lead</a></div></div>
+<div class="fp-wrap">
+  <div class="fp-card">
+    <h1>${esc(f.empresa)}</h1>
+    <p class="fr-meta">${esc(f.titulo || 'Formulario')} · ${contestadas} de ${total} respondidas · respondido ${tiempoRel(f.respondido_at)} · link creado por ${esc(f.creador)}</p>
+    ${f.respondido_at ? cuerpo : '<p class="fr-meta">Este formulario todavía no fue respondido.</p>'}
+  </div>
+  <p class="fp-pie">Uso interno · Cloud For Deploy</p>
+</div>
 </body>
 </html>`;
 }
@@ -6723,7 +6788,7 @@ function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads
 }
 
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage, agendaPage, b2bListaPage, b2bFichaPage, finanzasPage, formPublicoPage, propuestasPage, propuestaNuevaPage, propuestaVerPage, whatsappPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage, agendaPage, b2bListaPage, b2bFichaPage, finanzasPage, formPublicoPage, formRespuestasPage, propuestasPage, propuestaNuevaPage, propuestaVerPage, whatsappPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusCursoPage, campusQuizPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,
