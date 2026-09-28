@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.7.0',
+    fecha: '2026-09-28',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Tres planillas nuevas de relevamiento para sistemas a medida: Operación y stock (14 preguntas), Administración y costos (15) y Sistema y seguridad (15) — listas en el selector de la ficha.' },
+      { tipo: 'mejora', texto: 'El formulario que ve el cliente ahora tiene la identidad de Cloud For Deploy: logo, azul corporativo y tipografía Montserrat, con barra de progreso que avanza mientras responde, numeración que se va pintando y animaciones de entrada. Pensado para contestar cómodo desde el celular.' },
+    ],
+  },
+  {
     version: '3.6.3',
     fecha: '2026-09-28',
     cambios: [
