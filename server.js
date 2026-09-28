@@ -442,6 +442,8 @@ app.get('/deals/:id', requireAuth, (req, res) => {
   const ultimaEd = eventos[0] ? { nombre: eventos[0].user_name, fecha: eventos[0].created_at } : null;
   const modal = V.dealFormModal({
     user: req.user, deal, vendedores, isAdmin: req.user.role === 'admin', eventos, ultimaEd,
+    formularios: db.prepare('SELECT f.*, u.name AS creador FROM form_links f JOIN users u ON u.id = f.creado_por WHERE f.deal_id = ? ORDER BY f.id DESC').all(deal.id),
+    baseUrl: (req.headers['x-forwarded-proto'] || req.protocol) + '://' + req.get('host'),
     errAprob: req.query.err === 'valor', errCalif: req.query.err === 'calificacion', errMigrar: req.query.err === 'migrar-ganado',
     tiempos: tiemposDeLead(deal), companeros: companerosDe(deal, req.user), mencionables: mencionablesDe(deal.panel),
     tomar: (() => { const robo = configRobo(deal.panel); return leadDisponible(deal, robo) && deal.user_id !== req.user.id ? { horas: robo.horas } : null; })(),
@@ -1718,6 +1720,75 @@ app.post('/clientes/:id/estado', requireAuth, requireSistema('clientes'), (req, 
     if (req.body.accion === 'liberar' && req.user.role === 'admin' && p.estado !== 'nuevo') db.prepare("UPDATE prospectos SET estado = 'nuevo', tomado_por = NULL, tomado_at = NULL WHERE id = ?").run(p.id);
   }
   res.redirect('/clientes');
+});
+
+/* ---------------- Formularios efímeros para clientes ---------------- */
+// Desde la ficha de una lead se genera un link público (sin login) con preguntas
+// genéricas o escritas a mano. Vence a los 7 días y admite UNA respuesta: cuando el
+// cliente contesta, las respuestas caen como nota en el historial y avisa por campanita.
+
+const FORM_GENERICO = [
+  '¿Cómo se llama tu negocio y a qué se dedica?',
+  '¿Tenés página web o tienda online hoy? Si tenés, ¿cuál es?',
+  '¿Qué te gustaría resolver o mejorar? (página web, tienda online, sistema a medida…)',
+  '¿Qué funcionalidades no pueden faltar?',
+  '¿Manejás un presupuesto aproximado?',
+  '¿Para cuándo lo necesitás?',
+  '¿Cuál es el mejor medio y horario para contactarte?',
+];
+
+app.post('/deals/:id/formulario', requireAuth, (req, res) => {
+  const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(req.params.id);
+  if (!deal) return res.redirect('/hub');
+  if (!puede(req.user, deal.panel)) return res.status(403).send('Sin acceso a este panel.');
+  let preguntas = FORM_GENERICO;
+  if (req.body.modo === 'custom') {
+    preguntas = String(req.body.preguntas || '').split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 12).map((x) => x.slice(0, 250));
+    if (!preguntas.length) return res.redirect(`/deals/${deal.id}?err=form`);
+  }
+  const token = require('crypto').randomBytes(12).toString('hex');
+  const expira = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+  db.prepare('INSERT INTO form_links (deal_id, token, tipo, preguntas, expira_at, creado_por) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(deal.id, token, req.body.modo === 'custom' ? 'custom' : 'generico', JSON.stringify(preguntas), expira, req.user.id);
+  logDealEvent(deal.id, req.user.id, 'edicion', `Nota: 📋 Se creó un formulario ${req.body.modo === 'custom' ? 'personalizado' : 'genérico'} para el cliente (${preguntas.length} preguntas, vence el ${expira}).`);
+  res.redirect('/deals/' + deal.id);
+});
+
+app.post('/deals/:id/formulario/:fid/borrar', requireAuth, (req, res) => {
+  const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(req.params.id);
+  if (!deal) return res.redirect('/hub');
+  if (!puede(req.user, deal.panel)) return res.status(403).send('Sin acceso a este panel.');
+  // Solo se anulan links sin responder: las respuestas ya recibidas son historia de la lead.
+  db.prepare('DELETE FROM form_links WHERE id = ? AND deal_id = ? AND respondido_at IS NULL').run(req.params.fid, deal.id);
+  res.redirect('/deals/' + deal.id);
+});
+
+// ---- Público (sin login): el cliente abre el link y contesta una sola vez ----
+const formDe = (token) => db.prepare('SELECT f.*, d.empresa, d.user_id AS dueno FROM form_links f JOIN deals d ON d.id = f.deal_id WHERE f.token = ?').get(String(token || '').slice(0, 40));
+
+app.get('/f/:token', (req, res) => {
+  const f = formDe(req.params.token);
+  if (!f) return res.status(404).send(V.formPublicoPage({ estado: 'no' }));
+  if (f.respondido_at) return res.send(V.formPublicoPage({ estado: 'respondido' }));
+  if (f.expira_at < hoyAR()) return res.send(V.formPublicoPage({ estado: 'vencido' }));
+  res.send(V.formPublicoPage({ estado: 'ok', token: f.token, preguntas: JSON.parse(f.preguntas) }));
+});
+
+app.post('/f/:token', (req, res) => {
+  const f = formDe(req.params.token);
+  if (!f) return res.status(404).send(V.formPublicoPage({ estado: 'no' }));
+  if (f.respondido_at) return res.send(V.formPublicoPage({ estado: 'respondido' }));
+  if (f.expira_at < hoyAR()) return res.send(V.formPublicoPage({ estado: 'vencido' }));
+  if (clean(req.body.web)) return res.send(V.formPublicoPage({ estado: 'gracias' })); // honeypot: los bots llenan todo
+  const preguntas = JSON.parse(f.preguntas);
+  const respuestas = preguntas.map((q, i) => String(req.body['r' + i] || '').trim().slice(0, 2000));
+  if (!respuestas.some(Boolean)) return res.send(V.formPublicoPage({ estado: 'ok', token: f.token, preguntas, err: 'Contestá al menos una pregunta, ¡así te podemos ayudar mejor!' }));
+  db.prepare("UPDATE form_links SET respuestas = ?, respondido_at = datetime('now') WHERE id = ?").run(JSON.stringify(respuestas), f.id);
+  const resumen = preguntas.map((q, i) => respuestas[i] ? `• ${q}\n   → ${respuestas[i]}` : null).filter(Boolean).join('\n');
+  logDealEvent(f.deal_id, f.creado_por, 'edicion', ('Nota: 📋 El cliente respondió el formulario:\n' + resumen).slice(0, 3500));
+  const insN = db.prepare('INSERT INTO notifications (user_id, texto, url) VALUES (?, ?, ?)');
+  for (const uid of new Set([f.creado_por, f.dueno])) insN.run(uid, `📋 ${f.empresa} respondió el formulario de la lead`, '/deals/' + f.deal_id);
+  res.send(V.formPublicoPage({ estado: 'gracias' }));
 });
 
 /* ---------------- Finanzas del grupo (solo admins) ---------------- */

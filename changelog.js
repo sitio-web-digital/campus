@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.6.0',
+    fecha: '2026-09-28',
+    cambios: [
+      { tipo: 'nuevo', texto: '📋 Formulario para el cliente: desde la ficha de cualquier lead ahora generás un link público que le mandás al cliente (copiar o directo por WhatsApp). Hay dos sabores: preguntas genéricas listas para usar, o las preguntas que escribas vos. El link vence a los 7 días y se responde una sola vez: las respuestas caen solas al historial de la lead y te avisa la campanita.' },
+    ],
+  },
+  {
     version: '3.5.0',
     fecha: '2026-09-26',
     cambios: [

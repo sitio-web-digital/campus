@@ -332,6 +332,20 @@ if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'macro'
 }
 db.prepare("UPDATE users SET macro = 1 WHERE email = 'admin@cloudfordeploy.com'").run();
 
+// 3.6.0: formularios efímeros para clientes — un link público por lead, con vencimiento.
+db.exec(`CREATE TABLE IF NOT EXISTS form_links (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  deal_id INTEGER NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE,
+  tipo TEXT NOT NULL DEFAULT 'generico' CHECK (tipo IN ('generico', 'custom')),
+  preguntas TEXT NOT NULL,
+  respuestas TEXT,
+  respondido_at TEXT,
+  expira_at TEXT NOT NULL,
+  creado_por INTEGER NOT NULL REFERENCES users(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);`);
+
 // 3.5.0: Finanzas del grupo (solo admins) — movimientos manuales y gastos fijos recurrentes.
 // Las ventas aprobadas y las comisiones NO se copian acá: el panel las lee en vivo de deals/commissions.
 db.exec(`CREATE TABLE IF NOT EXISTS fin_movimientos (

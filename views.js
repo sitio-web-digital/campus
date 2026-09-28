@@ -2363,6 +2363,30 @@ html.dark .col { background:#262525; border-color:var(--line); }
 .pc-tomar select { flex:1 1 auto; min-width:0; max-width:none; }
 .pc-tomar .btn { flex-shrink:0; }
 
+/* formularios de la lead */
+.fl-caja { margin:.3rem 0 .8rem; border:1px solid var(--line); border-radius:10px; padding:.55rem .7rem; background:var(--surface3); }
+.fl-caja > summary { cursor:pointer; font-weight:600; font-size:.86rem; list-style:none; }
+.fl-caja > summary::-webkit-details-marker { display:none; }
+.fl-cant { font-size:.68rem; font-weight:700; color:var(--accent-ink); background:var(--accent-soft); border-radius:999px; padding:.05rem .45rem; }
+.fl-item { border:1px solid var(--line); border-radius:9px; background:var(--surface); padding:.5rem .6rem; margin:.45rem 0; }
+.fl-item-top { display:flex; gap:.45rem; align-items:center; flex-wrap:wrap; }
+.fl-item-top form { margin-left:auto; }
+.fl-sub { font-size:.72rem; color:var(--muted); }
+.fl-link { display:flex; gap:.4rem; margin-top:.45rem; }
+.fl-link input { flex:1; min-width:0; margin:0; font-size:.76rem; color:var(--muted); }
+.fl-link .btn { flex-shrink:0; }
+.fl-resp { margin-top:.4rem; }
+.fl-resp summary { cursor:pointer; font-size:.78rem; font-weight:600; color:var(--accent-ink); }
+.fl-qa { margin:.45rem 0 0; }
+.fl-qa span { display:block; font-size:.74rem; font-weight:600; color:var(--muted); }
+.fl-qa p { margin:.1rem 0 0; font-size:.84rem; white-space:pre-wrap; }
+.fl-crear { display:flex; gap:.5rem; align-items:flex-start; flex-wrap:wrap; margin-top:.5rem; }
+.fl-custom summary { list-style:none; cursor:pointer; }
+.fl-custom summary::-webkit-details-marker { display:none; }
+.fl-custom { flex:1 1 100%; }
+.fl-custom textarea { margin:0; }
+@media (max-width: 640px) { .fl-link { flex-wrap:wrap; } .fl-link input { flex-basis:100%; } }
+
 /* finanzas del grupo */
 .fin-mes { font-family:"Inter",sans-serif; font-size:.95rem; min-width:9.5rem; text-align:center; }
 .fin-emp { flex-wrap:wrap; }
@@ -2629,7 +2653,54 @@ function conMenciones(texto, personas) {
 
 const STAR_SVG = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.8l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 8.1l5-.7z"/></svg>';
 
-function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, errCalif, errMigrar, tiempos, companeros = [], tomar = null, mencionables = [], reunionAgendada = null, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [] }) {
+// Formularios efímeros de la lead: lista + creación (genérico o con preguntas propias).
+function formulariosLead(d, formularios, baseUrl) {
+  const activos = formularios.filter((f) => !f.respondido_at && f.expira_at >= new Date().toISOString().slice(0, 10));
+  const tel = d.telefono ? String(d.telefono).replace(/\D/g, '') : '';
+  const filaForm = (f) => {
+    const url = `${baseUrl}/f/${f.token}`;
+    const vigente = !f.respondido_at && f.expira_at >= new Date().toISOString().slice(0, 10);
+    let respuestas = [];
+    try { respuestas = JSON.parse(f.respuestas || '[]'); } catch (e) {}
+    const preguntas = (() => { try { return JSON.parse(f.preguntas); } catch (e) { return []; } })();
+    return `
+    <div class="fl-item">
+      <div class="fl-item-top">
+        <span class="fin-tag ${f.respondido_at ? 'fin-t-venta' : vigente ? 'fin-t-manual' : 'fin-t-fijo'}">${f.respondido_at ? 'Respondido' : vigente ? 'Activo' : 'Vencido'}</span>
+        <span class="fl-sub">${f.tipo === 'custom' ? 'Personalizado' : 'Genérico'} · ${preguntas.length} preguntas · ${f.respondido_at ? 'respondió ' + tiempoRel(f.respondido_at) : 'vence el ' + f.expira_at.slice(8, 10) + '/' + f.expira_at.slice(5, 7)} · por ${esc(f.creador)}</span>
+        ${vigente ? `<form method="post" action="/deals/${d.id}/formulario/${f.id}/borrar" onsubmit="return confirm('¿Anular este link? El cliente ya no va a poder abrirlo.')"><button class="btn secondary small btn-ic" title="Anular link">${IC24('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>')}</button></form>` : ''}
+      </div>
+      ${vigente ? `
+      <div class="fl-link">
+        <input type="text" readonly value="${esc(url)}" onclick="this.select()">
+        <button type="button" class="btn secondary small" onclick="var i = this.previousElementSibling; i.select(); navigator.clipboard.writeText(i.value).then(() => { this.textContent = 'Copiado ✓'; })">Copiar</button>
+        ${tel ? `<a class="btn secondary small" target="_blank" rel="noopener" href="https://wa.me/${tel}?text=${encodeURIComponent('¡Hola! Te paso un formulario cortito para entender mejor lo que necesitás y prepararte una buena propuesta: ' + url)}">WhatsApp</a>` : ''}
+      </div>` : ''}
+      ${f.respondido_at && respuestas.length ? `
+      <details class="fl-resp"><summary>Ver las respuestas</summary>
+        ${preguntas.map((q, i) => respuestas[i] ? `<div class="fl-qa"><span>${esc(q)}</span><p>${esc(respuestas[i])}</p></div>` : '').join('')}
+      </details>` : ''}
+    </div>`;
+  };
+  return `
+  <details class="fl-caja" ${activos.length ? 'open' : ''}>
+    <summary>📋 Formulario para el cliente${formularios.length ? ` <span class="fl-cant">${formularios.length}</span>` : ''}</summary>
+    <p class="caption" style="margin:.2rem 0 .5rem">Un link público que vence a los 7 días y se responde una sola vez: las respuestas caen al historial de la lead y te avisa la campanita.</p>
+    ${formularios.map(filaForm).join('')}
+    <div class="fl-crear">
+      <form method="post" action="/deals/${d.id}/formulario"><input type="hidden" name="modo" value="generico"><button class="btn secondary small">+ Link con preguntas genéricas (7)</button></form>
+      <details class="fl-custom"><summary class="btn secondary small" style="display:inline-flex">+ Link con mis preguntas</summary>
+        <form method="post" action="/deals/${d.id}/formulario" style="margin-top:.45rem">
+          <input type="hidden" name="modo" value="custom">
+          <textarea name="preguntas" rows="4" placeholder="Una pregunta por línea (máx. 12)&#10;¿Cuántas sucursales tenés?&#10;¿Qué sistema usás hoy para facturar?"></textarea>
+          <button class="btn small" style="margin-top:.4rem">Crear link</button>
+        </form>
+      </details>
+    </div>
+  </details>`;
+}
+
+function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd, errAprob, errCalif, errMigrar, tiempos, companeros = [], tomar = null, mencionables = [], reunionAgendada = null, panel = 'cfd', etapas = ETAPAS, backHref = '/pipeline', campanas = [], formularios = [], baseUrl = '' }) {
   const d = deal || {};
   const isNew = !deal;
   const opt = (list, sel) => list.map((o) => `<option value="${esc(o)}" ${o === sel ? 'selected' : ''}>${esc(o)}</option>`).join('');
@@ -2742,6 +2813,7 @@ function dealFormModal({ user, deal, vendedores, isAdmin, eventos = [], ultimaEd
       </div>
     </div>
     ${!isNew && ['admin', 'vendedor'].includes(user.role) ? `<p class="small" style="margin:.1rem 0 .5rem"><a href="/asesor?deal=${d.id}" onclick="if (window.miniJuanAbrir) { miniJuanAbrir(${d.id}, '${esc(d.empresa).replace(/'/g, '')}'); return false; }">💡 Preguntale a MiniJuan cómo responderle a este cliente →</a></p>` : ''}
+    ${!isNew && ['admin', 'vendedor'].includes(user.role) ? formulariosLead(d, formularios, baseUrl) : ''}
     <label>Agregar nota al historial <span class="muted" style="font-weight:400">· escribí <code>@</code> para mencionar a alguien del panel</span></label>
     <div class="men-wrap"><textarea name="notas" rows="3" data-menciones="${esc(JSON.stringify(mencionables))}" placeholder="Contexto, objeciones, acuerdos… Al guardar, la nota queda registrada en el historial con tu nombre y fecha, y este campo vuelve a quedar libre."></textarea></div>
     <script>
@@ -4337,6 +4409,74 @@ function iaConversacionesPage({ user, fecha: fechaSel, vendedorId, filas, dias, 
     </details>`).join('')}
   </div>`).join('') : '<div class="card"><p class="muted" style="margin:0">No hubo consultas ese día.</p></div>'}`
   });
+}
+
+/* --------- formulario público del cliente (sin login) --------- */
+
+function formPublicoPage({ estado, token = '', preguntas = [], err = '' }) {
+  const cuerpo = estado === 'ok' ? `
+    <p class="fp-intro">Contanos un poco de tu negocio así te preparamos una propuesta a medida. Son ${preguntas.length} preguntas cortas — contestá las que puedas.</p>
+    ${err ? `<div class="fp-err">${esc(err)}</div>` : ''}
+    <form method="post" action="/f/${esc(token)}">
+      <input type="text" name="web" tabindex="-1" autocomplete="off" style="position:absolute; left:-5000px" aria-hidden="true">
+      ${preguntas.map((q, i) => `
+      <label class="fp-campo">
+        <span>${i + 1}. ${esc(q)}</span>
+        <textarea name="r${i}" rows="2" maxlength="2000"></textarea>
+      </label>`).join('')}
+      <button class="fp-btn" type="submit">Enviar respuestas</button>
+    </form>`
+  : estado === 'gracias' ? `<div class="fp-fin">✅<h2>¡Listo, gracias!</h2><p>Recibimos tus respuestas. En breve nos ponemos en contacto para avanzar con tu propuesta.</p></div>`
+  : estado === 'respondido' ? `<div class="fp-fin">📬<h2>Este formulario ya fue respondido</h2><p>Gracias por completarlo. Si querés agregar algo, escribile directamente a tu asesor.</p></div>`
+  : estado === 'vencido' ? `<div class="fp-fin">⏰<h2>Este link venció</h2><p>Pedile a tu asesor que te genere uno nuevo — tarda un segundo.</p></div>`
+  : `<div class="fp-fin">🔎<h2>Link no encontrado</h2><p>Revisá que la dirección esté completa o pedí uno nuevo.</p></div>`;
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Cloud For Deploy · Formulario</title>
+<style>
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 400 800; font-display: swap; src: url(/fonts/inter-var.woff2) format('woff2'); }
+:root { --bg:#f9f7f6; --surface:#fff; --ink:#1f1e1e; --muted:#706e6d; --line:#eeebea; --line2:#dad9d8; --accent:#4b70cc; --bad:#b22d30; --bad-soft:#fff6f4; }
+@media (prefers-color-scheme: dark) { :root { --bg:#1f1e1e; --surface:#232222; --ink:#f9f7f6; --muted:#a5a3a2; --line:#3a3838; --line2:#4a4848; --accent:#6c94ec; --bad:#e46c63; --bad-soft:rgba(228,108,99,.12); } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.6 'Inter', 'Segoe UI', -apple-system, Roboto, Arial, sans-serif; -webkit-font-smoothing:antialiased; }
+.fp-wrap { max-width:36rem; margin:0 auto; padding:1.4rem 1rem 3rem; }
+.fp-marca { display:flex; align-items:center; gap:.6rem; margin:0 0 1.1rem; }
+.fp-logo { width:2.1rem; height:2.1rem; border-radius:7px; background:#1f1e1e; color:#fff; display:grid; place-items:center; font-size:.72rem; font-weight:700; }
+@media (prefers-color-scheme: dark) { .fp-logo { background:#f9f7f6; color:#1f1e1e; } }
+.fp-marca strong { font-size:.95rem; }
+.fp-marca span { display:block; font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+.fp-card { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:1.3rem 1.2rem; box-shadow:0 1px 2px rgba(31,30,30,.05); }
+h1 { font-size:1.25rem; letter-spacing:-.02em; margin:0 0 .3rem; }
+.fp-intro { color:var(--muted); font-size:.88rem; margin:.2rem 0 1.1rem; }
+.fp-campo { display:block; margin:0 0 .9rem; }
+.fp-campo span { display:block; font-size:.85rem; font-weight:600; margin-bottom:.3rem; }
+textarea { width:100%; border:1px solid var(--line2); border-radius:8px; background:var(--surface); color:var(--ink); padding:.5rem .6rem; font:inherit; font-size:.9rem; resize:vertical; }
+textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(75,112,204,.15); }
+.fp-btn { width:100%; margin-top:.4rem; background:#1f1e1e; color:#fff; border:none; border-radius:9px; padding:.7rem 1rem; font:600 .95rem 'Inter', sans-serif; cursor:pointer; }
+.fp-btn:hover { background:#444342; }
+@media (prefers-color-scheme: dark) { .fp-btn { background:#f9f7f6; color:#1f1e1e; } .fp-btn:hover { background:#dad9d8; } }
+.fp-err { background:var(--bad-soft); color:var(--bad); border-radius:8px; padding:.55rem .75rem; font-size:.85rem; font-weight:600; margin-bottom:.9rem; }
+.fp-fin { text-align:center; padding:1.2rem 0 .8rem; font-size:2rem; }
+.fp-fin h2 { font-size:1.15rem; margin:.6rem 0 .2rem; }
+.fp-fin p { font-size:.88rem; color:var(--muted); margin:0; }
+.fp-pie { text-align:center; font-size:.72rem; color:var(--muted); margin-top:1rem; }
+</style>
+</head>
+<body>
+<div class="fp-wrap">
+  <div class="fp-marca"><div class="fp-logo">C4D</div><div><strong>Cloud For Deploy</strong><span>Software y desarrollo web</span></div></div>
+  <div class="fp-card">
+    ${estado === 'ok' ? '<h1>Un par de preguntas rápidas</h1>' : ''}
+    ${cuerpo}
+  </div>
+  <p class="fp-pie">Tus respuestas van directo a tu asesor comercial. Cloud For Deploy · cloudfordeploy.com</p>
+</div>
+</body>
+</html>`;
 }
 
 /* --------- Finanzas del grupo (solo admins) --------- */
@@ -6426,7 +6566,7 @@ function whatsappPage({ user, convs, conv, mensajes = [], vendedores = [], leads
 }
 
 module.exports = {
-  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage, agendaPage, b2bListaPage, b2bFichaPage, finanzasPage, propuestasPage, propuestaNuevaPage, propuestaVerPage, whatsappPage,
+  loginPage, pipelinePage, dealFormModal, adminPage, adminComunicacionPage, adminPreferenciasPage, adminUserPage, perfilPage, docsPage, changelogPage, soporteListaPage, soporteTicketPage, devBoardPage, panelContactosPage, asesorPage, iaConversacionesPage, iaNegocioPage, clientesPage, agendaPage, b2bListaPage, b2bFichaPage, finanzasPage, formPublicoPage, propuestasPage, propuestaNuevaPage, propuestaVerPage, whatsappPage,
   notificacionesPage, metasDetallePage, dashboardUnificadoPage, hubPage, campusPage, campusCursoPage, campusQuizPage, campusStatsPage,
   cobranzaAdminPage, cobranzaVendedorPage, reglasPage,
   panelActividadPage, panelObjetivosPage, panelRankingPage, panelConfigPage, reporteImprimirPage,
