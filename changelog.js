@@ -2,6 +2,13 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.7.7',
+    fecha: '2026-09-30',
+    cambios: [
+      { tipo: 'mejora', texto: 'Los formularios vencidos sin responder ahora se pueden reactivar desde la ficha de la lead: "Reactivar · 48 hs más". Es el MISMO link que el cliente ya tiene, así que si venía contestando, al abrirlo de nuevo retoma exactamente donde quedó (las respuestas se guardan en su dispositivo mientras escribe).' },
+    ],
+  },
+  {
     version: '3.7.3',
     fecha: '2026-09-28',
     cambios: [

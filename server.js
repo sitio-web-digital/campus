@@ -1757,6 +1757,20 @@ app.post('/formularios/plantillas/:pid/borrar', requireAuth, (req, res) => {
   res.redirect(req.body.volver && /^\/deals\/\d+$/.test(req.body.volver) ? req.body.volver : '/hub');
 });
 
+// Un link vencido sin responder se puede reactivar: mismo token, 48 hs más.
+// Como el borrador vive en el dispositivo del cliente bajo ese token, retoma donde quedó.
+app.post('/deals/:id/formulario/:fid/reactivar', requireAuth, (req, res) => {
+  const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(req.params.id);
+  if (!deal) return res.redirect('/hub');
+  if (!puede(req.user, deal.panel)) return res.status(403).send('Sin acceso a este panel.');
+  const f = db.prepare('SELECT * FROM form_links WHERE id = ? AND deal_id = ? AND respondido_at IS NULL').get(req.params.fid, deal.id);
+  if (f) {
+    db.prepare('UPDATE form_links SET expira_at = ? WHERE id = ?').run(new Date(Date.now() + FORM_VIDA_HS * 3600e3).toISOString(), f.id);
+    logDealEvent(deal.id, req.user.id, 'edicion', `Nota: Se reactivó el formulario "${f.titulo || 'Formulario'}" por ${FORM_VIDA_HS} horas más (mismo link: el cliente retoma donde quedó).`);
+  }
+  res.redirect(`/deals/${deal.id}?fl=${req.params.fid}`);
+});
+
 app.post('/deals/:id/formulario/:fid/borrar', requireAuth, (req, res) => {
   const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(req.params.id);
   if (!deal) return res.redirect('/hub');

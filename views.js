@@ -2689,6 +2689,7 @@ function formulariosLead(d, formularios, baseUrl, plantillas = [], user = null, 
         ${tel ? `<a class="btn secondary small" target="_blank" rel="noopener" href="https://wa.me/${tel}?text=${encodeURIComponent('¡Hola! Te paso un formulario cortito para entender mejor lo que necesitás y prepararte una buena propuesta: ' + url)}">WhatsApp</a>` : ''}
       </div>` : ''}
       ${f.respondido_at ? `<div style="margin-top:.45rem"><a class="btn secondary small" href="/formularios/${f.id}">Ver el formulario contestado →</a></div>` : ''}
+      ${!f.respondido_at && !vigente ? `<div style="margin-top:.45rem"><button type="button" class="btn secondary small" onclick="this.disabled = true; this.textContent = 'Reactivando…'; fetch('/deals/${d.id}/formulario/${f.id}/reactivar', { method: 'POST' }).then(function (r) { location.href = r.url; })">Reactivar · 48 hs más</button> <span class="fl-sub">mismo link: el cliente retoma donde quedó</span></div>` : ''}
     </div>`;
   };
   return `
