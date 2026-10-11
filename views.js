@@ -2679,7 +2679,7 @@ function formulariosLead(d, formularios, baseUrl, plantillas = [], user = null, 
     <div class="fl-item ${f.id === nuevoId ? 'fl-nuevo' : ''}">
       <div class="fl-item-top">
         <span class="fin-tag ${f.respondido_at ? 'fin-t-venta' : vigente ? 'fin-t-manual' : 'fin-t-fijo'}">${f.respondido_at ? 'Respondido' : vigente ? 'Activo' : 'Vencido'}</span>
-        <span class="fl-sub">${esc(f.titulo || (f.tipo === 'custom' ? 'Personalizado' : 'Genéricas'))} · ${preguntas.filter((q) => typeof q === 'string').length} preguntas · ${f.respondido_at ? 'respondió ' + tiempoRel(f.respondido_at) : vigente ? 'le quedan ' + horasRestantes(f) + ' hs' : 'vencido'} · por ${esc(f.creador)}</span>
+        <span class="fl-sub">${esc(f.titulo || (f.tipo === 'custom' ? 'Personalizado' : 'Genéricas'))} · ${preguntas.filter((q) => typeof q === 'string').length} preguntas · ${f.respondido_at ? 'respondió ' + tiempoRel(f.respondido_at) : vigente ? (f.expira_at.startsWith('9999') ? 'sin vencimiento' : 'le quedan ' + horasRestantes(f) + ' hs') : 'vencido'} · por ${esc(f.creador)}</span>
         ${vigente ? `<button type="button" class="btn secondary small btn-ic fl-borrar" title="Anular link" onclick="if (confirm('¿Anular este link? El cliente ya no va a poder abrirlo.')) { this.disabled = true; fetch('/deals/${d.id}/formulario/${f.id}/borrar', { method: 'POST' }).then(function (r) { location.href = r.url; }); }">${IC24('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>')}</button>` : ''}
       </div>
       ${vigente ? `
@@ -2699,7 +2699,8 @@ function formulariosLead(d, formularios, baseUrl, plantillas = [], user = null, 
     <div class="fl-crear">
       <div class="fl-plantilla">
         <select id="flPlanilla${d.id}">${plantillas.map((pl) => { let n = 0; try { n = JSON.parse(pl.preguntas).filter((x) => typeof x === 'string').length; } catch (e) {} return `<option value="${pl.id}">${esc(pl.nombre)} · ${n} preguntas</option>`; }).join('')}</select>
-        <button type="button" class="btn small" onclick="var b = this; b.disabled = true; b.textContent = 'Creando el link…'; fetch('/deals/${d.id}/formulario', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'plantilla_id=' + encodeURIComponent(document.getElementById('flPlanilla${d.id}').value) }).then(function (r) { location.href = r.url; }).catch(function () { b.disabled = false; b.textContent = 'Crear formulario'; })">Crear formulario</button>
+        <select id="flVida${d.id}" title="Cuánto vive el link"><option value="48">Vence en 48 hs</option><option value="168">Vence en 7 días</option><option value="0">No vence nunca</option></select>
+        <button type="button" class="btn small" onclick="var b = this; b.disabled = true; b.textContent = 'Creando el link…'; fetch('/deals/${d.id}/formulario', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'plantilla_id=' + encodeURIComponent(document.getElementById('flPlanilla${d.id}').value) + '&vida=' + encodeURIComponent(document.getElementById('flVida${d.id}').value) }).then(function (r) { location.href = r.url; }).catch(function () { b.disabled = false; b.textContent = 'Crear formulario'; })">Crear formulario</button>
       </div>
     </div>
     ${formularios.map(filaForm).join('')}
@@ -4609,6 +4610,7 @@ ${estado === 'ok' ? `
   var expira = new Date('${esc(expira)}');
   function reloj() {
     if (!vence || isNaN(expira)) return;
+    if (expira.getFullYear() > 9000) { vence.hidden = true; return; } // sin vencimiento
     var ms = expira - Date.now();
     if (ms <= 0) { vence.hidden = false; vence.className = 'fp-vence fp-vence-critico'; vence.innerHTML = 'El link <b>venció</b>'; return; }
     var h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);

@@ -2,6 +2,14 @@
 // Tipos de cambio: 'nuevo' | 'mejora' | 'fix'
 module.exports = [
   {
+    version: '3.8.0',
+    fecha: '2026-10-11',
+    cambios: [
+      { tipo: 'nuevo', texto: 'Al crear un formulario ahora elegís cuánto vive el link: 48 horas, 7 días o que no venza nunca — ideal para relevamientos largos que el cliente completa en varias sesiones (el borrador se guarda solo en su dispositivo).' },
+      { tipo: 'nuevo', texto: 'Planilla nueva "Relevamiento JRB completo": 145 preguntas en 13 secciones — el relevamiento de sistema a medida más la batería completa de octubre (generales, stock, fraccionamiento, depósitos, ventas, facturación, clientes, informes, infraestructura y migración), cada pregunta con quién debería responderla.' },
+    ],
+  },
+  {
     version: '3.7.7',
     fecha: '2026-09-30',
     cambios: [

@@ -1741,11 +1741,13 @@ app.post('/deals/:id/formulario', requireAuth, (req, res) => {
   if (!pl) return res.redirect(`/deals/${deal.id}?err=form`);
   const preguntas = JSON.parse(pl.preguntas);
   const token = require('crypto').randomBytes(12).toString('hex');
-  const expira = new Date(Date.now() + FORM_VIDA_HS * 3600e3).toISOString();
+  // Vida del link elegible: 48 hs (default), 7 días, o sin vencimiento (año 9999).
+  const vida = { '48': 48, '168': 168, '0': 0 }[req.body.vida];
+  const expira = vida === 0 ? '9999-12-31T00:00:00.000Z' : new Date(Date.now() + (vida || FORM_VIDA_HS) * 3600e3).toISOString();
   const nuevo = db.prepare('INSERT INTO form_links (deal_id, token, tipo, titulo, preguntas, expira_at, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .run(deal.id, token, 'generico', pl.nombre, JSON.stringify(preguntas), expira, req.user.id).lastInsertRowid;
   const nPreguntas = preguntas.filter((q) => typeof q === 'string').length;
-  logDealEvent(deal.id, req.user.id, 'edicion', `Nota: Se creó el formulario "${pl.nombre}" para el cliente (${nPreguntas} preguntas, el link vive ${FORM_VIDA_HS} horas).`);
+  logDealEvent(deal.id, req.user.id, 'edicion', `Nota: Se creó el formulario "${pl.nombre}" para el cliente (${nPreguntas} preguntas, ${vida === 0 ? 'sin vencimiento' : 'el link vive ' + (vida || FORM_VIDA_HS) + ' horas'}).`);
   // El redirect marca el link recién creado: la ficha lo muestra resaltado y con la URL seleccionada.
   res.redirect(`/deals/${deal.id}?fl=${nuevo}`);
 });
